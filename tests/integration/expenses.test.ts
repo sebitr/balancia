@@ -1279,6 +1279,70 @@ describe("a repayment sent twice", () => {
 });
 
 /**
+ * A repayment taken back from its toast, then recorded again.
+ *
+ * The toast's Undo is the repayment's ordinary deletion, so this is the order
+ * those calls arrive in when somebody records the wrong person, presses Undo,
+ * and records the right one: each recording under a key of its own, because
+ * the first key is spent for good — deletion included — and sending it again
+ * would hand back the repayment just taken back and write nothing.
+ */
+describe("a repayment taken back from its toast", () => {
+  it("puts the debt back as it was", async () => {
+    const { group, lunch, repayment } = await lunchOwedByBlaise();
+    await createExpense(group.access, lunch);
+    const before = await loadGroupBalances(group.access);
+
+    const settlementId = await createSettlement(group.access, repayment, {
+      clientKey: randomUUID(),
+    });
+    await deleteSettlement(group.access, settlementId);
+
+    const after = await loadGroupBalances(group.access);
+    expect(after.currencies).toEqual(before.currencies);
+    expect(await liveSettlements(group.groupId)).toHaveLength(0);
+  });
+
+  it("records the next one, and leaves the debt paid once", async () => {
+    const { group, lunch, repayment } = await lunchOwedByBlaise();
+    await createExpense(group.access, lunch);
+
+    const first = await createSettlement(group.access, repayment, {
+      clientKey: randomUUID(),
+    });
+    await deleteSettlement(group.access, first);
+    const second = await createSettlement(group.access, repayment, {
+      clientKey: randomUUID(),
+    });
+
+    expect(second).not.toBe(first);
+    const live = await liveSettlements(group.groupId);
+    expect(live.map((row) => row.id)).toEqual([second]);
+    const balances = await loadGroupBalances(group.access);
+    const eur = balances.currencies.find((entry) => entry.currency === "EUR")!;
+    expect(eur.balances.every((balance) => balance.amount === 0n)).toBe(true);
+  });
+
+  it("says in Activity that it was recorded and deleted, and offers it back", async () => {
+    const { group, repayment } = await lunchOwedByBlaise();
+    const settlementId = await createSettlement(group.access, repayment, {
+      clientKey: randomUUID(),
+    });
+    await deleteSettlement(group.access, settlementId);
+
+    const entries = await listGroupActivity(group.groupId, { limit: 100 });
+    const actions = entries
+      .filter((entry) => entry.entityId === settlementId)
+      .map((entry) => entry.action);
+    expect(actions.sort()).toEqual([
+      "settlement.created",
+      "settlement.deleted",
+    ]);
+    expect((await findRestorableDeletions(group.access, entries)).size).toBe(1);
+  });
+});
+
+/**
  * Changing an entry's kind, sent twice.
  *
  * The move writes one row and removes another, and it used to do them in two

@@ -30,7 +30,6 @@ import { getPreferences } from "@/modules/notifications/service";
 import { listPayoutMethods } from "@/modules/payouts/service";
 import { getAvatarVersion } from "@/modules/profile/avatar";
 import { resolveFormatPreferences } from "@/i18n/preferences";
-import { dateFormatSample } from "@/i18n/format";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("userSettings");
@@ -86,20 +85,15 @@ export default async function SettingsHubPage() {
   const categories = Object.values(preferences);
   const on = categories.filter(Boolean).length;
 
-  // The resolved sample rather than the word "Automatic", even where nothing
-  // was chosen: the row exists to answer "how will my money read", and the
-  // answer is a date, not the name of a setting. It is also the shorter of the
-  // two, which is what keeps the label beside it from truncating.
-  const dateSummary = dateFormatSample(
-    formats.dateFormat,
-    formats.formatLocale,
-  );
+  // The date notation by its name — "DD/MM/YYYY", or "Automatic" — rather than
+  // a date written in it. A sample read as a fact: "EUR · Aug 13, 2026" on a
+  // screen opened in October looked like the day something had happened, and
+  // nothing beside it said otherwise. The screen behind the row is where the
+  // notation is shown in use, on the reader's own last entry.
+  const dateSummary = t("dateFormatName", { format: formats.dateFormat });
 
   return (
-    <SettingsScreen
-      title={t("title")}
-      close={{ href: "/dashboard", label: t("close") }}
-    >
+    <SettingsScreen title={t("title")} close={{ label: t("close") }}>
       <IdentityCard name={user.name} email={user.email} photoVersion={photo} />
 
       <SettingsGroup label={t("groupAccount")}>

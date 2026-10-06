@@ -501,8 +501,7 @@
       "percentageSumMismatch": "Percentages must add up to 100 — they currently total {received}",
       "shareNegative": "Shares cannot be negative",
       "sharesAllZero": "At least one share must be greater than zero",
-      "invalid": "That split is not valid",
-      "roundingNote": "This does not divide evenly. {count, plural, one {One person pays} other {# people pay}} {amount} more so the parts add up to the total exactly."
+      "invalid": "That split is not valid"
     }
   },
   "dashboard": {
@@ -742,6 +741,7 @@
       "minPlaceholder": "min",
       "maxPlaceholder": "max",
       "paidBy": "Paid by",
+      "with": "With",
       "anyOf": "any of",
       "category": "Category",
       "categoryHint": "tap to open a category",
@@ -768,6 +768,7 @@
   },
   "userSettings": {
     "title": "Settings",
+    "yourAccount": "Your account",
     "close": "Close settings",
     "backToSettings": "Back to settings",
     "groupAccount": "Account",
@@ -779,6 +780,7 @@
     "security": "Sign-in & security",
     "appearance": "Appearance & language",
     "money": "Money & formats",
+    "dateFormatName": "{format, select, dmy {DD/MM/YYYY} mdy {MM/DD/YYYY} ymd {YYYY-MM-DD} other {Automatic}}",
     "payouts": "Get paid back",
     "groups": "Your groups",
     "data": "Data & imports",
@@ -789,14 +791,13 @@
     "allOn": "All on",
     "someOn": "{on} of {total}",
     "passkeyCount": "{count, plural, =0 {No passkey} one {# passkey} other {# passkeys}}",
-    "automatic": "Automatic",
     "cancel": "Cancel",
     "change": "Change",
     "signOut": "Sign out",
     "signOutTitle": "Sign out of Balancia?",
     "signOutBody": "Your groups stay exactly as they are. You will need your passkey or password to come back.",
     "signOutUnsent": "{count, plural, one {# entry on this device has not synced yet, and signing out deletes it. Stay signed in and it syncs the next time you are online.} other {# entries on this device have not synced yet, and signing out deletes them. Stay signed in and they sync the next time you are online.}}",
-    "keepIt": "Keep it",
+    "signOutCancel": "Stay signed in",
     "photoAdd": "Add a photo",
     "photoChange": "Change photo",
     "photoRemove": "Remove",
@@ -817,7 +818,8 @@
     "deleteTitle": "Delete your account?",
     "deleteBody": "Your expenses stay in each group under your name, but the account, its passkeys and its preferences are gone for good.",
     "deleteTypeEmail": "Type your email address to confirm",
-    "delete": "Delete",
+    "deletePermanently": "Delete my account permanently",
+    "deleteCancel": "Keep my account",
     "deleteFailed": "That account could not be deleted.",
     "securityIntro": "A passkey signs you in with your device unlock — fingerprint, face or PIN. Nothing to remember, nothing to leak.",
     "securityInsecure": "Passkeys need a secure origin. Set <code></code> to an https address, or reach this instance over localhost, before adding one.",
@@ -933,6 +935,7 @@
     "empty": "Nothing has happened in this group yet.",
     "someone": "Someone",
     "withDescription": "{action}: {description}",
+    "left": "left the group",
     "restore": {
       "action": "Restore",
       "expense": "Restore the expense “{description}”",
@@ -1836,89 +1839,7 @@
     "haveAccount": "I already have an account"
   },
   "joinGroup": {
-    "metaTitle": "Join a group",
-    "header": {
-      "back": "Back",
-      "stepInvitation": "Invitation",
-      "stepOf": "Step {step} of {total}",
-      "stepDone": "Done"
-    },
-    "invite": {
-      "badge": "Invitation",
-      "title": "You've been invited to join {group}",
-      "ledeFrom": "{inviter} shared this link with the group. Anyone with it can ask to join.",
-      "lede": "This link was shared with the group. Anyone with it can ask to join.",
-      "since": "since {date}",
-      "trackedSoFar": "tracked so far",
-      "alertTitle": "Someone may have already added you",
-      "alertBody": "If your name is already in this group, you'll claim it in the next step and keep every expense attached to it.",
-      "start": "Ask to join this group",
-      "footnote": "You'll be in as soon as you finish setting up."
-    },
-    "name": {
-      "title": "What's your name?",
-      "lede": "We use it to find you among the people already in {group}.",
-      "label": "Your name",
-      "placeholder": "e.g. Jonas Thévenot",
-      "help": "Use the name your group would recognise.",
-      "continue": "Continue"
-    },
-    "match": {
-      "title": "Are you already in this group?",
-      "ledeSuggestion": "We found a name that looks like yours. Pick it to take over its expenses, or choose another.",
-      "ledePlain": "These people were added by hand and have no account yet. Pick your own name if you see it.",
-      "ledeEmpty": "Everyone in this group already has an account, so there is no name to take over.",
-      "likelyYou": "Likely you",
-      "othersWithSuggestion": "Someone else in the group",
-      "othersPlain": "Not linked to an account yet",
-      "expenseCount": "{count, plural, =0 {No expenses yet} one {# expense} other {# expenses}}",
-      "addMe": "I'm not on this list — add me",
-      "addMeEmpty": "Add me to the group",
-      "footnote": "Only people without an account yet are listed."
-    },
-    "confirm": {
-      "title": "Is this you?",
-      "lede": "Claiming a name links its whole history to your account. Check the details below before you confirm.",
-      "position": "Current position in {currency}",
-      "settled": "Nothing owed either way",
-      "recent": "Most recent expenses under this name",
-      "noRecent": "No expenses under this name yet",
-      "yes": "Yes, that's me",
-      "no": "No, pick someone else"
-    },
-    "account": {
-      "titleClaim": "Create your account",
-      "ledeClaim": "Your account is how you come back to this group, and how nobody else can claim this name.",
-      "titleNew": "Add yourself to the group",
-      "ledeNew": "You'll join as a new member with an empty balance. Past expenses stay as they are.",
-      "badgeClaim": "Claiming",
-      "badgeNew": "New member",
-      "email": "Email",
-      "emailPlaceholder": "you@example.com",
-      "password": "Password",
-      "passwordPlaceholder": "At least 8 characters",
-      "passwordHelp": "This account works across every Balancia group you join.",
-      "submitNew": "Join {group}",
-      "submitClaim": "Claim this name and join",
-      "footnoteClaimFrom": "{inviter} is told that {member} is now linked.",
-      "footnoteClaim": "The group is told that {member} is now linked.",
-      "footnoteNew": "The group sees that you joined, not your email."
-    },
-    "done": {
-      "titleClaim": "Welcome back, {name}",
-      "titleNew": "You're in",
-      "ledeClaim": "Everything recorded under this name is now yours, and the group can see you're linked.",
-      "ledeNew": "You're a member of {group}. Add an expense whenever you pay for something.",
-      "balanceLabel": "You, in {currency}",
-      "open": "Open {group}",
-      "verifyTitle": "Confirm your email address",
-      "verifyBody": "We sent a link to {email}. Open it to finish signing in — your place in {group} is saved either way."
-    },
-    "taken": {
-      "title": "That name was just taken",
-      "body": "Somebody else claimed it while you were signing up. Your account exists, so sign in and ask the group to add you.",
-      "signIn": "Sign in"
-    }
+    "metaTitle": "Join a group"
   },
   "linkPreview": {
     "groupTitle": "Join {group} on Balancia",
@@ -1931,12 +1852,16 @@
   "onboarding": {
     "back": "Back",
     "joinFailed": "You could not be added to the group. Try again in a moment.",
+    "joined": {
+      "title": "You're in {group}",
+      "claimed": "{count, plural, one {# expense was already under your name. It's yours now.} other {# expenses were already under your name. They're yours now.}}",
+      "signedInNotJoined": "You're signed in, but you could not be added to {group}. Open the link again to pick your name."
+    },
     "since": "since {date}",
     "stepWelcome": "Invitation",
     "stepStart": "Welcome",
     "stepWhoYouAre": "Who you are",
-    "stepConfirm": "Confirm",
-    "stepKeepIt": "Keep it",
+    "stepKeepIt": "Join",
     "stepAccount": "Account",
     "stepProfile": "Profile",
     "stepDone": "Done",
@@ -1948,18 +1873,13 @@
       "personalTitle": "{inviter} added you to {group}",
       "personalTitleNoInviter": "You have been added to {group}",
       "personalSub": "See where you stand, add what you paid for, and settle up when the trip ends.",
-      "sharedTitle": "{group}, and one link for everyone in it",
-      "sharedSub": "This link is the same for everybody, so it cannot know which of you just opened it.",
-      "sharedNote": "Account, sign-in or guest — we'll ask once we know who you are.",
-      "sharedNoteSignedIn": "Signed in as {name} — we only need to know which of these is you.",
-      "findMyself": "Find myself in the list",
       "coldTitle": "Keep your accounts within reach",
       "coldSub": "Create an account to get back to your groups, keep track of what you spend, and see at a glance what is left to settle.",
       "createAccount": "Create an account",
       "haveAccount": "Sign in",
       "or": "or",
       "guest": "Continue as a guest",
-      "guestNote": "Just a name. Nothing you do here is stranded if you claim it later.",
+      "guestNote": "Just a name. Nothing you add is lost if you create an account later.",
       "startGroup": "Start a group without an account",
       "startGroupNote": "A name and a group, in this browser. Claim it later to keep it on every device."
     },
@@ -1976,25 +1896,37 @@
       "failed": "The group could not be created. Try again in a moment."
     },
     "whichOne": {
-      "title": "Which one of these is you?",
-      "sub": "These are the names the group has been keeping expenses under. Claiming one takes its balance too.",
-      "filed": "{count, plural, one {# expense filed} other {# expenses filed}}",
+      "titleInviter": "{inviter} invited you to {group}. Which of these is you?",
+      "title": "You're invited to {group}. Which of these is you?",
+      "sub": "Everyone in the group gets this same link, so it can't tell who opened it. Pick your name and its balance becomes yours.",
+      "subSignedIn": "You're signed in as {name}. Pick your name and its balance joins that account.",
+      "rowOwes": "<money>owes {amount}</money> · {count, plural, =0 {no expenses} one {# expense} other {# expenses}}",
+      "rowGetsBack": "<money>gets back {amount}</money> · {count, plural, =0 {no expenses} one {# expense} other {# expenses}}",
+      "rowSettled": "{count, plural, =0 {No expenses yet} one {<money>settled up</money> · # expense} other {<money>settled up</money> · # expenses}}",
       "newHere": "None of these — I'm new here",
       "newHereNamed": "None of these — I'm {name}, and I'm new here"
     },
-    "confirm": {
-      "title": "Is this you? Claiming it takes the balance too.",
-      "position": "Their position",
-      "filed": "{count, plural, one {# expense filed} other {# expenses filed}}",
-      "filedBy": "{count, plural, one {# expense filed by {inviter}} other {# expenses filed by {inviter}}}",
-      "yes": "Yes, that's me",
-      "no": "No, show me the list again"
-    },
     "keepIt": {
-      "title": "You're {name} — how should we keep it?",
-      "sub": "An account keeps the group, your balance and {count, plural, =0 {everything under your name} one {the # expense now under your name} other {the # expenses now under your name}} — on any device, not just this browser.",
+      "title": "{name}, how do you want to join {group}?",
+      "titleSignedIn": "{name}, ready to join {group}?",
+      "titleNew": "What should {group} call you?",
+      "sub": "An account keeps {group}, your balance and {count, plural, =0 {everything you add} one {the expense under your name} other {the # expenses under your name}} on any device, not just this browser.",
+      "subSignedIn": "You're signed in as {account}. Your balance and {count, plural, =0 {everything you add} one {the expense under your name} other {the # expenses under your name}} go on that account.",
+      "subNew": "You start with nothing owed either way. An account keeps {group} on any device, not just this browser.",
+      "subNewSignedIn": "You're signed in as {account}. You start with nothing owed either way.",
+      "nameLabel": "Your name",
+      "namePlaceholder": "Your name",
       "createAccount": "Create an account",
-      "haveAccount": "I already have an account"
+      "haveAccount": "I already have an account",
+      "guestNote": "Stays in this browser. Nothing you add is lost if you create an account later.",
+      "join": "Join {group}",
+      "notYou": "Not you? Back to the list",
+      "backToList": "Back to the list"
+    },
+    "yourBalance": {
+      "owe": "You owe {amount}",
+      "getBack": "You get back {amount}",
+      "settled": "You're settled up"
     },
     "identity": {
       "title": "Your email, and one tap",
@@ -2027,8 +1959,6 @@
       "guestTitle": "What should the group call you?",
       "guestSub": "One field, and you are in.",
       "guestNote": "Guest access lives in this browser and nowhere else. Claiming an account later keeps the group, your balance and every expense you added.",
-      "newMemberTitle": "Add yourself to the group",
-      "newMemberSub": "Nobody on the list was you, so you start clean — no expenses filed against your name yet.",
       "nameLabel": "Your name",
       "namePlaceholder": "Your name",
       "photoAdd": "Add a photo",
@@ -2042,12 +1972,8 @@
       "sub": "Three taps, one code. Everything else can wait.",
       "welcomeBackTitle": "Welcome back, {name}",
       "welcomeBackSub": "Nothing changed while you were gone.",
-      "joinedSub": "{group} is on your account now, alongside your other groups.",
-      "guestTitle": "You're in as a guest",
-      "guestSub": "Everything works — add expenses, see your balance. Claim the account whenever you want to keep it.",
-      "claimedTitle": "You're in, {name}",
-      "claimedSub": "{count, plural, =0 {Nothing was filed under your name yet.} one {# expense was already filed under your name. It's yours now.} other {# expenses were already filed under your name. They're yours now.}}",
-      "seeGroup": "See the group"
+      "finishSetup": "Finish setting up",
+      "goToGroup": "Go to the group"
     },
     "firstGroup": {
       "title": "You're in, {name}",
@@ -2058,8 +1984,6 @@
     "checklist": {
       "title": "Finish setting up",
       "count": "{done} of {total}",
-      "position": "Your position",
-      "guestBadge": "Guest",
       "settleTitle": "{name} wants to settle up",
       "settleNote": "Tap to choose how they should send it",
       "continue": "Go to the group",
@@ -2067,8 +1991,6 @@
       "accountNotePasskey": "Passkey saved to this phone",
       "accountNoteVerified": "Verified {email}",
       "accountNotePassword": "Password saved",
-      "claimLabel": "Claim your account",
-      "claimNote": "Guest access lives in this browser only",
       "profileLabel": "Name and photo",
       "profileNotePhoto": "{name}, with a photo",
       "profileNoteInitials": "{name}, initials for now",
@@ -2118,16 +2040,6 @@
         "sub": "The name your groups see, and a photo if you feel like it. Tap the circle.",
         "nameLabel": "Your name",
         "done": "Done"
-      },
-      "claim": {
-        "title": "Claim this account",
-        "sub": "It keeps the group, your balance and every expense you added — on any device, not just this browser.",
-        "emailLabel": "Email address",
-        "emailPlaceholder": "you@example.com",
-        "codeLabel": "The six-digit code",
-        "send": "Email me a code",
-        "verify": "Create my account",
-        "failed": "That could not be saved. Try again in a moment."
       }
     }
   },
@@ -2187,8 +2099,8 @@
   "guestWidget": {
     "title": "You are in {group} as a guest",
     "bodyPlain": "This browser is the only place your access lives. An account keeps {group} and everything you do in it.",
-    "bodyBalance": "This browser is the only place your access lives. An account keeps {group} and your <balance></balance>.",
-    "bodyBalanceExpenses": "This browser is the only place your access lives. An account keeps {group}, your <balance></balance> and {count, plural, one {the expense you added} other {the # expenses you added}}.",
+    "bodyOwe": "This browser is the only place your access lives. An account keeps {group}, the <balance></balance> you owe and {count, plural, =0 {everything you add} one {the expense you added} other {the # expenses you added}}.",
+    "bodyGetBack": "This browser is the only place your access lives. An account keeps {group}, the <balance></balance> you get back and {count, plural, =0 {everything you add} one {the expense you added} other {the # expenses you added}}, and lets you say how to be paid.",
     "cta": "Create your account"
   },
   "registerDone": {
@@ -2294,7 +2206,7 @@
     "details": "Details",
     "description": "Description",
     "timezone": "Timezone",
-    "timezoneHelp": "Recurring expenses are generated according to this timezone.",
+    "timezoneHelp": "Decides what counts as today for new entries, when recurring expenses are added, and the times shown in Activity.",
     "saving": "Saving…",
     "saved": "Changes saved",
     "failed": "Those changes could not be saved.",
@@ -2317,7 +2229,7 @@
     "deleteBody": "Removes every expense, repayment and receipt. Cannot be undone.",
     "delete": "Delete",
     "confirmTitle": "Delete “{name}”?",
-    "confirmBody": "Every expense, repayment, receipt and invitation in this group is permanently removed. This cannot be undone.",
+    "confirmBody": "The group goes for everyone in it, with every expense, repayment, receipt and invitation. This cannot be undone. Export it first if you want a copy.",
     "typeToConfirm": "Type <name></name> to confirm",
     "deletePermanently": "Delete permanently",
     "deleteFailed": "The group could not be deleted.",
@@ -2343,6 +2255,7 @@
     "thisPasskey": "this passkey",
     "removeTitle": "Remove this passkey?",
     "removeBody": "You will no longer be able to sign in with it. Make sure you still have your password or another passkey.",
+    "removeCancel": "Keep this passkey",
     "addedToast": "Passkey added",
     "removedToast": "Passkey removed",
     "registerFailed": "That passkey could not be registered.",
@@ -2376,6 +2289,7 @@
     "revokeTitle": "Revoke this key?",
     "revokeBody": "Anything still using it stops working straight away, and it cannot be brought back. You can always create another.",
     "revokeConfirm": "Revoke",
+    "revokeCancel": "Keep this key",
     "revokedToast": "{name} revoked",
     "revokeFailed": "That key could not be revoked."
   },
@@ -2434,7 +2348,7 @@
   "membersPage": {
     "title": "People",
     "intro": "Everyone who shares expenses in this group. Tap a person to rename them, manage their access, or remove them.",
-    "introMember": "Everyone who shares expenses in this group. Tap yourself to change the name you go by here, or anyone without an account to fix theirs. The group's owner looks after access.",
+    "introMember": "Everyone who shares expenses in this group. Tap yourself to change the name you go by here or to leave, or anyone without an account to fix theirs. The group's owner looks after access.",
     "introReadOnly": "Everyone who shares expenses in this group.",
     "footnote": "Expenses keep the name of whoever paid, even after someone leaves the group.",
     "owner": "Owner",
@@ -2492,6 +2406,19 @@
     "removeFailed": "That person could not be removed.",
     "restored": "{name} is back in the group",
     "restoreFailed": "That person could not be put back.",
+    "leaveGroup": "Leave this group",
+    "leaveHint": "You will stop seeing this group. What you added stays in it, under your name.",
+    "leaveBlockedOwes": "You still owe {amounts}. Settle up first, then leave.",
+    "leaveBlockedOwed": "You are still owed {amounts}. Settle up first, then leave.",
+    "leaveBlockedMixed": "You still have {amounts} outstanding. Settle up first, then leave.",
+    "leaveBlockedOwner": "You own this group, so you cannot leave it. To stop using it, archive it or delete it in the group's settings.",
+    "leaveBlockedArchived": "This group is archived. Its owner has to restore it before you can leave.",
+    "leaveTitle": "Leave {group}?",
+    "leaveBody": "You will no longer see this group. Everything you added stays under your name. To come back, someone in the group has to invite you again.",
+    "stayInGroup": "Stay in the group",
+    "leave": "Leave group",
+    "left": "You left {group}",
+    "leaveFailed": "You could not leave the group. Try again.",
     "addSomeone": "Add someone",
     "then": "Then",
     "createALink": "Create a link",
@@ -2508,9 +2435,9 @@
     "badgeMember": "Member",
     "badgeGuest": "Guest",
     "joined": "In {group} since {date}",
-    "eyebrowSelf": "Your position in {group}",
+    "balanceYou": "Your balance in this group",
     "eyebrowBetween": "Between you two",
-    "eyebrowMember": "{name}'s position",
+    "balanceThem": "{name}'s balance in this group",
     "heroYouGetBack": "You get back",
     "heroYouOwe": "You owe",
     "heroYouSettled": "You're settled up",
@@ -2520,13 +2447,16 @@
     "heroGetsBack": "{name} gets back",
     "heroOwes": "{name} owes",
     "heroSettled": "{name} is settled up",
-    "netAcrossGroup": "Net across the group",
-    "openWith": "{count, plural, =0 {Nothing outstanding} one {Open with # person} other {Open with # people}}",
+    "openWith": "{count, plural, =0 {Settled up with everyone} one {Not settled with # person} other {Not settled with # people}}",
     "owedToYouBy": "{count, plural, =0 {Nobody owes you} one {Owed to you by # person} other {Owed to you by # people}}",
     "owedByGroup": "{count, plural, =0 {Owed nothing} one {Owed by # person} other {Owed by # people}}",
     "youStillOwe": "You still owe {name}",
     "youOwePeople": "{count, plural, =0 {You owe nobody} one {You owe # person} other {You owe # people}}",
     "stillToPay": "{count, plural, =0 {Nothing left to pay} one {Still to pay # person} other {Still to pay # people}}",
+    "entriesWith": "Entries with {name}",
+    "entriesWithCaption": "Everything {name} paid for or has a share in",
+    "entriesYours": "Your entries",
+    "entriesYoursCaption": "Everything you paid for or have a share in",
     "statistics": "Statistics",
     "rangeLabel": "How far back the statistics look",
     "ranges": {
@@ -2549,18 +2479,18 @@
     },
     "legendPaid": "paid",
     "legendShare": "share",
-    "chartSummary": "Paid against share over {count, plural, one {# period} other {# periods}}, {index} times their share put in overall.",
+    "chartSummary": "Paid against share over {count, plural, one {# period} other {# periods}}: {index} times their share paid overall.",
     "chartSummaryNone": "Paid against share over {count, plural, one {# period} other {# periods}}. No share to compare against.",
     "times": "{index}×",
-    "payerIndexYou": "You put in {index} times what you owed over this window — the group has been carried by your card.",
-    "payerIndexThem": "{name} put in {index} times what they owed over this window.",
-    "payerIndexNone": "No share over this window, so there is nothing to measure what they put in against.",
+    "payerIndexYou": "You paid {index} times your share in this period.",
+    "payerIndexThem": "{name} paid {index} times their share in this period.",
+    "payerIndexNone": "No share in this period, so there is nothing to compare what was paid against.",
     "payerIndexEven": "1.0× — pays exactly their share",
     "shareTitle": "Share of group spend",
     "shareCaption": "of <amount></amount> spent by the group",
     "percent": "{percent, number, ::.0}%",
-    "shareBarLabel": "{percent, number, ::.0}% of what the group spent, {rank} of {count} members",
-    "shareFootnote": "{rank} of {count} · median member {median, number, ::.0}% · evenly split would be {even, number, ::.0}%",
+    "shareBarLabel": "{percent, number, ::.0}% of what the group spent",
+    "shareFootnote": "{place, select, only {The only share} largest {Largest share of {count} people} smallest {Smallest share of {count} people} other {{rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} largest share of {count} people}} · an even split is {even, number, ::.0}% each",
     "categoriesYou": "Where your share went",
     "categoriesThem": "Where their share went",
     "uncategorized": "Not filed",
@@ -2694,9 +2624,9 @@
     "recurring": "Recurring expenses",
     "activity": "Activity",
     "import": "Import data",
-    "convertedNote": "Everything is converted into {currency} at the rate recorded with each expense.",
-    "separateNote": "Each currency keeps its own balance. Nothing is converted.",
-    "modeFixed": "The mode is fixed once a group exists — changing it would reinterpret every amount already recorded.",
+    "modeConverted": "One shared balance, in {currency}",
+    "modeSeparate": "A balance per currency",
+    "modeFixed": "This cannot be changed once the group exists, because every amount already entered depends on it.",
     "ownerOnly": "Only the group owner can change these settings.",
     "export": "Export",
     "exportIntro": "Your data, in a format you can open anywhere. The file is built on this server and sent straight to you.",
@@ -2710,11 +2640,7 @@
     "exportNote": "Receipts are not in these files — download them from each expense.",
     "restoreNote": "A JSON export can be read back in.",
     "restoreAction": "Import a backup",
-    "exportStarted": "{format} file is on its way.",
-    "currencyMode": "Currency mode: {mode}",
-    "currencyModeSeparate": "Multi currency",
-    "currencyModeConverted": "Converted to {currency}",
-    "currencyModeFixed": "Fixed"
+    "exportStarted": "{format} file is on its way."
   },
   "transactionDetail": {
     "types": {
@@ -2781,6 +2707,7 @@
     "edit": "Edit",
     "delete": {
       "trigger": "Delete",
+      "named": "Delete “{entry}”",
       "title": "Delete this entry?",
       "body": "“{entry}” will be removed from the group and balances will be recalculated without it. You can undo this right after, or restore it later from Activity.",
       "keep": "Keep it",
@@ -2884,6 +2811,7 @@
     "authRequired": "Sign in to continue.",
     "participantNotInGroup": "Somebody you picked is not in this group any more. Reload the page and pick from the people who are.",
     "ownerNotRemovable": "The group owner cannot be removed from the group. Archive it or delete it instead.",
+    "ownerCannotLeave": "You own this group, so you cannot leave it. Archive it or delete it instead.",
     "participantHasAccount": "This person already signs in with their own account, so they do not need a guest link.",
     "groupArchived": "This group is archived. Restore it before making changes.",
     "noPermission": "You cannot do that in this group. Ask its owner.",
@@ -2899,6 +2827,7 @@
     "reminderNotOwed": "That person does not owe you anything in this group.",
     "reminderTooSoon": "That person was reminded in the last 24 hours. Give them a day.",
     "participantHasBalance": "{name} still has money outstanding in this group. Settle up first, then remove them.",
+    "selfHasBalance": "You still have money outstanding in this group. Settle up first, then leave.",
     "removedParticipantSettlement": "{name} is no longer in this group. A repayment can include them only to settle what is still outstanding, and for no more than that.",
     "appleNoEmail": "Apple did not share an email address with this instance, so there is nothing to create an account from.",
     "appleEmailTaken": "An account already uses that email address. Sign in with your password or passkey, then link Apple from the security page.",
@@ -3362,6 +3291,12 @@
         "exact": "Exact",
         "percentage": "Percent"
       },
+      "methodTabs": {
+        "equal": "Equally",
+        "shares": "Shares",
+        "exact": "Exact",
+        "percentage": "Percent"
+      },
       "hints": {
         "equal": "Split evenly between everyone selected.",
         "shares": "Give each person a weight — 2 shares pay double.",
@@ -3381,17 +3316,24 @@
         "shares": "Split by shares · {count} people",
         "byItem": "Split by item · {count} people",
         "justOne": "All of it to one person",
-        "nobody": "Nobody selected yet"
+        "nobody": "Nobody selected yet",
+        "exactLeft": "Exact amounts · {amount} left to assign",
+        "exactOver": "Exact amounts · {amount} over the total",
+        "percentagesOff": "Percentages · add up to {sum}%, not 100%",
+        "sharesZero": "Shares · every share is zero",
+        "unreadable": "{method, select, exact {Exact amounts} percentage {Percentages} other {Shares}} · one value is not a number"
       },
       "payerOption": "Paid by {name}",
       "receiverOption": "Received by {name}",
       "includeOption": "Include {name} in the split",
       "notes": {
         "nobody": "Pick at least one person to split this with.",
-        "remainderAbsorbed": "{amount} could not be split evenly — {name} absorbs it.",
+        "roundedUp": "{you, select, yes {{count, plural, =0 {You pay} one {You and {names} pay} other {You, {names} pay}}} other {{count, plural, one {{names} pays} other {{names} pay}}}} {amount} more so it adds up to {total}.",
         "stillToAssign": "{amount} still to assign.",
         "overTheTotal": "{amount} over the total.",
-        "percentagesOff": "Percentages add up to {sum}%, not 100%."
+        "percentagesOff": "Percentages add up to {sum}%, not 100%.",
+        "sharesAllZero": "Give at least one person a share.",
+        "unreadable": "One of these is not a number the split can use."
       },
       "alwaysTitle": "Always split like this",
       "alwaysHint": "Saves it as this group's default",
@@ -3401,6 +3343,9 @@
       "justOnePaid": "Just one person paid",
       "splitPayment": "Split the payment equally",
       "giveRest": "Give the rest to {name}",
+      "giveRemaining": "Give the remaining {amount} to {name}",
+      "shareFewer": "One share fewer for {name}",
+      "shareMore": "One more share for {name}",
       "payerShort": "{amount} still to assign to a payer.",
       "payerOver": "{amount} more than the total was paid.",
       "payerNobody": "Say how much at least one person paid."
@@ -3571,6 +3516,8 @@
       "changesSaved": "Changes saved",
       "deleted": "Entry deleted",
       "restored": "Entry restored",
+      "paymentUndone": "Repayment deleted",
+      "paymentUndoneNote": "Balances are back as they were.",
       "queued": "Saved on this device",
       "queuedNote": "It will sync as soon as you are back online.",
       "paidBy": "{name} paid",
@@ -3588,7 +3535,8 @@
       "descriptionRequired": "Give this entry a description.",
       "choosePair": "Choose who is paying whom.",
       "saveFailed": "That could not be saved. Try again.",
-      "restoreFailed": "That entry could not be put back. Try again."
+      "restoreFailed": "That entry could not be put back. Try again.",
+      "undoRecordFailed": "The repayment is still recorded. Delete it from Transactions."
     },
     "sheetTitles": {
       "split": "Payment and split",
@@ -3857,6 +3805,7 @@
     "linkedToast": "Your Apple account is linked.",
     "unlinkTitle": "Unlink your Apple account?",
     "unlinkBody": "You will no longer be able to sign in with Apple. Your password and any passkeys keep working.",
+    "unlinkCancel": "Keep Apple sign-in",
     "unlinkedToast": "Your Apple account is no longer linked.",
     "unlinkFailed": "That Apple account could not be unlinked."
   },

@@ -495,7 +495,11 @@ const ids = (rows: readonly RowView[]) =>
  * list its two payers either way round — which says nothing about a filter.
  */
 const settled = (rows: readonly RowView[]) =>
-  rows.map((row) => ({ ...row, payers: [...row.payers].sort() }));
+  rows.map((row) => ({
+    ...row,
+    payers: [...row.payers].sort(),
+    people: [...row.people].sort(),
+  }));
 
 /**
  * `filter` both ways, and the same answer: the same rows, in the same order,
@@ -585,6 +589,18 @@ const CASES: readonly Case[] = [
     ({ bob }) => ({ payers: [bob.toUpperCase()] }),
     "empty",
   ],
+  // With: on the entry at all, which a person's page opens the list on.
+  ["with one person", ({ bob }) => ({ people: [bob] })],
+  ["with any of two people", ({ ada, zoe }) => ({ people: [ada, zoe] })],
+  [
+    "with one person, paid by another",
+    ({ bob, chloe }) => ({ people: [bob], payers: [chloe] }),
+  ],
+  [
+    "a person's repayments, oldest first",
+    ({ bob }) => ({ people: [bob], kinds: ["settlement"], sort: "oldest" }),
+  ],
+  ["a person that is not an id", () => ({ people: ["bob"] }), "empty"],
   ["what you owe", () => ({ positions: ["owe"] })],
   ["what you get back", () => ({ positions: ["back"] })],
   ["nothing for you", () => ({ positions: ["flat"] })],
@@ -704,6 +720,72 @@ describe("the transactions filter, beyond the cases", () => {
     );
     expect(flat.length).toBeGreaterThan(0);
     await sameBothWays(seeded, { positions: ["owe"] }, { access: stranger });
+  });
+
+  /**
+   * The cases above hold the server to the browser, and both read a row's
+   * people off the same page of rows — so a mistake in building that list
+   * would be agreed on by both. This asks the tables directly: every live
+   * entry with Bob on it, and nothing else.
+   */
+  it("finds every entry a person is on, the ones they only share in too", async () => {
+    const seeded = await seedGroup("separate");
+    const { bob } = seeded.people;
+    const db = getDb();
+
+    const [payerRows, shareRows, repayments] = await Promise.all([
+      db
+        .select({ id: expensePayers.expenseId })
+        .from(expensePayers)
+        .innerJoin(expenses, eq(expenses.id, expensePayers.expenseId))
+        .where(
+          and(
+            eq(expensePayers.participantId, bob),
+            eq(expenses.groupId, seeded.access.groupId),
+            isNull(expenses.deletedAt),
+          ),
+        ),
+      db
+        .select({ id: expenseShares.expenseId })
+        .from(expenseShares)
+        .innerJoin(expenses, eq(expenses.id, expenseShares.expenseId))
+        .where(
+          and(
+            eq(expenseShares.participantId, bob),
+            eq(expenses.groupId, seeded.access.groupId),
+            isNull(expenses.deletedAt),
+          ),
+        ),
+      db
+        .select({
+          id: settlements.id,
+          from: settlements.fromParticipantId,
+          to: settlements.toParticipantId,
+        })
+        .from(settlements)
+        .where(
+          and(
+            eq(settlements.groupId, seeded.access.groupId),
+            isNull(settlements.deletedAt),
+          ),
+        ),
+    ]);
+
+    const expected = new Set([
+      ...payerRows.map((row) => `expense:${row.id}`),
+      ...shareRows.map((row) => `expense:${row.id}`),
+      ...repayments
+        .filter((row) => row.from === bob || row.to === bob)
+        .map((row) => `settlement:${row.id}`),
+    ]);
+    const onlyShared = shareRows.filter(
+      (share) => !payerRows.some((payer) => payer.id === share.id),
+    );
+    // The seed has to hold the case that tells "with" from "paid by".
+    expect(onlyShared.length).toBeGreaterThan(0);
+
+    const found = await sameBothWays(seeded, { people: [bob] });
+    expect(new Set(ids(found))).toEqual(expected);
   });
 
   it("reads percent signs, underscores and backslashes as themselves", async () => {
@@ -977,6 +1059,24 @@ describe("GET /api/groups/:groupId/transactions", () => {
     expect(await response.json()).toEqual({
       count: all.filter((row) => row.kind === "settlement").length,
     });
+  });
+
+  it("narrows to a person by the address a person's page links to", async () => {
+    const seeded = await signedIn("converted");
+    const { bob } = seeded.people;
+    const response = await get(seeded.access.groupId, `?with=${bob}&limit=5`);
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      rows: RowView[];
+      cursor: string | null;
+    };
+    const expected = selectRows(
+      await everything(seeded.access),
+      { ...NO_FILTER, people: [bob] },
+      { today: TODAY, dateText: ENGLISH },
+    );
+    expect(settled(body.rows)).toEqual(settled(expected.slice(0, 5)));
+    expect(body.rows.every((row) => row.people.includes(bob))).toBe(true);
   });
 
   it("refuses a filter too big to be a question", async () => {

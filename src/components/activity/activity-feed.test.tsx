@@ -91,7 +91,7 @@ function event(
     metadata: null,
     actorLabel: "Ada",
     actorType: "user",
-    actorParticipantId: null,
+    actorParticipantId: "p-ada",
     createdAt: new Date("2026-09-01T10:00:00Z"),
     ...fields,
   };
@@ -535,6 +535,40 @@ describe("putting a removed person back from the activity feed", () => {
     ).toBeVisible();
     // Somebody may have put Bob back first; the refresh shows what is true.
     expect(refresh).toHaveBeenCalled();
+  });
+
+  /**
+   * Leaving writes the same removal, with the person who left as its actor:
+   * the kind of event is a database enum, and a new one would need a
+   * migration. The feed tells it apart by that, and the owner can still put
+   * them back from it.
+   */
+  it("says somebody left, rather than that they removed themselves", async () => {
+    const BOB_LEFT = event({
+      id: "c1",
+      action: "participant.removed",
+      entityType: "participant",
+      entityId: "p-bob",
+      actorLabel: "Bob",
+      actorParticipantId: "p-bob",
+      metadata: { displayName: "Bob" },
+    });
+    renderWithIntl(
+      await ActivityFeed({
+        entries: [BOB_LEFT],
+        groupId: "g1",
+        restorable: new Set(["c1"]),
+        timeZone: "UTC",
+      }),
+      GROUP,
+    );
+
+    expect(screen.getByText("Bob")).toBeVisible();
+    expect(screen.getByText("left the group")).toBeVisible();
+    expect(screen.queryByText(/removed Bob/)).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Restore Bob to the group" }),
+    ).toBeVisible();
   });
 
   it("still says what it does for a removal that recorded no name", async () => {

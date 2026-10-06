@@ -27,6 +27,7 @@ import {
 } from "@/modules/groups/actions";
 import { addParticipantSchema } from "@/modules/groups/schemas";
 import { cn } from "@/lib/utils";
+import { LeaveGroup, type Outstanding } from "./leave-group";
 import type { PersonView } from "./people-card";
 
 /**
@@ -52,10 +53,22 @@ import type { PersonView } from "./people-card";
  * their account settings, not here. Access and removal belong to the owner
  * alone — a member runs the money, not the door. A row with no account behind
  * it is just a label, and whoever manages participants owns all of it.
+ *
+ * The one door a member does hold is their own way out, so the reader's own
+ * row ends with leaving. The owner's row ends with it too, held shut with the
+ * reason, because "how do I leave this?" is a question an owner asks as well
+ * and the answer is somewhere else. A guest's row has nothing: their way out
+ * is the owner's to give (see `leaveGroup` in `authorization.ts`).
  */
 function openings(
   person: PersonView,
-  can: { isSelf: boolean; manage: boolean; invite: boolean; remove: boolean },
+  can: {
+    isSelf: boolean;
+    manage: boolean;
+    invite: boolean;
+    remove: boolean;
+    leave: boolean;
+  },
 ) {
   const hasAccount = person.access === "account";
   return {
@@ -67,6 +80,8 @@ function openings(
     access: can.invite,
     /** Taking them out of the group. The owner never appears here. */
     remove: can.remove && !person.isOwner,
+    /** Taking yourself out: a member can, and the owner is told why not. */
+    leave: can.isSelf && (can.leave || person.isOwner),
   };
 }
 
@@ -104,6 +119,8 @@ const FIELD =
 
 export function PersonRow({
   groupId,
+  groupName,
+  archived,
   person,
   isOpen,
   onToggle,
@@ -115,8 +132,11 @@ export function PersonRow({
   canManage,
   canInvite,
   canRemove,
+  canLeave,
 }: {
   groupId: string;
+  groupName: string;
+  archived: boolean;
   person: PersonView;
   isOpen: boolean;
   onToggle: () => void;
@@ -128,6 +148,7 @@ export function PersonRow({
   canManage: boolean;
   canInvite: boolean;
   canRemove: boolean;
+  canLeave: boolean;
 }) {
   const t = useTranslations("membersPage");
   const may = openings(person, {
@@ -135,10 +156,12 @@ export function PersonRow({
     manage: canManage,
     invite: canInvite,
     remove: canRemove,
+    leave: canLeave,
   });
   // Nothing to open is nothing to tap: a row with an empty panel behind it
   // stays a plain line rather than a control that answers with a blank.
-  const expandable = may.name || may.email || may.access || may.remove;
+  const expandable =
+    may.name || may.email || may.access || may.remove || may.leave;
 
   /*
    * What the pill does not already say.
@@ -224,6 +247,8 @@ export function PersonRow({
       {isOpen && (
         <PersonPanel
           groupId={groupId}
+          groupName={groupName}
+          archived={archived}
           person={person}
           revealUrl={revealUrl}
           onReveal={onReveal}
@@ -260,8 +285,8 @@ function Pill({
 }
 
 /**
- * The open half of a row: rename, access, remove — whichever of the three this
- * reader is entitled to, per `may`.
+ * The open half of a row: rename, access, remove or leave — whichever of those
+ * this reader is entitled to, per `may`.
  *
  * Mounted only while open, which is what resets the name and email drafts — a
  * half-typed rename is not something to carry back after closing the row and
@@ -269,6 +294,8 @@ function Pill({
  */
 function PersonPanel({
   groupId,
+  groupName,
+  archived,
   person,
   revealUrl,
   onReveal,
@@ -277,6 +304,8 @@ function PersonPanel({
   may,
 }: {
   groupId: string;
+  groupName: string;
+  archived: boolean;
   person: PersonView;
   revealUrl: string | null;
   onReveal: (url: string) => void;
@@ -383,21 +412,33 @@ function PersonPanel({
     }
   };
 
-  const amounts = person.balances
-    .map((balance) => {
-      const value = BigInt(balance.minorUnits);
-      return formatMoney(money(value < 0n ? -value : value, balance.currency), {
-        locale,
-      });
-    })
-    .join(", ");
-  const blocked = person.balances.length > 0;
-  const owesAll = person.balances.every(
-    (balance) => BigInt(balance.minorUnits) < 0n,
-  );
-  const owedAll = person.balances.every(
-    (balance) => BigInt(balance.minorUnits) > 0n,
-  );
+  /*
+   * What this person is not square in, said once for both of the ways out of
+   * the group that it blocks: being removed, and leaving.
+   */
+  const outstanding: Outstanding | null =
+    person.balances.length === 0
+      ? null
+      : {
+          amounts: person.balances
+            .map((balance) => {
+              const value = BigInt(balance.minorUnits);
+              return formatMoney(
+                money(value < 0n ? -value : value, balance.currency),
+                { locale },
+              );
+            })
+            .join(", "),
+          direction: person.balances.every(
+            (balance) => BigInt(balance.minorUnits) < 0n,
+          )
+            ? "owes"
+            : person.balances.every(
+                  (balance) => BigInt(balance.minorUnits) > 0n,
+                )
+              ? "owed"
+              : "mixed",
+        };
 
   return (
     <div className="flex flex-col gap-4 bg-[color-mix(in_oklch,var(--muted)_42%,transparent)] px-3.5 pt-0.5 pb-[18px] motion-safe:animate-in motion-safe:duration-150 motion-safe:fade-in-0 motion-safe:slide-in-from-top-1">
@@ -637,21 +678,40 @@ function PersonPanel({
             variant="destructive"
             className="h-[38px] self-start px-3"
             onClick={onAskRemove}
-            disabled={blocked}
+            disabled={outstanding !== null}
           >
             <UserMinus aria-hidden="true" />
             {t("removeFromGroup")}
           </Button>
           <span className="text-xs text-pretty text-muted-foreground">
-            {!blocked
+            {!outstanding
               ? t("removeHint")
-              : owesAll
-                ? t("removeBlockedOwes", { name: person.name, amounts })
-                : owedAll
-                  ? t("removeBlockedOwed", { name: person.name, amounts })
-                  : t("removeBlockedMixed", { name: person.name, amounts })}
+              : outstanding.direction === "owes"
+                ? t("removeBlockedOwes", {
+                    name: person.name,
+                    amounts: outstanding.amounts,
+                  })
+                : outstanding.direction === "owed"
+                  ? t("removeBlockedOwed", {
+                      name: person.name,
+                      amounts: outstanding.amounts,
+                    })
+                  : t("removeBlockedMixed", {
+                      name: person.name,
+                      amounts: outstanding.amounts,
+                    })}
           </span>
         </div>
+      )}
+
+      {may.leave && (
+        <LeaveGroup
+          groupId={groupId}
+          groupName={groupName}
+          isOwner={person.isOwner}
+          archived={archived}
+          outstanding={outstanding}
+        />
       )}
     </div>
   );

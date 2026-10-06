@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef } from "react";
+import { useId, type Ref } from "react";
 import { cn } from "@/lib/utils";
 import { CODE_LENGTH, normalizeCode } from "@/modules/auth/code-format";
 
@@ -36,6 +36,8 @@ export function CodeInput({
   label,
   disabled = false,
   autoFocus = false,
+  ref,
+  describedBy,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -44,9 +46,15 @@ export function CodeInput({
   label: string;
   disabled?: boolean;
   autoFocus?: boolean;
+  /**
+   * The one input, for a screen that has to put the caret back in it — a
+   * wrong code is checked with the field disabled, which drops focus.
+   */
+  ref?: Ref<HTMLInputElement>;
+  /** What else to read out with the field, such as why a code was refused. */
+  describedBy?: string;
 }) {
   const inputId = useId();
-  const field = useRef<HTMLInputElement>(null);
   const digits = Array.from(
     { length: CODE_LENGTH },
     (_, index) => value[index] ?? "",
@@ -76,8 +84,9 @@ export function CodeInput({
         ))}
       </div>
       <input
-        ref={field}
+        ref={ref}
         id={inputId}
+        aria-describedby={describedBy}
         // `text-base` matters even on a field nobody can see: Safari zooms the
         // page in when a control under 16px takes focus, and never zooms back.
         className="absolute inset-0 h-full w-full text-base opacity-0 outline-none"

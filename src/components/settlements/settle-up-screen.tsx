@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import {
@@ -11,17 +10,14 @@ import {
   Receipt,
 } from "lucide-react";
 import { Amount } from "@/components/money/amount";
-import { RemindButton } from "@/components/reminders/remind-button";
-import {
-  PayoutHint,
-  type PayoutMethodChoice,
-} from "@/components/payouts/payout-hint";
+import type { PayoutMethodChoice } from "@/components/payouts/payout-hint";
 import type {
   PaymentQrRefusal,
   PaymentQrStandard,
 } from "@/modules/payouts/qr/payment-qr";
 import { settleIntentPath } from "@/components/entries/settle-intent";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { remindRecipientsFor, SettleActions } from "./settle-actions";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import type { RemindRecipient } from "@/modules/reminders/types";
@@ -514,92 +510,13 @@ function PaymentBlock({
   const t = useTranslations("settleUp");
   const format = useFormatter();
 
-  // Shown only on a row the reader is the one paying: it answers "where do I
-  // send it", which nobody else on this screen is asking.
-  const payout = transfer.fromIsSelf
-    ? shared.payoutHints.find(
-        (hint) =>
-          hint.participantId === transfer.toParticipantId &&
-          hint.currency === transfer.currency,
-      )
-    : undefined;
-
-  /*
-   * Which method the reader is looking at, and therefore the one they are
-   * about to use.
-   *
-   * Held here rather than inside the hint because the record button is the
-   * other half of the answer: the drawer that opens next should already say
-   * TWINT if TWINT is what is on screen, and it cannot know that from a state
-   * kept below it. Starts on the payee's own first choice, which is what the
-   * row showed before this screen had a menu.
-   */
-  const [picked, setPicked] = useState(() => payout?.methods[0]?.method ?? "");
-
   // The face is the other party: on this row the reader is always one of the
   // two, and their own initials would say nothing.
   const face = transfer.fromIsSelf ? transfer.toName : transfer.fromName;
 
-  /*
-   * Recording opens the add-entry drawer over this screen, on the settle tab,
-   * with the pair already picked — the same drawer the bottom bar's Add opens,
-   * rather than a second form that only knows how to write repayments.
-   *
-   * The amount is not on the link. The drawer prices the debt from the
-   * balances it loads for itself, so what the form opens on is what is
-   * outstanding when it opens rather than what this screen last rendered.
-   */
-  const recordHref = settleIntentPath(shared.groupId, {
-    fromParticipantId: transfer.fromParticipantId,
-    toParticipantId: transfer.toParticipantId,
-    currency: transfer.currency,
-    // Only ever the reader's own choice about their own debt. A row between
-    // two other people states no method, because nobody here has picked one.
-    method: picked || null,
-  });
-
-  // Only debts owed *to* the reader can be chased, and only through the
-  // reminder flow's own memory of who was asked when.
-  const recipients = transfer.toIsSelf
-    ? shared.recipients.filter(
-        (recipient) => recipient.participantId === transfer.fromParticipantId,
-      )
-    : [];
-  const reminded = recipients.find(
+  const reminded = remindRecipientsFor(transfer, shared.recipients).find(
     (recipient) => recipient.lastRemindedAt !== null,
   )?.lastRemindedAt;
-
-  const recordLabel = t("recordFor", {
-    from: transfer.fromName,
-    to: transfer.toName,
-  });
-
-  /*
-   * The button that records it, which lives in one of two places.
-   *
-   * Where there are payment rails, it is the last thing in the panel: the
-   * reader has just copied a number and gone to their bank, and the button
-   * they come back to should be under the thing they used. Where there are
-   * none, the row has no panel and the button is the row's own action.
-   */
-  const record = (tall: boolean) => (
-    <Button
-      asChild
-      size="lg"
-      className={cn(
-        "w-full font-semibold",
-        tall ? "h-[50px] rounded-[16px] text-sm" : "h-[46px] rounded-[14px]",
-      )}
-    >
-      {/* First person, and past tense. The button does not move the money —
-          nothing here does — so it must not read like an instruction that
-          would. What it records is something the reader has already gone and
-          done. */}
-      <Link href={recordHref} aria-label={recordLabel}>
-        {t("iPaid", { name: transfer.toName })}
-      </Link>
-    </Button>
-  );
 
   return (
     <div className={cn("flex flex-col gap-3.5 py-4", !first && "border-t")}>
@@ -642,56 +559,16 @@ function PaymentBlock({
         />
       </div>
 
-      {payout ? (
-        <PayoutHint
-          name={transfer.toName}
-          groupName={shared.groupName}
-          methods={payout.methods}
-          picked={picked}
-          onPick={setPicked}
-          minorUnits={transfer.minorUnits}
-          currency={transfer.currency}
-          qr={payout.qr}
-          qrMissing={payout.qrMissing}
-          action={record(true)}
-        />
-      ) : transfer.fromIsSelf ? (
-        record(false)
-      ) : (
-        /* Wraps, because one of these buttons carries a name. "Relancer" and
-           "J'ai reçu le paiement" fit beside each other on a 375px phone, and
-           a longer translation of either does not — `flex-1` cannot rescue
-           that, because `min-width: auto` holds every flex item at its label's
-           min-content width, so instead of shrinking the second button runs
-           off the side of the screen with its label cut mid-word. Wrapping
-           puts it on its own line, where `flex-1` gives it the full width. */
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Button
-            asChild
-            size="lg"
-            className="h-[46px] flex-1 rounded-[14px] font-semibold"
-          >
-            <Link href={recordHref} aria-label={recordLabel}>
-              {t("iWasPaid")}
-            </Link>
-          </Button>
-          {recipients.length > 0 && (
-            <RemindButton
-              groupId={shared.groupId}
-              groupName={shared.groupName}
-              senderName={shared.senderName}
-              recipients={recipients}
-              label={t("remindShort")}
-              // The word on the button is short because the row above it says
-              // who; out of that context — a screen reader running the
-              // buttons of a screen with three of these — it would not.
-              ariaLabel={t("remindPerson", { name: transfer.fromName })}
-              variant="outline"
-              className="h-[46px] rounded-[14px] px-4 font-medium"
-            />
-          )}
-        </div>
-      )}
+      {/* The one thing to do about it — shared with a person's own page,
+          which offers the same payment from the other direction. */}
+      <SettleActions
+        transfer={transfer}
+        groupId={shared.groupId}
+        groupName={shared.groupName}
+        senderName={shared.senderName}
+        recipients={shared.recipients}
+        payoutHints={shared.payoutHints}
+      />
     </div>
   );
 }

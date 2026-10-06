@@ -158,6 +158,11 @@ describe("ApiTokensCard", () => {
 
     expect(await screen.findByText("Revoke this key?")).toBeInTheDocument();
     expect(revokeAction).not.toHaveBeenCalled();
+
+    // The way out says what it keeps, rather than "Keep it".
+    await user.click(screen.getByRole("button", { name: "Keep this key" }));
+    expect(screen.queryByText("Revoke this key?")).not.toBeInTheDocument();
+    expect(revokeAction).not.toHaveBeenCalled();
   });
 
   it("revokes on confirmation, and says so without offering an Undo", async () => {

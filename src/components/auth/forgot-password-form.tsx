@@ -12,6 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { requestPasswordResetAction } from "@/modules/auth/actions";
+import { describedBy, useRefusalFocus } from "./use-refusal-focus";
+
+/** The refusal's id, which the address field is described by. */
+const FORM_ERROR_ID = "forgot-password-error";
 
 /**
  * Asks for the address a reset link should go to.
@@ -39,11 +43,19 @@ export function ForgotPasswordForm() {
     defaultValues: { email: "" },
   });
 
+  // The only field, so every refusal — too many requests, no mail on this
+  // instance — leaves the caret in it rather than on nothing.
+  const [refused, refuse] = useRefusalFocus<"email">((field) =>
+    form.setFocus(field, { shouldSelect: true }),
+  );
+
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);
+    refuse(null);
     const result = await requestPasswordResetAction(values);
     if (!result.ok) {
       setFormError(result.error ?? tErrors("generic"));
+      refuse("email");
       return;
     }
     setSentTo(values.email);
@@ -83,7 +95,7 @@ export function ForgotPasswordForm() {
       </div>
 
       {formError && (
-        <Alert variant="destructive">
+        <Alert id={FORM_ERROR_ID} variant="destructive">
           <AlertDescription>{formError}</AlertDescription>
         </Alert>
       )}
@@ -97,7 +109,10 @@ export function ForgotPasswordForm() {
             autoComplete="username"
             autoFocus
             aria-invalid={Boolean(emailError)}
-            aria-describedby={emailError ? "email-error" : undefined}
+            aria-describedby={describedBy(
+              emailError && "email-error",
+              formError && refused === "email" && FORM_ERROR_ID,
+            )}
             {...form.register("email")}
           />
           {emailError && (

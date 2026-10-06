@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import en from "../../../messages/en.json";
@@ -67,6 +67,40 @@ describe("the new-password errors", () => {
     );
     expect(screen.getByLabelText("Confirm password")).not.toHaveAttribute(
       "aria-describedby",
+    );
+  });
+});
+
+/**
+ * Where the caret is after the server says no.
+ *
+ * The server holds a new password to two rules this form cannot check — not
+ * a common one, not the account's own name or address — so a refusal is
+ * usually about the new password, and the caret goes back into it with the
+ * attempt selected. The button that was pressed is disabled while the request
+ * is out, and used to leave the keyboard on the page body.
+ */
+describe("after the server refuses", () => {
+  it("puts the caret back in the new password, selected", async () => {
+    resetPasswordAction.mockResolvedValueOnce({
+      ok: false,
+      error: en.serverErrors.passwordCommon,
+    });
+    const user = userEvent.setup();
+    renderWithIntl(<ResetPasswordForm token="token" />);
+
+    await submit(user, "orchid-lantern-42", "orchid-lantern-42");
+
+    const password = screen.getByLabelText<HTMLInputElement>("New password");
+    await waitFor(() => expect(password).toHaveFocus());
+    expect(password.selectionStart).toBe(0);
+    expect(password.selectionEnd).toBe("orchid-lantern-42".length);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      en.serverErrors.passwordCommon,
+    );
+    // The rule, and then why this attempt at it was refused.
+    expect(password).toHaveAccessibleDescription(
+      `${en.resetPassword.passwordHint} ${en.serverErrors.passwordCommon}`,
     );
   });
 });

@@ -306,6 +306,7 @@ export function ApiTokensCard({
         title={t("revokeTitle")}
         body={t("revokeBody")}
         confirmLabel={t("revokeConfirm")}
+        cancelLabel={t("revokeCancel")}
         destructive
         onConfirm={() => revoking && onRevoke(revoking)}
       />

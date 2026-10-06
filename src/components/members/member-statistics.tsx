@@ -13,7 +13,11 @@ import {
   FALLBACK_GLYPH,
   hasGlyph,
 } from "@/components/expenses/category-icon";
-import { useDateFormatter, useFormatPreferences } from "@/i18n/format-context";
+import {
+  useDateFormatter,
+  useFormatPreferences,
+  useNumberLocale,
+} from "@/i18n/format-context";
 import { parsePlainDate } from "@/i18n/format";
 import { cn } from "@/lib/utils";
 import type { Granularity, StatsRange } from "@/modules/groups/member-stats";
@@ -78,7 +82,6 @@ export interface CurrencyStatsView {
   readonly sharePercent: number;
   readonly rank: number;
   readonly evenPercent: number;
-  readonly medianPercent: number;
   readonly members: readonly MemberShareView[];
   readonly buckets: readonly StatsBucketView[];
   readonly categories: readonly CategorySliceView[];
@@ -308,7 +311,17 @@ function CurrencyBlock({
   );
 }
 
-/** Paid · share · entries, the three figures a window comes down to. */
+/**
+ * Paid · share · entries, the three figures a window comes down to.
+ *
+ * One under another, label on the left and figure on the right. They used to
+ * stand side by side as three tiles, and a third of a phone is about 90px:
+ * "CHF 3,066.10" did not fit in it, so two of the three headline figures
+ * reached the reader as "CHF 3,066.…" — the one part of a figure nobody can
+ * do without, cut off. A row has the width of the card, which holds
+ * "CHF 12,345.67" at 360px with room to spare, and anything wider still
+ * wraps rather than losing its last digits.
+ */
 function StatStrip({
   entry,
   viewingSelf,
@@ -318,19 +331,19 @@ function StatStrip({
 }) {
   const t = useTranslations("memberStats");
   return (
-    <dl className="grid grid-cols-3 divide-x divide-border overflow-hidden rounded-xl ring-1 ring-border">
-      <Cell label={t("statPaid")}>
+    <dl className="flex flex-col divide-y divide-border overflow-hidden rounded-xl ring-1 ring-border">
+      <Row label={t("statPaid")}>
         <Amount minorUnits={entry.paid} currency={entry.currency} />
-      </Cell>
-      <Cell label={t(viewingSelf ? "statYourShare" : "statTheirShare")}>
+      </Row>
+      <Row label={t(viewingSelf ? "statYourShare" : "statTheirShare")}>
         <Amount minorUnits={entry.share} currency={entry.currency} />
-      </Cell>
-      <Cell label={t("statEntries")}>{entry.entryCount}</Cell>
+      </Row>
+      <Row label={t("statEntries")}>{entry.entryCount}</Row>
     </dl>
   );
 }
 
-function Cell({
+function Row({
   label,
   children,
 }: {
@@ -338,14 +351,9 @@ function Cell({
   children: React.ReactNode;
 }) {
   return (
-    // Label at the top and figure at the bottom, so a label that wraps in a
-    // longer language pushes its own cell taller without shunting the figure
-    // beside it out of line.
-    <div className="flex min-h-[62px] flex-col justify-between gap-1.5 p-2.5">
-      <dt className="text-2xs leading-tight font-semibold tracking-[0.04em] text-muted-foreground uppercase">
-        {label}
-      </dt>
-      <dd className="truncate text-sm font-semibold tabular-nums">
+    <div className="flex items-baseline justify-between gap-3 px-3 py-2.5">
+      <dt className="text-sm text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 text-right text-sm font-semibold wrap-anywhere tabular-nums">
         {children}
       </dd>
     </div>
@@ -402,13 +410,22 @@ function PaidAgainstShare({
   const fill =
     index === null ? 0 : Math.max(0, Math.min(100, ((index - 0.5) / 2) * 100));
 
+  /*
+   * The ratio as it is said and shown: one decimal, in the reader's notation.
+   * "2.8 times their share" is a sentence, and the second decimal of "2.82"
+   * was precision nobody reads a ratio for. Written out here rather than left
+   * to the message, whose bare `{index}` printed "1.69" to a French reader.
+   */
+  const ratio = useRatio();
+  const said = index === null ? null : ratio(index);
+
   // No money in the label: the two figures it would read out are already the
   // strip above this card, and a screen reader hearing them twice learns
   // nothing the second time.
   const summary =
-    index === null
+    said === null
       ? t("chartSummaryNone", { count: entry.buckets.length })
-      : t("chartSummary", { count: entry.buckets.length, index });
+      : t("chartSummary", { count: entry.buckets.length, index: said });
 
   return (
     <div className={CARD}>
@@ -488,15 +505,15 @@ function PaidAgainstShare({
       <div className="flex flex-col gap-2 border-t border-border pt-3">
         <div className="flex items-start justify-between gap-3">
           <p className="min-w-0 text-xs text-pretty text-muted-foreground">
-            {index === null
+            {said === null
               ? t("payerIndexNone")
               : t(viewingSelf ? "payerIndexYou" : "payerIndexThem", {
                   name,
-                  index,
+                  index: said,
                 })}
           </p>
           <p className="shrink-0 text-lg font-semibold tabular-nums">
-            {index === null ? "—" : t("times", { index })}
+            {said === null ? "—" : t("times", { index: said })}
           </p>
         </div>
 
@@ -509,9 +526,9 @@ function PaidAgainstShare({
         </div>
 
         <div className="flex justify-between text-2xs text-muted-foreground">
-          <span>{t("times", { index: 0.5 })}</span>
+          <span>{t("times", { index: ratio(0.5) })}</span>
           <span>{t("payerIndexEven")}</span>
-          <span>{t("times", { index: 2.5 })}</span>
+          <span>{t("times", { index: ratio(2.5) })}</span>
         </div>
       </div>
     </div>
@@ -579,7 +596,10 @@ function Tip({
         className,
       )}
     >
-      <span className="max-w-full truncate rounded-[0.6rem] bg-foreground px-2 py-1 text-2xs font-medium text-background tabular-nums">
+      {/* Wraps rather than truncating: it carries two amounts, and at 360px
+          the sentence is wider than the card. A second line over the top of
+          the bars for as long as a finger is on one is the lesser cost. */}
+      <span className="max-w-full rounded-[0.6rem] bg-foreground px-2 py-1 text-2xs font-medium text-pretty text-background tabular-nums">
         {children}
       </span>
     </span>
@@ -598,6 +618,25 @@ function positionOf(
   return Math.max(min, Math.min(max, centre));
 }
 
+/**
+ * Where a rank puts somebody, in the words a person would use for it.
+ *
+ * "2 of 3" was a rank with nothing to say what it ranked, beside a "median
+ * member" that is a statistician's word for a person. The two ends get their
+ * own words — the largest share, the smallest — and the middle an ordinal.
+ * A rank past the end belongs to somebody with no share at all, which is the
+ * smallest there is.
+ */
+function placeOf(
+  rank: number,
+  count: number,
+): "only" | "largest" | "smallest" | "other" {
+  if (count <= 1) return "only";
+  if (rank <= 1) return "largest";
+  if (rank >= count) return "smallest";
+  return "other";
+}
+
 /** How much of what the group spent was theirs, and where that puts them. */
 function ShareOfGroup({ entry }: { entry: CurrencyStatsView }) {
   const t = useTranslations("memberStats");
@@ -606,7 +645,8 @@ function ShareOfGroup({ entry }: { entry: CurrencyStatsView }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-sm font-medium">{t("shareTitle")}</h3>
-          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+          {/* Not truncated: the caption carries the group's total. */}
+          <p className="mt-0.5 text-xs text-pretty text-muted-foreground">
             {t.rich("shareCaption", {
               amount: () => (
                 <Amount
@@ -624,11 +664,8 @@ function ShareOfGroup({ entry }: { entry: CurrencyStatsView }) {
 
       <div
         role="img"
-        aria-label={t("shareBarLabel", {
-          percent: entry.sharePercent,
-          rank: entry.rank,
-          count: entry.members.length,
-        })}
+        // The rank is the footnote's to say, in words, right underneath.
+        aria-label={t("shareBarLabel", { percent: entry.sharePercent })}
         className="flex h-2.5 gap-0.5 overflow-hidden rounded-full"
       >
         {entry.members.map((member) => (
@@ -647,9 +684,9 @@ function ShareOfGroup({ entry }: { entry: CurrencyStatsView }) {
 
       <p className="text-xs text-pretty text-muted-foreground">
         {t("shareFootnote", {
+          place: placeOf(entry.rank, entry.members.length),
           rank: entry.rank,
           count: entry.members.length,
-          median: entry.medianPercent,
           even: entry.evenPercent,
         })}
       </p>
@@ -1051,6 +1088,24 @@ function useBucketLabels(granularity: Granularity): {
       tooltip: (start) => shortWithYear.format(parsePlainDate(start)),
     };
   }, [dates, granularity, short, shortWithYear]);
+}
+
+/**
+ * A ratio to one decimal, in the reader's number notation — "2.8", "2,8".
+ *
+ * The notation rather than the interface language, as every amount on the
+ * screen is written: the two are chosen separately, and a ratio beside a
+ * figure should use the same decimal mark the figure does.
+ */
+function useRatio(): (value: number) => string {
+  const locale = useNumberLocale();
+  return useMemo(() => {
+    const format = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    });
+    return (value: number) => format.format(value);
+  }, [locale]);
 }
 
 /**

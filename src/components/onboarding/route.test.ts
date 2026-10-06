@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ENDINGS,
   nextScreen,
   previousScreen,
   progressOf,
@@ -12,24 +13,22 @@ import {
 } from "./route";
 
 /**
- * The six routes, spelled out.
+ * The routes, spelled out.
  *
  * The handoff lists them as a table and the prototype got two of them wrong by
  * maintaining the order by hand, so the table is the test: if a screen moves,
  * this says which route it moved in rather than leaving somebody to click
- * through all six.
+ * through all of them.
  */
 
 const state = (
   arrival: Arrival,
   intent: Intent,
-  isNewMember = false,
   signedIn = false,
   setupComplete = false,
 ): OnboardingRouteState => ({
   arrival,
   intent,
-  isNewMember,
   signedIn,
   setupComplete,
 });
@@ -54,73 +53,68 @@ describe("routeFor", () => {
     ]);
   });
 
-  it("asks a guest for a name and nothing else", () => {
-    expect(routeFor(state("personal", "guest"))).toEqual([
-      "welcome",
-      "profile",
-      "arrival",
-      "checklist",
-    ]);
+  it("asks a guest for a name, and ends in the group as a shared link's guest does", () => {
+    // The arrival screen and the checklist were a receipt in front of the
+    // group, and of the checklist's rows a guest could keep only the account,
+    // which the overview's guest card offers.
+    const route = routeFor(state("personal", "guest"));
+    expect(route).toEqual(["welcome", "profile"]);
+    expect(nextScreen(route, "profile")).toBeNull();
+    // Nothing is committed on the name screen, so it keeps its way back.
+    expect(ENDINGS.has("profile")).toBe(false);
   });
 
-  it("asks a shared link who this is before what to keep", () => {
+  it("keeps the arrival screen and the checklist for an account", () => {
+    // Every row of the list can be saved by an account, and the arrival
+    // screen is what gives the page time to hand the account's setup down.
+    for (const intent of ["account", "signin"] as Intent[]) {
+      const route = routeFor(state("personal", intent));
+      expect(route.slice(-2)).toEqual(["arrival", "checklist"]);
+    }
+  });
+
+  it("opens a shared link on the list, and lets a guest in from the next screen", () => {
+    // Two screens, then the group itself: the list, and how to come in. The
+    // welcome, "Is this you?", the arrival screen and the checklist that used
+    // to stand between them and the group are all gone.
+    expect(routeFor(state("shared", "guest"))).toEqual(["whichOne", "keepIt"]);
+  });
+
+  it("adds the credential, and only that, for an account on a shared link", () => {
     expect(routeFor(state("shared", "account"))).toEqual([
-      "welcome",
       "whichOne",
-      "confirm",
       "keepIt",
       "identity",
-      "arrival",
-      "checklist",
+    ]);
+    expect(routeFor(state("shared", "signin"))).toEqual([
+      "whichOne",
+      "keepIt",
+      "identity",
     ]);
   });
 
-  it("sends somebody who was not on the list to type their own name", () => {
-    const route = routeFor(state("shared", "account", true));
-    expect(route).toEqual([
-      "welcome",
-      "whichOne",
-      "profile",
-      "keepIt",
-      "identity",
-      "arrival",
-      "checklist",
-    ]);
-    expect(route).not.toContain("confirm");
-  });
-
-  it("drops the account screen when a shared link ends in a guest", () => {
-    expect(routeFor(state("shared", "guest"))).not.toContain("identity");
-  });
-
-  it("asks a signed-in reader which name is theirs and nothing else", () => {
+  it("asks a signed-in reader which name is theirs, and to say yes", () => {
     // The account question and the credential that answers it are both behind
-    // them, so claiming the name is the last thing they do.
-    expect(routeFor(state("shared", "signin", false, true))).toEqual([
-      "welcome",
+    // them, so saying yes to the name is the last thing they do.
+    expect(routeFor(state("shared", "signin", true))).toEqual([
       "whichOne",
-      "confirm",
-      "arrival",
-      "checklist",
+      "keepIt",
     ]);
   });
 
-  it("sends a signed-in reader who was not on the list to type a name", () => {
-    expect(routeFor(state("shared", "signin", true, true))).toEqual([
-      "welcome",
-      "whichOne",
-      "profile",
-      "arrival",
-      "checklist",
-    ]);
-  });
-
-  it("never asks a signed-in reader to keep it or to prove anything", () => {
+  it("never asks a signed-in reader to prove anything", () => {
     for (const intent of ["account", "signin", "guest"] as Intent[]) {
-      for (const isNewMember of [false, true]) {
-        const route = routeFor(state("shared", intent, isNewMember, true));
-        expect(route).not.toContain("keepIt");
-        expect(route).not.toContain("identity");
+      expect(routeFor(state("shared", intent, true))).not.toContain("identity");
+    }
+  });
+
+  it("never puts a receipt between a shared link and its group", () => {
+    for (const intent of ["account", "signin", "guest"] as Intent[]) {
+      for (const signedIn of [false, true]) {
+        const route = routeFor(state("shared", intent, signedIn));
+        expect(route).not.toContain("welcome");
+        expect(route).not.toContain("arrival");
+        expect(route).not.toContain("checklist");
       }
     }
   });
@@ -142,16 +136,8 @@ describe("routeFor", () => {
     expect(nextScreen(route, "identity")).toBeNull();
   });
 
-  it("drops the checklist when there is nothing left on it", () => {
-    // Only somebody who arrived signed in can be in this state, and for them
-    // the arrival screen is the end: its primary goes straight to the group.
-    const route = routeFor(state("shared", "signin", false, true, true));
-    expect(route).toEqual(["welcome", "whichOne", "confirm", "arrival"]);
-    expect(nextScreen(route, "arrival")).toBeNull();
-  });
-
-  it("drops it from a personal invitation on the same terms", () => {
-    expect(routeFor(state("personal", "signin", false, false, true))).toEqual([
+  it("drops the checklist from a personal invitation when nothing is left on it", () => {
+    expect(routeFor(state("personal", "signin", false, true))).toEqual([
       "welcome",
       "identity",
       "arrival",
@@ -176,7 +162,7 @@ describe("routeFor", () => {
   });
 
   it("leaves a cold arrival alone, having no checklist to drop", () => {
-    expect(routeFor(state("cold", "account", false, false, true))).toEqual([
+    expect(routeFor(state("cold", "account", false, true))).toEqual([
       "welcome",
       "identity",
       "profile",
@@ -189,16 +175,14 @@ describe("routeFor", () => {
     const intents: Intent[] = ["account", "signin", "guest"];
     for (const arrival of arrivals) {
       for (const intent of intents) {
-        for (const isNewMember of [false, true]) {
-          for (const signedIn of [false, true]) {
-            for (const setupComplete of [false, true]) {
-              const route = routeFor(
-                state(arrival, intent, isNewMember, signedIn, setupComplete),
-              );
-              expect(new Set(route).size).toBe(route.length);
-              // Whatever else it drops, a route always has somewhere to land.
-              expect(route.length).toBeGreaterThan(1);
-            }
+        for (const signedIn of [false, true]) {
+          for (const setupComplete of [false, true]) {
+            const route = routeFor(
+              state(arrival, intent, signedIn, setupComplete),
+            );
+            expect(new Set(route).size).toBe(route.length);
+            // Whatever else it drops, a route always has somewhere to land.
+            expect(route.length).toBeGreaterThan(1);
           }
         }
       }
@@ -222,10 +206,13 @@ describe("previousScreen and nextScreen", () => {
     const route = routeFor(state("cold", "account"));
     expect(previousScreen(route, "welcome")).toBeNull();
     expect(nextScreen(route, "firstGroup")).toBeNull();
+    expect(previousScreen(routeFor(state("shared", "guest")), "whichOne")).toBe(
+      null,
+    );
   });
 
   it("walks the whole route forwards and back again", () => {
-    const route = routeFor(state("shared", "account"));
+    const route = routeFor(state("personal", "account"));
     const walked: ScreenId[] = ["welcome"];
     for (;;) {
       const next = nextScreen(route, walked[walked.length - 1]);
@@ -246,18 +233,12 @@ describe("progressOf", () => {
   });
 
   it("reaches full on the arrival screen when that is where a route ends", () => {
-    const route = routeFor(state("shared", "signin", false, true, true));
+    const route = routeFor(state("personal", "signin", false, true));
     expect(progressOf(route, "arrival")).toBe(1);
   });
 
-  it("runs to full on the shorter route a signed-in reader takes", () => {
-    const route = routeFor(state("shared", "signin", false, true));
-    expect(progressOf(route, "welcome")).toBe(0);
-    expect(progressOf(route, "checklist")).toBe(1);
-  });
-
   it("only ever moves forwards", () => {
-    const route = routeFor(state("shared", "account"));
+    const route = routeFor(state("personal", "account"));
     const measured = route.map((screen) => progressOf(route, screen));
     expect(measured).toEqual([...measured].sort((a, b) => a - b));
   });
@@ -268,14 +249,12 @@ describe("STEP_LABEL_KEYS", () => {
     const reachable = new Set<ScreenId>();
     for (const arrival of ["personal", "shared", "cold"] as Arrival[]) {
       for (const intent of ["account", "signin", "guest"] as Intent[]) {
-        for (const isNewMember of [false, true]) {
-          for (const signedIn of [false, true]) {
-            for (const setupComplete of [false, true]) {
-              const route = routeFor(
-                state(arrival, intent, isNewMember, signedIn, setupComplete),
-              );
-              for (const screen of route) reachable.add(screen);
-            }
+        for (const signedIn of [false, true]) {
+          for (const setupComplete of [false, true]) {
+            const route = routeFor(
+              state(arrival, intent, signedIn, setupComplete),
+            );
+            for (const screen of route) reachable.add(screen);
           }
         }
       }

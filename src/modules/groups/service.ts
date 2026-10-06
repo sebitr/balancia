@@ -788,13 +788,35 @@ export async function updateParticipant(
  * would sit on the settle screen with no way to record it. The People screen
  * disables the button for somebody with money outstanding; this is the rule
  * behind it, for the API and for the screen that was rendered a minute ago.
+ *
+ * It is also how somebody leaves. Naming yourself asks for `leaveGroup`
+ * rather than `removeParticipants`, so a member may take themselves out and
+ * nobody else; every other guarantee is the same one, kept by the same lines:
+ * square first, history kept, links revoked, membership gone. The only
+ * difference left is who the refusals are spoken to. The Activity line is the
+ * same event, and reads as leaving because its actor is the person it is
+ * about — see `describeActivity`.
  */
 export async function removeParticipant(
   access: GroupAccess,
   participantId: string,
   options: { db?: Database } = {},
 ): Promise<void> {
-  requirePermission(access, "removeParticipants");
+  /*
+   * Compared with the participant the access was verified for, never with
+   * anything the request says about who is asking: `access.participantId` is
+   * read from the caller's own membership, so this is true only for their own
+   * row, and naming anybody else falls through to the owner's permission.
+   */
+  const leaving =
+    access.participantId !== null && participantId === access.participantId;
+  if (leaving && access.role === "owner") {
+    throw new AuthorizationError(
+      "You own this group, so you cannot leave it. Archive it or delete it instead.",
+      "ownerCannotLeave",
+    );
+  }
+  requirePermission(access, leaving ? "leaveGroup" : "removeParticipants");
   const db = options.db ?? getDb();
 
   await db.transaction(async (tx) => {
@@ -854,7 +876,15 @@ export async function removeParticipant(
       if (membership?.role === "owner") {
         // Ownership passes on only when the owner closes their account, so
         // the refusal points at what they can do with the group from here:
-        // archive it, or delete it.
+        // archive it, or delete it. Somebody leaving was checked against
+        // their role before this began; this is the same answer for a member
+        // promoted since, when the owner closed their account.
+        if (leaving) {
+          throw new AuthorizationError(
+            "You own this group, so you cannot leave it. Archive it or delete it instead.",
+            "ownerCannotLeave",
+          );
+        }
         throw new AuthorizationError(
           "The group owner cannot be removed from the group. Archive it or delete it instead.",
           "ownerNotRemovable",
@@ -874,7 +904,10 @@ export async function removeParticipant(
       ),
     );
     if (outstanding) {
-      throw new OpenBalanceError("participantHasBalance", target.displayName);
+      throw new OpenBalanceError(
+        leaving ? "selfHasBalance" : "participantHasBalance",
+        target.displayName,
+      );
     }
 
     await tx
@@ -916,6 +949,25 @@ export async function removeParticipant(
       metadata: { displayName: target.displayName },
     });
   });
+}
+
+/**
+ * Takes the caller out of the group: `removeParticipant` on their own row.
+ *
+ * The row is the one the access was verified for, so there is no id for a
+ * request to supply and nothing to get wrong about whose it is. What leaving
+ * leaves behind is what removal does: the group drops off their list, their
+ * entries keep their name, and the way back is an invitation, or the owner's
+ * Restore on the line it writes in Activity.
+ */
+export async function leaveGroup(
+  access: GroupAccess,
+  options: { db?: Database } = {},
+): Promise<void> {
+  if (access.participantId === null) {
+    throw new AuthorizationError();
+  }
+  await removeParticipant(access, access.participantId, options);
 }
 
 /**

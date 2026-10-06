@@ -132,8 +132,11 @@ export interface ActivityEntry {
   readonly actorLabel: string | null;
   readonly actorType: "user" | "guest" | "system";
   /**
-   * The participant who did it, when it was somebody in the group. Read so a
-   * line can tell when the person it names is the one who did it.
+   * The actor's own row in the group, when they had one. Read so a line can
+   * tell when the person it names is the one who did it: a removal whose
+   * actor is the person removed is somebody leaving, and a repayment whose
+   * actor is the payer is "their repayment". Null for the system, and once
+   * that row is gone.
    */
   readonly actorParticipantId: string | null;
   readonly createdAt: Date;

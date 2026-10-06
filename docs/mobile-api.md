@@ -54,19 +54,20 @@ sentence. Branch on the code, not on the prose:
 
 ```json
 {
-  "error": "The group owner cannot be removed from the group. Archive it or delete it instead.",
-  "code": "ownerNotRemovable"
+  "error": "You own this group, so you cannot leave it. Archive it or delete it instead.",
+  "code": "ownerCannotLeave"
 }
 ```
 
-| Status | `code`                  | When                                                                                                                                                  |
-| ------ | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 422    | `participantNotInGroup` | An expense, repayment or recurring template names somebody removed from the group, or never in it                                                     |
-| 409    | `groupArchived`         | A write to an archived group. Restoring it is the group's own PATCH, which is not refused                                                             |
-| 409    | `ownerNotRemovable`     | `DELETE …/participants/:id` on the group's owner                                                                                                      |
-| 409    | `participantHasAccount` | `POST …/participants/:id/invitation` for somebody who signs in with their own account                                                                 |
-| 403    | `noPermission`          | An owner-only action asked for by a member or a guest: removing or restoring people, invitations and the join link, the group's settings, deleting it |
-| 403    | `notYourAccount`        | `PATCH …/participants/:id` on somebody else who has an account — only they change their own name and email                                            |
+| Status | `code`                  | When                                                                                                                                                                                                  |
+| ------ | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 422    | `participantNotInGroup` | An expense, repayment or recurring template names somebody removed from the group, or never in it                                                                                                     |
+| 409    | `groupArchived`         | A write to an archived group. Restoring it is the group's own PATCH, which is not refused                                                                                                             |
+| 409    | `ownerCannotLeave`      | `DELETE …/participants/:id` by the group's owner on their own row — see [Leaving a group](#leaving-a-group)                                                                                           |
+| 409    | `ownerNotRemovable`     | `DELETE …/participants/:id` on the group's owner by somebody else. A group has one owner, and only the owner may remove people, so in practice it is `ownerCannotLeave` that a client meets           |
+| 409    | `participantHasAccount` | `POST …/participants/:id/invitation` for somebody who signs in with their own account                                                                                                                 |
+| 403    | `noPermission`          | An owner-only action asked for by a member or a guest: removing or restoring anybody else, invitations and the join link, the group's settings, deleting it. Also a guest asking to leave — see below |
+| 403    | `notYourAccount`        | `PATCH …/participants/:id` on somebody else who has an account — only they change their own name and email                                                                                            |
 
 Each is given only after the caller has been let into the group, so none of
 them tells an outsider anything: that the group exists, and what the caller's
@@ -230,7 +231,7 @@ is off, which is the default.
 | GET    | `/api/groups/:groupId/settlements/:settlementId`         | One settlement **with `paymentMethod`** (the list omits it on purpose — see `getSettlement`) and its `version`, also sent as the `ETag`.                                                                                                                                                                                          |
 | GET    | `/api/groups/:groupId/expenses/:expenseId/attachments`   | The receipts on one expense (`id`, `fileName`, `contentType`, `byteSize`); bytes come from the per-attachment download route.                                                                                                                                                                                                     |
 | GET    | `/api/groups/:groupId/participants`                      | The People screen's rows: `listParticipants` with the invitation state (`hasActiveInvitation`, created/expires/last-used instants). Also inlined in the group read.                                                                                                                                                               |
-| GET    | `/api/groups/:groupId/activity?limit`                    | `listGroupActivity`, newest first (default 100, max 200).                                                                                                                                                                                                                                                                         |
+| GET    | `/api/groups/:groupId/activity?limit`                    | `listGroupActivity`, newest first (default 100, max 200). Each event carries `actorParticipantId`, the actor's own row in the group (null for the system); a removal whose actor is the person removed is somebody leaving.                                                                                                       |
 | GET    | `/api/groups/:groupId/recurring`                         | `listRecurringExpenses`: templates with their schedule, `nextRunAt`, `pausedAt`, `generatedCount`.                                                                                                                                                                                                                                |
 | GET    | `/api/groups/:groupId/reminders`                         | `listRemindRecipients`: who owes the reader, per-currency debts, the channel, the 24-hour lock, `payWith` (the reader's own ways to be paid this debt, `{method, kind, text, code}`, as ranked) and `link`: `{kind: "group"}`, or `{kind: "invite", url}` for an owner, never a key. See `docs/settling-up.md`.                   |
 | GET    | `/api/groups/:groupId/categories`                        | The picker's suggestion data: `loadFrequentCategories` + `loadMappings` (group's own plus the reader's learned merchants).                                                                                                                                                                                                        |
@@ -361,13 +362,14 @@ was — newest first, with the three-part cursor an older client already holds.
 | `min`     |         | Lowest magnitude, in major units of each row's own listed currency (`12.50`, `12,50`). Ignored when it is not a number.                                                                                                                                          |
 | `max`     |         | Highest magnitude, likewise.                                                                                                                                                                                                                                     |
 | `by`      | yes     | A participant who paid; any of. A repayment's payer is the person who paid it back.                                                                                                                                                                              |
+| `with`    | yes     | A participant the row involves at all; any of. An expense they paid or carry a share of, a repayment at either end. What a person's page opens the list on. Each row carries the same as `people`, its participant ids.                                          |
 | `pos`     | yes     | What the row left the reader holding: `owe`, `back`, `flat`. A repayment is always `flat`.                                                                                                                                                                       |
 | `only`    | yes     | `series`, `foreign`, `receipt`; all of them together.                                                                                                                                                                                                            |
 | `sort`    |         | `oldest`, or `largest` (by magnitude, newest first among equals). A `largest` cursor carries a fourth part, the amount it resumes at.                                                                                                                            |
 
 Unknown values of `kind`, `when`, `pos`, `only` and `sort` are dropped, the way
 the web drops them from a hand-edited link. A filter too large to be a question
-— a `q` over 200 characters, more than 64 categories or payers — is refused
+— a `q` over 200 characters, more than 64 categories, payers or people — is refused
 with 400 rather than quietly shortened. Keep the cursor with the filter it came
 from: a cursor fed back under another `sort` restarts the list from the top.
 
@@ -392,7 +394,7 @@ on its apply button, and it costs two `COUNT`s rather than a list.
 | DELETE | `/api/groups/:groupId`                             | **hard** delete, like the web's danger zone                                                                                                                                                                                                                                                              |
 | POST   | `/api/groups/:groupId/participants`                | `{displayName, email?}` → 201 `{participantId}`                                                                                                                                                                                                                                                          |
 | PATCH  | `/api/groups/:groupId/participants/:id`            | `{displayName, email?}`                                                                                                                                                                                                                                                                                  |
-| DELETE | `/api/groups/:groupId/participants/:id`            | soft remove; revokes their invitation and guest sessions. 422 while they still owe or are owed anything, in any currency — settle up first                                                                                                                                                               |
+| DELETE | `/api/groups/:groupId/participants/:id`            | soft remove; revokes their invitation and guest sessions. 422 while they still owe or are owed anything, in any currency — settle up first. On the caller's own row this is leaving — see [Leaving a group](#leaving-a-group)                                                                            |
 | POST   | `/api/groups/:groupId/participants/:id/restore`    | undo for the remove (the invitation stays gone — only its hash was kept)                                                                                                                                                                                                                                 |
 | POST   | `/api/groups/:groupId/participants/:id/invitation` | `{expiresInDays?}` → 201 `{url, expiresAt}`, shown once                                                                                                                                                                                                                                                  |
 | DELETE | `/api/groups/:groupId/participants/:id/invitation` | revoke                                                                                                                                                                                                                                                                                                   |
@@ -434,6 +436,42 @@ receipts. The server stores the bytes it is sent, so a native client should
 strip a photo's EXIF block itself, as the web app does before uploading. The
 export answers **429** with `Retry-After` after ten requests an hour from one
 person for one group.
+
+### Leaving a group
+
+A member leaves with `DELETE /api/groups/:groupId/participants/:id` on their
+own row — the `participantId` the group read hands back. It is the removal the
+owner has, asked for by the person it removes, so it needs no permission over
+anybody else, and it keeps every guarantee removal has:
+
+- **Square first.** 422 while they owe or are owed anything, in any currency,
+  with a sentence in the second person:
+  `{"error": "You still have money outstanding in this group. Settle up first, then leave."}`
+- **History kept.** Their entries keep their name; the row is soft-removed.
+- **Membership gone.** The group drops out of `GET /api/groups` and every read
+  of it is the anonymous 404 from then on. The way back is an invitation, or
+  the owner's Restore (`POST …/participants/:id/restore`) on the line it
+  writes in Activity.
+
+Who may: `permissions.leaveGroup` in the group read says it, and is true for a
+member only.
+
+- **The owner** is refused with 409 `ownerCannotLeave`. Ownership passes on
+  only when the owner closes their account, so the sentence points at what is
+  left to them: archive the group, or delete it.
+- **A guest** is refused with 403 `noPermission`. A guest's seat may be the one
+  a group started without an account is keeping for its future owner, and in
+  a group nobody owns yet nobody could put them back; their way out is the
+  owner's to give.
+- **Anybody else's row** is removal, and stays the owner's: 403 `noPermission`.
+
+An archived group refuses it like any other write, with 409 `groupArchived`.
+
+Activity records it as the removal it is — `participant.removed` — with the
+person who left as its own actor: `actorParticipantId` equals `entityId`. That
+is the line to word as "Grace left the group" rather than "Grace removed
+Grace". The action is a database enum, and a kind of its own would have needed
+a migration.
 
 ### Creating an expense or a repayment exactly once
 

@@ -44,11 +44,31 @@ export interface ActivityReader extends ActivityPeople {
 /** Nobody named and nobody reading: every line in its short form. */
 export const NOBODY: ActivityPeople = { you: null, names: new Map() };
 
+/**
+ * `reader` may be left out by a caller with no names to hand — a test about
+ * some other line, say. A repayment then keeps its short form, since there is
+ * nobody it could name.
+ */
 export function describeActivity(
   entry: ActivityEntry,
   t: ActivityTranslate,
-  reader: ActivityReader,
+  reader: ActivityReader = { ...NOBODY, locale: "en" },
 ): string {
+  /*
+   * Somebody who left. Leaving writes the removal event, because the action
+   * is a database enum and a new kind would need a migration; what tells the
+   * two apart is that a person who leaves is their own actor. The feed puts
+   * the actor's name in front, so this reads "Ada left the group", not "Ada
+   * removed Ada from the group".
+   */
+  if (
+    entry.action === "participant.removed" &&
+    entry.actorParticipantId !== null &&
+    entry.actorParticipantId === entry.entityId
+  ) {
+    return t("left");
+  }
+
   const base = t.has(`actions.${entry.action}`)
     ? t(`actions.${entry.action}`)
     : entry.action;
