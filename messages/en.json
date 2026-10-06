@@ -787,6 +787,7 @@
     "yourAccount": "Your account",
     "close": "Close settings",
     "backToSettings": "Back to settings",
+    "signedInTo": "Signed in to {instance} as {email}",
     "groupAccount": "Account",
     "groupPreferences": "Preferences",
     "groupData": "Data",
