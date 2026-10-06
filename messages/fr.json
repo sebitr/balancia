@@ -37,7 +37,16 @@
     "switcherYouAreOwed": "on te doit {amount}",
     "switcherDashboard": "Tableau de bord",
     "switcherAllGroups": "tous les groupes",
-    "switcherRetry": "Impossible de charger tes groupes. Réessayer."
+    "switcherRetry": "Impossible de charger tes groupes. Réessayer.",
+    "sidebarHome": "Accueil",
+    "sidebarSearch": "Rechercher ou aller à",
+    "sidebarSearchGroup": "Rechercher dans ce groupe",
+    "sidebarCollapse": "Réduire la barre latérale",
+    "sidebarExpand": "Développer la barre latérale",
+    "sidebarGroups": "Groupes",
+    "sidebarNoGroups": "Aucun groupe pour l’instant. Les groupes que tu crées ou rejoins apparaissent ici, avec où tu en es dans chacun.",
+    "sidebarKeepGroup": "Garde {group}",
+    "sidebarGuestNote": "Ton accès n’existe que dans ce navigateur."
   },
   "theme": {
     "menu": "Thème"

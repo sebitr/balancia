@@ -1,4 +1,4 @@
-<!-- @dsCard group="Components" name="Navigation" subtitle="App shell header, screen header, and a group's bottom bar and desktop rail" -->
+<!-- @dsCard group="Components" name="Navigation" subtitle="App shell header, screen header, a group's bottom bar, and the desktop sidebar and group tabs" -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -1404,100 +1404,404 @@ a[aria-current="page"] .nav-icon--primary {
   background: var(--primary);
 }
 
-/* The group rail: from lg (1024px) up, the header and the bottom bar stood up
-   the left edge as one 15rem column — switcher, Add, the four places, then the
-   bell and the account at the foot. `src/components/layout/group-nav.tsx`. */
+/* The sidebar: from lg (1024px) up, on every signed-in screen — Home and
+   Notifications as well as a group — in place of the header along the top
+   and the group's bottom bar. 15rem, or 4rem folded to its icons.
+   `src/components/layout/app-sidebar.tsx`. It replaced #438's group rail. */
 .frame--desk {
   display: flex;
   max-width: 64rem;
   min-height: 27rem;
 }
-.rail {
+.sidebar {
   flex: 0 0 15rem;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--border);
-  background: color-mix(in oklch, var(--background) 95%, transparent);
-  padding: 1rem 0.75rem 0.75rem;
+  gap: 2px;
+  min-width: 0;
+  padding: 0.75rem;
+  border-right: 1px solid var(--sidebar-border);
+  background: var(--sidebar);
+  color: var(--sidebar-foreground);
+  font-size: 0.875rem;
 }
-.rail-switcher {
+.sidebar-top {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  min-height: 2.5rem;
+  justify-content: space-between;
+  height: 2.75rem;
+  padding: 0 2px 0 6px;
+}
+.sidebar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 1.125rem;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
-.rail-switcher svg {
-  width: 1.75rem;
-  height: 1.75rem;
+.sidebar-brand svg {
+  width: 1.625rem;
+  height: 1.625rem;
   flex-shrink: 0;
 }
-.rail-add {
-  display: flex;
+.sidebar-icon-btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.375rem;
-  height: 2.5rem;
-  margin: 1.25rem 0 0.875rem;
-  border-radius: var(--radius-xl);
-  background: var(--primary);
-  color: var(--primary-foreground);
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-decoration: none;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted-foreground);
 }
-.rail-add svg {
+.sidebar-icon-btn svg {
   width: 1.125rem;
   height: 1.125rem;
 }
-.rail ul {
+.sidebar-search {
   display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  list-style: none;
-  margin: 0;
-  padding: 0;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.25rem;
+  margin: 6px 0 2px;
+  padding: 0 6px 0 10px;
+  border: 1px solid var(--input);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--muted-foreground);
 }
-.rail ul a {
+.sidebar-search span:first-of-type {
+  flex: 1;
+}
+.sidebar-search svg {
+  width: 1rem;
+  height: 1rem;
+}
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.25rem;
+  border-radius: 6px;
+  background: var(--card);
+  box-shadow:
+    inset 0 0 0 1px var(--border),
+    0 1px 0 var(--border);
+  color: var(--muted-foreground);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+.sidebar-add {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.5rem;
+  margin: 0.5rem 0 0.625rem;
+  padding: 0 0.5rem 0 0.75rem;
+  border-radius: var(--radius-xl);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+  text-decoration: none;
+}
+.sidebar-add svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+.sidebar-row {
   display: flex;
   align-items: center;
   gap: 0.625rem;
   height: 2.5rem;
+  padding: 0 0.5rem 0 0.625rem;
+  border-radius: 10px;
+  color: var(--muted-foreground);
+  font-weight: 500;
+  text-decoration: none;
+}
+.sidebar-row svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+}
+.sidebar-row span:first-of-type {
+  flex: 1;
+}
+.sidebar-row[aria-current] {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+}
+.sidebar-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+.sidebar-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 1.875rem;
+  margin-top: 0.875rem;
+  padding: 0 2px 0 0.625rem;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.sidebar-section .sidebar-icon-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+/* A group: its tile, its name, and where the reader stands in it in words —
+   one line per currency, each in its own tone's ink, never in --primary. */
+.sidebar-group {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr);
+  align-items: center;
+  column-gap: 0.625rem;
+  min-height: 3rem;
+  padding: 6px 0.5rem;
+  border-radius: 10px;
+  color: inherit;
+  text-decoration: none;
+}
+.sidebar-group[aria-current] {
+  background: var(--sidebar-accent);
+}
+.sidebar-group-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.sidebar-group-name {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-pos {
+  overflow: hidden;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-pos--positive {
+  color: var(--positive-ink);
+}
+.sidebar-pos--negative {
+  color: var(--negative-ink);
+}
+.sidebar-pos--neutral {
+  color: var(--neutral-balance-ink);
+}
+.sidebar-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+.sidebar-tile--current {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.sidebar-more {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.25rem;
+  padding: 0 0.625rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.sidebar-more svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.sidebar-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: auto -0.75rem 0;
+  padding: 0.625rem 0.75rem 0;
+  border-top: 1px solid var(--sidebar-border);
+}
+.sidebar-foot small {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+/* Folded: 4rem of 44px targets. Every label stays the control's name and
+   comes back as a tip; a group's tile carries no colour that means money. */
+.sidebar--folded {
+  flex-basis: 4rem;
+  align-items: center;
+  padding: 0.75rem 0.5rem;
+}
+.sidebar--folded .sidebar-top {
+  flex-direction: column;
+  height: auto;
+  gap: 6px;
+  padding: 0;
+}
+.sidebar-fold-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted-foreground);
+}
+.sidebar-fold-btn svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+.sidebar-fold-btn[aria-current] {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+}
+.sidebar-fold-btn--add {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.sidebar-fold-btn .sidebar-count {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 1.125rem;
+  height: 1.125rem;
   padding: 0 0.25rem;
+}
+.sidebar-fold-btn .sidebar-tile {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 10px;
+}
+.sidebar-rule {
+  width: 2rem;
+  height: 1px;
+  margin: 0.625rem 0;
+  background: var(--sidebar-border);
+}
+.sidebar-tip {
+  display: flex;
+  flex-direction: column;
+  width: fit-content;
+  padding: 0.5rem 0.75rem;
   border-radius: var(--radius-xl);
+  background: var(--popover);
+  box-shadow:
+    0 0 0 1px var(--border),
+    var(--shadow-card);
+  line-height: 1.35;
+}
+
+/* A group's header, above the screen on its four places from lg up: the
+   tile, the name with its currencies, a meta line, and the places as a
+   segmented row. `src/components/layout/group-header.tsx`. */
+.group-head {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.75rem 1.5rem 0;
+}
+.group-head-title {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+.group-head-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 14px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 1rem;
+  font-weight: 600;
+}
+.group-head-name {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.group-head-meta {
+  margin: 0.125rem 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+.group-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: fit-content;
+  margin: 0;
+  padding: 3px;
+  border-radius: var(--radius-xl);
+  background: var(--muted);
+  list-style: none;
+}
+.group-tabs a {
+  display: inline-flex;
+  align-items: center;
+  height: 2.125rem;
+  padding: 0 0.875rem;
+  border-radius: 9px;
+  color: var(--muted-foreground);
   font-size: 0.875rem;
   font-weight: 500;
   text-decoration: none;
-  color: var(--muted-foreground);
-  transition:
-    color 150ms ease,
-    background-color 150ms ease;
 }
-.rail ul a:hover {
+.group-tabs a[aria-current="page"] {
+  background: var(--card);
+  box-shadow:
+    0 0 0 1px var(--border),
+    var(--shadow-card);
   color: var(--foreground);
-  background: color-mix(in oklch, var(--foreground) 6%, transparent);
 }
-.rail ul a[aria-current="page"] {
-  color: var(--primary-ink);
-  background: transparent;
-}
-.rail-foot {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  margin: auto -0.75rem 0;
-  border-top: 1px solid var(--border);
-  padding: 0.75rem 0.75rem 0;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-/* The screen beside the rail: one readable column, or the overview's two. */
+/* The screen beside the sidebar: one readable column, or the overview's two. */
 .desk-screen {
   flex: 1;
   min-width: 0;
   padding: 2rem 1.5rem 3rem;
+}
+.group-head + .desk-screen {
+  padding-top: 1.5rem;
+}
+.desk-main {
+  flex: 1;
+  min-width: 0;
 }
 .overview-cols {
   display: grid;
@@ -1561,11 +1865,12 @@ a[aria-current="page"] .nav-icon--primary {
     <div class="page-eyebrow">Components</div>
     <h1>Navigation</h1>
     <p class="lede">
-      Three pieces only: a sticky header that carries identity, the line a
-      screen opens with, and a group's navigation — a bottom bar on a phone, and
-      from <code>lg</code> (1024px) up a rail down the left of the window. There
-      is no hamburger: a group has five destinations and they all fit, on a
-      thumb's reach or down the side.
+      On a phone, three pieces: a sticky header that carries identity, the line
+      a screen opens with, and a group's bottom bar. From <code>lg</code>
+      (1024px) up the header and the bar give way to one sidebar down the left
+      of every signed-in screen, and a group's places become tabs under its
+      name. There is no hamburger: a group has five destinations and they all
+      fit, on a thumb's reach or across the top of the screen.
     </p>
   </header>
 
@@ -1602,7 +1907,11 @@ a[aria-current="page"] .nav-icon--primary {
     </div>
     <dl class="dl" style="margin-top: 1rem">
       <dt>position</dt>
-      <dd><code>sticky top-0 z-30</code> with a bottom border.</dd>
+      <dd>
+        <code>sticky top-0 z-30</code> with a bottom border, below
+        <code>lg</code>. From <code>lg</code> up it is <code>lg:hidden</code>:
+        the sidebar holds everything it did.
+      </dd>
       <dt>background</dt>
       <dd>
         <code>background/95</code>, dropping to <code>/80</code> where
@@ -1880,182 +2189,499 @@ a[aria-current="page"] .nav-icon--primary {
       </dd>
       <dt>from lg up</dt>
       <dd>
-        <code>lg:hidden</code>. The rail below takes over, and the screen drops
-        the inset it kept clear for the bar.
+        <code>lg:hidden</code>. Its places become the group header's tabs, its
+        Add the sidebar's filled button, and the screen drops the inset it kept
+        clear for the bar.
       </dd>
     </dl>
   </section>
 
   <section>
-    <h2>Group rail — from lg up</h2>
+    <h2>Sidebar — from lg up</h2>
     <p class="note" style="margin-bottom: 1rem">
-      On a desktop the header and the bar fold into one column down the left of
-      the window: the switcher at the top, Add and the four places in the
-      middle, the bell and the account at the foot. The same controls, in the
-      same document order, so Tab walks the rail top to bottom and then the
-      screen.
+      On a desktop window every signed-in screen — Home and Notifications as
+      well as a group — has one sidebar, 15rem wide, in place of the header and
+      the bar. Top to bottom: the wordmark and the toggle that folds it; Search;
+      Add expense, the one filled button; Home and Notifications; every group
+      with where the reader stands in it; the account. It is the group switcher
+      too: every group is always in view, with its balance, which is why it is
+      on Home, where the reader chooses where to go.
     </p>
     <div class="frame frame--desk">
-      <header class="rail">
-        <div class="rail-switcher">
-          <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
-            <g transform="translate(2.4 2.6) scale(0.85)">
-              <circle cx="16" cy="4.5" r="4.4" style="fill: var(--primary)" />
-              <rect
-                x="0"
-                y="14.75"
-                width="32"
-                height="4.5"
-                rx="2.25"
-                fill="currentColor"
-              />
-              <path d="M9.5 25a6.5 6.5 0 0 0 13 0Z" fill="currentColor" />
-            </g>
-          </svg>
-          Lisbon, March
-        </div>
-        <nav aria-label="Group sections">
-          <a class="rail-add" href="#">
-            <svg
+      <header class="sidebar">
+        <div class="sidebar-top">
+          <span class="sidebar-brand">
+            <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+              <g transform="translate(2.4 2.6) scale(0.85)">
+                <circle cx="16" cy="4.5" r="4.4" style="fill: var(--primary)" />
+                <rect
+                  x="0"
+                  y="14.75"
+                  width="32"
+                  height="4.5"
+                  rx="2.25"
+                  fill="currentColor"
+                />
+                <path d="M9.5 25a6.5 6.5 0 0 0 13 0Z" fill="currentColor" />
+              </g>
+            </svg>
+            Balancia
+          </span>
+          <span class="sidebar-icon-btn" aria-label="Collapse the sidebar"
+            ><svg
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              stroke-width="2.2"
+              stroke-width="2"
               stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <rect width="18" height="18" x="3" y="3" rx="2" />
+              <path d="M9 3v18" />
+              <path d="m16 15-3-3 3-3" /></svg
+          ></span>
+        </div>
+        <span class="sidebar-search"
+          ><svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" /></svg
+          ><span>Search or jump to</span><span class="kbd">⌘K</span></span
+        >
+        <a class="sidebar-add" href="#"
+          ><svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14" />
+            <path d="M12 5v14" /></svg
+          >Add expense</a
+        >
+        <nav aria-label="Balancia">
+          <a class="sidebar-row" href="#" aria-current="page"
+            ><svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
+              <path
+                d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+              /></svg
+            ><span>Home</span></a
+          >
+          <a class="sidebar-row" href="#"
+            ><svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg
+            ><span>Notifications</span><span class="sidebar-count">4</span></a
+          >
+        </nav>
+        <div class="sidebar-section">
+          <span>Groups</span
+          ><span class="sidebar-icon-btn" aria-label="New group"
+            ><svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
             >
               <path d="M5 12h14" />
-              <path d="M12 5v14" />
-            </svg>
-            Add
-          </a>
-          <ul>
-            <li>
-              <a href="#" aria-current="page"
-                ><span class="nav-icon"
-                  ><svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path
-                      d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"
-                    />
-                    <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
-                    <path d="M7 21h10" />
-                    <path d="M12 3v18" />
-                    <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /></svg></span
-                >Overview</a
-              >
-            </li>
-            <li>
-              <a href="#"
-                ><span class="nav-icon"
-                  ><svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path
-                      d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"
-                    />
-                    <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
-                    <path d="M12 17.5v-11" /></svg></span
-                >Transactions</a
-              >
-            </li>
-            <li>
-              <a href="#"
-                ><span class="nav-icon"
-                  ><svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg></span
-                >People</a
-              >
-            </li>
-            <li>
-              <a href="#"
-                ><span class="nav-icon"
-                  ><svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <circle cx="12" cy="12" r="3" />
-                    <path
-                      d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"
-                    /></svg></span
-                >Settings</a
-              >
-            </li>
-          </ul>
+              <path d="M12 5v14" /></svg
+          ></span>
+        </div>
+        <nav aria-label="Your groups">
+          <a class="sidebar-group" href="#"
+            ><span class="sidebar-tile">LM</span
+            ><span class="sidebar-group-text"
+              ><span class="sidebar-group-name">Lisbon, March</span
+              ><span class="sidebar-pos sidebar-pos--positive"
+                >you are owed €248.00</span
+              ><span class="sidebar-pos sidebar-pos--negative"
+                >you owe CHF 62.20</span
+              ></span
+            ></a
+          >
+          <a class="sidebar-group" href="#"
+            ><span class="sidebar-tile">F4</span
+            ><span class="sidebar-group-text"
+              ><span class="sidebar-group-name">Flat 4B</span
+              ><span class="sidebar-pos sidebar-pos--negative"
+                >you owe €36.80</span
+              ></span
+            ></a
+          >
+          <a class="sidebar-group" href="#"
+            ><span class="sidebar-tile">BC</span
+            ><span class="sidebar-group-text"
+              ><span class="sidebar-group-name">Book club</span
+              ><span class="sidebar-pos sidebar-pos--positive"
+                >you are owed €12.50</span
+              ></span
+            ></a
+          >
+          <span class="sidebar-more"
+            ><svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m9 18 6-6-6-6" /></svg
+            >Settled up · 2</span
+          >
         </nav>
-        <div class="rail-foot">
-          <span class="avatar">ST</span>
-          Sébastien
+        <div class="sidebar-foot">
+          <span class="avatar">SB</span>
+          <span><strong>Sébastien B.</strong><small>Settings</small></span>
         </div>
       </header>
       <div class="desk-screen" style="color: var(--muted-foreground)">
-        The screen: one readable column, <code>max-w-3xl</code>, centred in the
-        space beside the rail — or the overview's two columns. See
-        <em>Desktop layout</em> under Patterns.
+        Home, beside it: one readable column, <code>max-w-3xl</code>, centred in
+        the space the sidebar leaves. See <em>Desktop layout</em> under
+        Patterns.
       </div>
     </div>
     <dl class="dl" style="margin-top: 1rem">
       <dt>breakpoint</dt>
       <dd>
-        <code>lg</code>, not <code>md</code>. At 768px a 15rem rail would leave
-        the screen a phone's width, which buys nothing; at 1024px the rail and
-        two phone-width columns fit side by side.
+        <code>lg</code>, not <code>md</code>. At 768px a 15rem sidebar would
+        leave the screen a phone's width, which buys nothing; at 1024px the
+        sidebar and two phone-width columns fit side by side. It stays expanded
+        at 1024: the content gives way first, because the sidebar is the only
+        place every balance shows at once.
       </dd>
-      <dt>one landmark</dt>
+      <dt>one banner</dt>
       <dd>
-        The bar and the rail are both in the document and CSS shows one:
-        <code>lg:hidden</code> on the bar, <code>hidden lg:flex</code> on the
-        rail. A screen reader finds one "Group sections" at any width, with the
-        same five names.
+        The sidebar is a <code>&lt;header&gt;</code>, the page's banner from
+        <code>lg</code> up, as the top header is below it; each is
+        <code>display: none</code> at the other's widths. Inside it, two
+        navigations: "Balancia" (Home, Notifications) and "Your groups".
+      </dd>
+      <dt>money</dt>
+      <dd>
+        In words, one line per currency, each in its own tone's ink — "you are
+        owed €248.00" over "you owe CHF 62.20". Never one verb for two
+        currencies, never a bare signed figure, never <code>--primary</code>.
+        The same rows as the phone's switcher panel.
+      </dd>
+      <dt>order</dt>
+      <dd>
+        Home's: the groups that need you, then the ones that owe you; settled
+        groups fold behind "Settled up · N", except the one being read, which is
+        never folded away. Archived groups are only on Home.
+      </dd>
+      <dt>current</dt>
+      <dd>
+        The group being read: the sidebar's accent wash, its tile in the accent
+        fill, <code>aria-current</code>. Home and Notifications the same way
+        when they are the screen.
       </dd>
       <dt>Add</dt>
       <dd>
-        The rail's one filled button, at its head. The same link, the same name
-        and the same offline fallback as the bar's disc.
+        Inside a group it adds to that group — the bar's own link, into the
+        drawer over the screen, with the same offline fallback. Elsewhere it
+        asks "Add to which group?" first. With no group at all it reads "New
+        group".
       </dd>
-      <dt>active</dt>
+      <dt>Search</dt>
       <dd>
-        The bar's two cues, unchanged: <code>--primary-ink</code> label and an
-        accent disc behind the icon, with <code>aria-current="page"</code>.
+        Drawn and named, with its ⌘K hint, and disabled until the command
+        palette lands.
       </dd>
       <dt>density</dt>
       <dd>
-        40px rows rather than 74px tabs — a pointer is not a thumb. Type stays
-        on the desk scale, <code>text-sm</code>.
+        Rows 40px, a group 48px (one line more per extra currency), every one
+        with the 44px hit area. <code>text-sm</code> names, <code>text-xs</code>
+        positions.
+      </dd>
+      <dt>data</dt>
+      <dd>
+        The list is Home's own read, streamed in behind the screen; while it
+        loads, the last list drawn stands in, so moving between Home and a group
+        does not blank the column.
       </dd>
       <dt>keyboard</dt>
       <dd>
-        A "Skip to content" link comes first, parked above the window until it
-        takes focus: the rail is eight stops before the screen.
+        "Skip to content" comes first on every screen from <code>lg</code> up,
+        parked above the window until it takes focus.
       </dd>
-      <dt>switcher</dt>
+      <dt>guest</dt>
       <dd>
-        Its panel takes a 20rem width of its own and opens out over the screen;
-        the rail is narrower than the rows it lists.
+        One group and no account: the sidebar heads with the group's name, its
+        search is "Search this group", and it has no Home, Notifications or list
+        of groups — a "Keep Lisbon, March" card instead, and the theme at the
+        foot, since a guest has no settings.
+      </dd>
+      <dt>history</dt>
+      <dd>
+        #438 stood the header and the bar up as a 15rem rail inside a group
+        only, holding the switcher, Add, the four places and the account. The
+        sidebar replaced it: the places moved into the group header, and the
+        rest went onto every screen.
+      </dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Sidebar, folded</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      The toggle beside the wordmark folds the sidebar to 4rem of 44px icons, at
+      any width from <code>lg</code>; the screen beside it takes the room. Kept
+      per device in a cookie, so the server draws it at the width it will stay
+      at, and saved in silence: the column moving is the confirmation, and the
+      same button is still under the pointer to put it back.
+    </p>
+    <div class="frame frame--desk" style="min-height: 0">
+      <header class="sidebar sidebar--folded">
+        <div class="sidebar-top">
+          <span class="sidebar-fold-btn" aria-label="Balancia home"
+            ><svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+              <g transform="translate(2.4 2.6) scale(0.85)">
+                <circle cx="16" cy="4.5" r="4.4" style="fill: var(--primary)" />
+                <rect
+                  x="0"
+                  y="14.75"
+                  width="32"
+                  height="4.5"
+                  rx="2.25"
+                  fill="currentColor"
+                />
+                <path d="M9.5 25a6.5 6.5 0 0 0 13 0Z" fill="currentColor" />
+              </g></svg
+          ></span>
+          <span class="sidebar-icon-btn" aria-label="Expand the sidebar"
+            ><svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <rect width="18" height="18" x="3" y="3" rx="2" />
+              <path d="M9 3v18" />
+              <path d="m14 9 3 3-3 3" /></svg
+          ></span>
+        </div>
+        <span class="sidebar-rule"></span>
+        <span class="sidebar-fold-btn" aria-label="Search or jump to"
+          ><svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" /></svg
+        ></span>
+        <span
+          class="sidebar-fold-btn sidebar-fold-btn--add"
+          aria-label="Add expense"
+          ><svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14" />
+            <path d="M12 5v14" /></svg
+        ></span>
+        <span class="sidebar-fold-btn" aria-label="Home"
+          ><svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
+            <path
+              d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+            /></svg
+        ></span>
+        <span class="sidebar-fold-btn" aria-label="Notifications, 4 unread"
+          ><svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg
+          ><span class="sidebar-count" aria-hidden="true">4</span></span
+        >
+        <span class="sidebar-rule"></span>
+        <span
+          class="sidebar-fold-btn"
+          aria-current="true"
+          aria-label="Lisbon, March, you are owed €248.00, you owe CHF 62.20"
+          ><span class="sidebar-tile sidebar-tile--current">LM</span></span
+        >
+        <span class="sidebar-fold-btn" aria-label="Flat 4B, you owe €36.80"
+          ><span class="sidebar-tile">F4</span></span
+        >
+        <span class="sidebar-fold-btn" aria-label="Settled up · 2"
+          ><svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="1" />
+            <circle cx="19" cy="12" r="1" />
+            <circle cx="5" cy="12" r="1" /></svg
+        ></span>
+        <div
+          class="sidebar-foot"
+          style="
+            margin: auto -0.5rem 0;
+            padding: 0.625rem 0.5rem 0;
+            justify-content: center;
+          "
+        >
+          <span class="avatar">SB</span>
+        </div>
+      </header>
+      <div
+        class="desk-screen"
+        style="display: flex; align-items: flex-start; gap: 1rem"
+      >
+        <span class="sidebar-tip">
+          <strong>Flat 4B</strong>
+          <span class="sidebar-pos sidebar-pos--negative">you owe €36.80</span>
+        </span>
+        <span class="note" style="margin: 0">
+          A tile's tip, on hover or focus: the name and the balance in words, on
+          the popover surface where the money's ink was chosen.
+        </span>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>names</dt>
+      <dd>
+        Every label leaves the screen and stays the control's name; it comes
+        back as a tip. A group's name is its name and its balance in words — the
+        tile alone carries no colour that would stand for money.
+      </dd>
+      <dt>width</dt>
+      <dd>
+        <code>--app-sidebar-w</code>, 15rem or 4rem, set by
+        <code>data-sidebar</code> on the shell. The grid, the position strip and
+        an entry's docked actions all start where it stops.
+      </dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Group header and tabs — from lg up</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      Above a group's four places — Overview, Transactions, People, Settings —
+      the group's tile, its name with the currencies it keeps, a line counting
+      its people and entries and the days they span, and the places as a
+      segmented row. The bar's own links in the bar's own order, without Add,
+      which is the sidebar's.
+    </p>
+    <div class="frame" style="max-width: 46rem">
+      <div class="group-head" style="padding-bottom: 1.5rem">
+        <div class="group-head-title">
+          <span class="group-head-tile">LM</span>
+          <div>
+            <p class="group-head-name">
+              Lisbon, March <span class="badge badge--outline">EUR · CHF</span>
+            </p>
+            <p class="group-head-meta">
+              6 people · 42 expenses · 2 – 12 August
+            </p>
+          </div>
+        </div>
+        <nav aria-label="Group sections">
+          <ul class="group-tabs">
+            <li><a href="#" aria-current="page">Overview</a></li>
+            <li><a href="#">Transactions</a></li>
+            <li><a href="#">People</a></li>
+            <li><a href="#">Settings</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>one landmark</dt>
+      <dd>
+        The bar and the tabs are both in the document and CSS shows one:
+        <code>lg:hidden</code> on the bar, <code>hidden lg:block</code> on the
+        tabs. A screen reader finds one "Group sections" at any width.
+      </dd>
+      <dt>where</dt>
+      <dd>
+        On the four places only. A screen reached by a push — an entry, a
+        person, Settle up, Statistics — opens on its own way back instead, as on
+        a phone. Under the entry drawer the header stays, because the screen
+        under the drawer is still the tab it was opened from.
+      </dd>
+      <dt>active</dt>
+      <dd>
+        The current place raised onto the card surface, the others muted on the
+        track, with <code>aria-current="page"</code>. 34px tabs with the 44px
+        hit area.
+      </dd>
+      <dt>title</dt>
+      <dd>
+        The name is not a heading: every screen under it opens with its own
+        <code>h1</code>. 36px tile and <code>text-xl</code> at <code>lg</code>,
+        where the header gives way first; 48px and <code>text-2xl</code> from
+        <code>xl</code>.
+      </dd>
+      <dt>motion</dt>
+      <dd>
+        Outside the part of the page that moves, so a switch between tabs fades
+        the screen through and leaves the tabs where they are.
       </dd>
     </dl>
   </section>

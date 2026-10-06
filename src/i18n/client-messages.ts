@@ -58,6 +58,9 @@ export const ROOT_NAMESPACES: readonly string[] = [
   "groupForm",
   "inviteLink",
   "money",
+  // The desktop sidebar, on every signed-in screen — Home's as much as a
+  // group's — and the group rows it shares with the phone's switcher.
+  "nav",
   "notificationSettings",
   "notificationsPage",
   "passkeys",
@@ -80,7 +83,7 @@ export const ROOT_NAMESPACES: readonly string[] = [
  * carried everywhere.
  */
 export const AREA_NAMESPACES = {
-  marketing: ["marketing.demo", "marketing.selfHosting.install", "nav"],
+  marketing: ["marketing.demo", "marketing.selfHosting.install"],
   auth: [
     "auth.apple",
     "auth.signIn",
@@ -104,7 +107,6 @@ export const AREA_NAMESPACES = {
     "importWizard",
     "memberStats",
     "membersPage",
-    "nav",
     "outbox",
     "receiptScanner",
     "receipts",

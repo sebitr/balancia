@@ -37,7 +37,16 @@
     "switcherYouAreOwed": "you are owed {amount}",
     "switcherDashboard": "Dashboard",
     "switcherAllGroups": "all groups",
-    "switcherRetry": "Couldn't load your groups. Try again."
+    "switcherRetry": "Couldn't load your groups. Try again.",
+    "sidebarHome": "Home",
+    "sidebarSearch": "Search or jump to",
+    "sidebarSearchGroup": "Search this group",
+    "sidebarCollapse": "Collapse the sidebar",
+    "sidebarExpand": "Expand the sidebar",
+    "sidebarGroups": "Groups",
+    "sidebarNoGroups": "No groups yet. A group you create or join turns up here, with where you stand in it.",
+    "sidebarKeepGroup": "Keep {group}",
+    "sidebarGuestNote": "This browser is the only place your access lives."
   },
   "theme": {
     "menu": "Theme"

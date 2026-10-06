@@ -606,13 +606,34 @@
   --app-header-h: 4rem;
 
   /*
-   * The width of a group's rail, from `lg` up — where the header and the
-   * bottom bar fold into one column down the left of the window. Stated here
-   * for the same reason as the header's height: the shell's grid, the
-   * position strip and the entry detail's docked actions all have to start
-   * where the rail stops, and none of them can measure it.
+   * The sidebar's two widths, from `lg` up — where it replaces the header and
+   * the bottom bar on every signed-in screen — and the one it has now.
+   *
+   * Stated here for the same reason as the header's height: the shell's grid,
+   * the position strip and the entry detail's docked actions all have to
+   * start where the sidebar stops, and none of them can measure it. They read
+   * `--app-sidebar-w`, which the frame points at the folded width with
+   * `data-sidebar="collapsed"` (below), so a press on the toggle moves all of
+   * them at once without any of them being told. Below `lg` there is no
+   * sidebar, and nothing reads them.
+   *
+   * 15rem holds a group's name and "you are owed €1,248.00" on one line at
+   * the desk's type size; 4rem is a 44px target and its gutters.
    */
-  --app-rail-w: 15rem;
+  --app-sidebar-w-expanded: 15rem;
+  --app-sidebar-w-collapsed: 4rem;
+  --app-sidebar-w: var(--app-sidebar-w-expanded);
+
+  /*
+   * How wide a screen that asks for the width may grow beside the sidebar —
+   * the overview's two columns — gutters included. At 1440px the expanded
+   * sidebar leaves exactly this; past it, or folded, the column centres.
+   */
+  --app-content-max: 75rem;
+}
+
+[data-sidebar="collapsed"] {
+  --app-sidebar-w: var(--app-sidebar-w-collapsed);
 }
 
 /* The marketing page has a fixed art direction and does not inherit the
@@ -1015,18 +1036,21 @@
 /* The chrome is what you navigate by. It does not go along for the ride. */
 ::view-transition-group(app-header),
 ::view-transition-group(app-nav),
+::view-transition-group(app-sidebar),
 ::view-transition-group(app-toaster) {
   animation: none;
   z-index: 100;
 }
 ::view-transition-old(app-header),
 ::view-transition-old(app-nav),
+::view-transition-old(app-sidebar),
 ::view-transition-old(app-toaster) {
   /* Both copies are briefly live; showing them together reads as a flicker. */
   display: none;
 }
 ::view-transition-new(app-header),
 ::view-transition-new(app-nav),
+::view-transition-new(app-sidebar),
 ::view-transition-new(app-toaster) {
   animation: none;
 }
@@ -1048,6 +1072,11 @@
 }
 [data-slot="app-nav"] {
   view-transition-name: app-nav;
+}
+/* Above the screen sliding beside it, so a push that recedes to the left
+   passes under the sidebar rather than over it. */
+[data-slot="app-sidebar"] {
+  view-transition-name: app-sidebar;
 }
 [data-sonner-toaster] {
   view-transition-name: app-toaster;
@@ -1209,17 +1238,30 @@
   }
 
   /*
-   * From `lg` up there is no header to hang under: the group's rail has taken
-   * its controls down the left of the window, so the strip sits at the very
-   * top of the column beside the rail. The hero now starts 56px higher — the
-   * header's 64px gone, the screen's top padding 8px more — and the range
-   * moves up with it, so the figure is handed over at the same moment.
+   * From `lg` up there is no header to hang under: the sidebar has taken its
+   * controls down the left of the window, so the strip sits at the very top
+   * of the column beside the sidebar, at whichever width it is.
+   *
+   * The hero no longer starts where it does on a phone. The header's 64px
+   * have gone, but the group's own header stands above the overview instead
+   * (`group-header.tsx`): 28px of top margin, the name and its meta line —
+   * 46px at `lg`, 50px from `xl`, where the name is a step larger — 20px to
+   * the tabs, 40px of tabs and 24px to the screen. That puts the hero 158px
+   * down at `lg` and 162px from `xl`, against 88px on a phone, and the range
+   * keeps the phone's distance from it, so the figure is handed over at the
+   * same point in its travel.
    */
   @media (width >= 64rem) {
     [data-slot="position-strip"] {
       top: 0;
-      inset-inline-start: var(--app-rail-w);
-      animation-range: 48px 112px;
+      inset-inline-start: var(--app-sidebar-w);
+      animation-range: 174px 238px;
+    }
+  }
+
+  @media (width >= 80rem) {
+    [data-slot="position-strip"] {
+      animation-range: 178px 242px;
     }
   }
 

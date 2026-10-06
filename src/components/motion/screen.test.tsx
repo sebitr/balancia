@@ -24,13 +24,13 @@ describe("Screen", () => {
   });
 
   /**
-   * Beside a group's rail, from `lg` up, there is no bar to clear, and a
-   * screen holding a wide layout gets the room for it. Everything stated for
-   * a phone is still there underneath: these only add `lg:` utilities.
+   * Beside the sidebar, from `lg` up, there is no bar to clear, and a screen
+   * holding a wide layout gets the room for it. Everything stated for a phone
+   * is still there underneath: these only add `lg:` and `xl:` utilities.
    */
-  it("drops the bar's inset beside a rail, and widens for a wide layout", () => {
+  it("drops the bar's inset beside the sidebar, and widens for a wide layout", () => {
     render(
-      <Screen inset rail>
+      <Screen inset sidebar>
         Group content
       </Screen>,
     );
@@ -41,11 +41,25 @@ describe("Screen", () => {
       "px-4",
       "pb-[calc(8rem+env(safe-area-inset-bottom))]",
       "lg:pb-12",
-      "lg:has-data-[layout=wide]:max-w-5xl",
+      "lg:has-data-[layout=wide]:max-w-(--app-content-max)",
+      // Closer under a group's header, which has given the top margin.
+      "lg:peer-data-[slot=group-header]:pt-6",
     );
+    const below = [...column.classList].filter(
+      (name) => !name.startsWith("lg:") && !name.startsWith("xl:"),
+    );
+    expect(below).toEqual([
+      "mx-auto",
+      "min-h-full",
+      "w-full",
+      "max-w-3xl",
+      "px-4",
+      "py-6",
+      "pb-[calc(8rem+env(safe-area-inset-bottom))]",
+    ]);
   });
 
-  it("changes nothing at any width for a screen with no rail", () => {
+  it("changes nothing at any width for a screen with no sidebar", () => {
     render(<Screen inset>Group content</Screen>);
 
     expect(
