@@ -91,6 +91,24 @@ function debtOf(
 }
 
 /**
+ * What a reminder asks the reader for, in the words `reminderTitle` uses —
+ * or null for every other kind, and for a reminder that names no amount.
+ *
+ * The inbox's card sets it apart at its right from `lg`, in the debt's tone,
+ * where the phone reads it inside the title. Nothing is added to what a push
+ * message says.
+ */
+export function reminderDebtOf(
+  entry: NotificationEntry,
+  locale: string,
+  options: { numberLocale?: string } = {},
+): string | null {
+  if (entry.payload.kind !== "reminder") return null;
+  const debt = debtOf(entry.payload, locale, options.numberLocale ?? locale);
+  return debt === "" ? null : debt;
+}
+
+/**
  * The destination for each kind of event.
  *
  * A deleted expense has no page left to open, so it lands on the list; a

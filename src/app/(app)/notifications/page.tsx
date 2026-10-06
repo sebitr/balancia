@@ -11,6 +11,7 @@ import { getCurrentUser } from "@/lib/security/actor";
 import { listInbox, listQuietGroups } from "@/modules/notifications/service";
 import { daySectionOf } from "@/modules/notifications/day";
 import {
+  reminderDebtOf,
   renderNotification,
   type Translate,
 } from "@/modules/notifications/render";
@@ -73,6 +74,9 @@ export default async function NotificationsPage() {
       title: rendered.title,
       sentence: rendered.sentence,
       amount: rendered.amount,
+      debt: reminderDebtOf(entry, locale, {
+        numberLocale: preferences.numberLocale,
+      }),
       url: rendered.url,
       createdAt: entry.createdAt.toISOString(),
       day: daySectionOf(entry.createdAt, now, preferences.timeZone),

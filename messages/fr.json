@@ -104,6 +104,10 @@
       "createOne": "Créer un compte",
       "metaTitle": "Connexion"
     },
+    "panel": {
+      "headline": "Où en suis-je ?",
+      "lede": "Des dépenses partagées sur un serveur que tu héberges. Un seul lien pour tout le groupe, un solde par devise, et rien n’est envoyé ailleurs."
+    },
     "validation": {
       "email": "Saisis une adresse e-mail valide",
       "password": "Saisis ton mot de passe"
@@ -2905,6 +2909,7 @@
   "notificationsPage": {
     "metaTitle": "Notifications",
     "title": "Notifications",
+    "summary": "{count, plural, =0 {Rien de non lu} one {# non lue} other {# non lues}} · ce qui a changé dans tes groupes",
     "bell": "Notifications",
     "bellUnread": "Notifications, {count} non lues",
     "empty": "Rien à rattraper",
@@ -2936,7 +2941,9 @@
     "archiveExpand": "Afficher les archives",
     "archiveCollapse": "Masquer les archives",
     "dismissed": "Notification écartée",
+    "dismissNamed": "Écarter « {row} »",
     "settleUp": "Rembourser",
+    "reminderFrom": "{name} t’a envoyé une relance",
     "copyLink": "Copier le lien",
     "linkCopied": "Lien copié",
     "linkCopyFailed": "Impossible de copier ce lien.",
