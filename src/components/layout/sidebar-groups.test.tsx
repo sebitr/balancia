@@ -97,6 +97,9 @@ function renderList(
 ) {
   cleanup();
   nav.pathname = pathname;
+  document.cookie = collapsed
+    ? "balancia_sidebar=collapsed; path=/"
+    : "balancia_sidebar=; path=/; max-age=0";
   renderWithIntl(
     <SidebarFrame initialCollapsed={collapsed}>
       <SidebarGroups groups={groups} groupId={groupId} failed={failed} />

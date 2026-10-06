@@ -98,6 +98,11 @@ function renderSidebar({
 } = {}) {
   cleanup();
   nav.pathname = pathname;
+  // The device's cookie, which the server read into `initialCollapsed` and
+  // the browser holds too.
+  document.cookie = collapsed
+    ? "balancia_sidebar=collapsed; path=/"
+    : "balancia_sidebar=; path=/; max-age=0";
   renderWithIntl(
     <SidebarFrame initialCollapsed={collapsed}>
       <AppSidebar
@@ -249,6 +254,25 @@ describe("AppSidebar", () => {
     expect(
       within(side).getByRole("button", { name: "Expand the sidebar" }),
     ).toBeTruthy();
+  });
+
+  /**
+   * Home and a group are two layouts, so moving between them mounts a new
+   * frame, and the router may hand it a render kept from before the toggle
+   * was last pressed. The browser's cookie is the newer word.
+   */
+  it("takes the device's cookie over a render made before it changed", () => {
+    cleanup();
+    document.cookie = "balancia_sidebar=collapsed; path=/";
+    renderWithIntl(
+      <SidebarFrame initialCollapsed={false}>
+        <p>screen</p>
+      </SidebarFrame>,
+    );
+    expect(document.querySelector("[data-slot=app-frame]")).toHaveAttribute(
+      "data-sidebar",
+      "collapsed",
+    );
   });
 
   it("shows a folded control's name as a tip on focus", async () => {

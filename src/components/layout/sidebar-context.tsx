@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import {
+  isSidebarCollapsed,
   SIDEBAR_COLLAPSED,
   SIDEBAR_COOKIE_MAX_AGE,
   SIDEBAR_COOKIE_NAME,
@@ -52,6 +53,14 @@ export function useSidebar(): SidebarState {
   return useContext(SidebarContext) ?? EXPANDED;
 }
 
+/** The device's choice as the browser holds it now. */
+function readCollapsed(): boolean {
+  const entry = document.cookie
+    .split("; ")
+    .find((part) => part.startsWith(`${SIDEBAR_COOKIE_NAME}=`));
+  return isSidebarCollapsed(entry?.slice(SIDEBAR_COOKIE_NAME.length + 1));
+}
+
 /** Written by the browser; see `sidebar-state.ts` for why a cookie. */
 function rememberCollapsed(collapsed: boolean) {
   const secure = window.location.protocol === "https:" ? "; secure" : "";
@@ -70,7 +79,16 @@ export function SidebarFrame({
   className?: string;
   children: ReactNode;
 }) {
-  const [collapsed, setCollapsedState] = useState(initialCollapsed);
+  /*
+   * The server's reading on the server and on the first paint, which agree.
+   * A frame mounted later — on moving between Home and a group, which are two
+   * layouts — asks the cookie again, because the router may hand it a render
+   * it kept from before the reader last pressed the toggle, and the sidebar
+   * would spring back open under them.
+   */
+  const [collapsed, setCollapsedState] = useState(() =>
+    typeof document === "undefined" ? initialCollapsed : readCollapsed(),
+  );
 
   // Saved the moment it is pressed, and in silence: the sidebar moving is the
   // confirmation, and the same control is still under the pointer to put it
