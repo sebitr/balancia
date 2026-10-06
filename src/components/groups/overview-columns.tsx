@@ -19,6 +19,13 @@ import { cn } from "@/lib/utils";
  * a screen reader and a keyboard follow the same as the one a phone shows. The
  * columns are placed by the grid, never reordered by it.
  *
+ * Even halves at `lg`, seven to five from `xl`. Between 1024 and 1279px the
+ * sidebar leaves the screen about 740px, and halves are about 360px each —
+ * what the spending card's category rows and the balance rows' three columns
+ * each need to sit on one line. From `xl` there is room to give the money the
+ * larger share: at 1440px the left is about 640px and the right about 460px,
+ * the widths the overview was drawn at.
+ *
  * `data-layout="wide"` is how the screen around this knows to make room for
  * it: `<Screen>` widens its column for a screen that holds one — this, the
  * transactions table, the people table and a person's two columns — and
@@ -44,7 +51,7 @@ export function OverviewColumns({
     <div
       data-layout="wide"
       className={cn(
-        "flex flex-col lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-6",
+        "flex flex-col lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]",
         className,
       )}
     >

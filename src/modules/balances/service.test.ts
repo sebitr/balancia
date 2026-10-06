@@ -319,3 +319,46 @@ describe("assembleBalances in a converted group", () => {
     );
   });
 });
+
+/**
+ * The category pair the overview's spending card files its bars by.
+ *
+ * Only the one-group read selects it, inside the same snapshot as the money;
+ * the home screen's batch read does not, and its facts must still come out
+ * whole rather than carrying `undefined` into a card that reads them.
+ */
+describe("the spending facts' categories", () => {
+  it("carry the pair as it was stored", () => {
+    const rows = rowsOf([expense("flat", "EUR", 42000n)]);
+    const result = assembleBalances(
+      separate,
+      {
+        ...rows,
+        expenses: rows.expenses.map((row) => ({
+          ...row,
+          category: "housing",
+          subcategory: "rent",
+        })),
+      },
+      null,
+    );
+
+    expect(result.spendingFacts[0]).toMatchObject({
+      category: "housing",
+      subcategory: "rent",
+    });
+  });
+
+  it("say unfiled when the rows were read without them", () => {
+    const result = assembleBalances(
+      separate,
+      rowsOf([expense("flat", "EUR", 42000n)]),
+      null,
+    );
+
+    expect(result.spendingFacts[0]).toMatchObject({
+      category: null,
+      subcategory: null,
+    });
+  });
+});

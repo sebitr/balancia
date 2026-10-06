@@ -1952,6 +1952,69 @@ a[aria-current="page"] .nav-icon--primary {
   gap: 1.625rem;
   min-width: 0;
 }
+/* From xl (1280px) up the money gets the larger share: seven to five. Halves
+   at lg, where each column needs its 360px. */
+.overview-cols--wide {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+}
+/* A position card's actions beside the sidebar: the buttons at their own
+   width, "How this is calculated" at the far end of the same row. */
+.position-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+.position-actions .btn {
+  height: 2.875rem;
+  padding: 0 1rem;
+  font-weight: 600;
+}
+.position-actions .position-how {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+/* The spending card's category bars, from lg up: label, bar, figure, on
+   columns every row shares, so the bars start and end level down the card.
+   Chart colours by rank — never --chart-2, the accent, and never a money
+   colour. `src/components/groups/spending-card.tsx`. */
+.cat-bars-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.cat-bars {
+  display: grid;
+  grid-template-columns: minmax(0, 7rem) minmax(0, 1fr) auto;
+  gap: 0.625rem 0.75rem;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+}
+.cat-bars li {
+  display: contents;
+}
+.cat-bars i {
+  display: block;
+  height: 0.5rem;
+  border-radius: 9999px;
+}
+.cat-bars .cat-figure {
+  text-align: right;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums lining-nums;
+}
 
 /* Settings from lg up: still a surface, with no rail — the hub as a 20rem pane
    beside the screen it led to, and the ✕ once along the top of both.
@@ -2798,6 +2861,340 @@ a[aria-current="page"] .nav-icon--primary {
         </ul>
       </nav>
     </div>
+  </section>
+
+  <section>
+    <h2>At width</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      From <code>lg</code> (1024px) up, beside the sidebar and under the group's
+      header and tabs — see Desktop layout. The same blocks, in two columns: the
+      money on the left, first in the document so the phone's reading order
+      survives; the context on the right. Halves at <code>lg</code>, seven to
+      five from <code>xl</code>, as drawn here for a group kept in euros and
+      francs. Below <code>lg</code> nothing on this page changes.
+    </p>
+    <div
+      class="frame"
+      style="max-width: 64rem; padding: 1.5rem; background: var(--background)"
+    >
+      <div
+        class="overview-cols overview-cols--wide"
+        style="gap: 1.25rem 1.5rem"
+      >
+        <div class="overview-col" style="gap: 1.25rem">
+          <!-- Two currencies: the position card, its figures one under the
+               other with their own signs, as on a phone. Only the actions
+               change at width: their own width, and the way into the sheet
+               at the far end of the same row. -->
+          <div class="card">
+            <div
+              class="card-content"
+              style="display: flex; flex-direction: column; gap: 0.875rem"
+            >
+              <p class="card-desc" style="margin: 0">Your position</p>
+              <div style="display: flex; flex-direction: column; gap: 0.25rem">
+                <span
+                  class="tabular-nums"
+                  style="
+                    font-size: 2.125rem;
+                    line-height: 1;
+                    font-weight: 600;
+                    letter-spacing: -0.035em;
+                    color: var(--positive-ink);
+                  "
+                  >+ €248.00</span
+                >
+                <span
+                  class="tabular-nums"
+                  style="
+                    font-size: 2.125rem;
+                    line-height: 1;
+                    font-weight: 600;
+                    letter-spacing: -0.035em;
+                    color: var(--negative-ink);
+                  "
+                  >− CHF 62.20</span
+                >
+              </div>
+              <div class="position-actions">
+                <button class="btn btn--default">Settle up</button>
+                <button class="btn btn--outline">Remind all</button>
+                <span class="position-how">How this is calculated ›</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Balances by currency: one row per currency, one open at a
+               time — two sets of balances in two currencies side by side is
+               the comparison this screen refuses to invite. -->
+          <section style="margin: 0">
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 0.75rem;
+                margin-bottom: 0.625rem;
+              "
+            >
+              <h3
+                style="
+                  font-size: 0.875rem;
+                  font-weight: 500;
+                  margin: 0;
+                  color: var(--foreground);
+                  text-transform: none;
+                  letter-spacing: 0;
+                "
+              >
+                Balances by currency
+              </h3>
+              <span class="note" style="margin: 0"
+                >2 currencies · 6 people</span
+              >
+            </div>
+            <ul class="list" style="background: var(--card)">
+              <li>
+                <span class="list-row">
+                  <span class="list-main">
+                    <span class="list-title">EUR</span>
+                    <span class="list-sub">€1,411.00 spent · 4 repayments</span>
+                  </span>
+                  <span
+                    class="tabular-nums"
+                    style="font-weight: 600; color: var(--positive-ink)"
+                    >↙ 248.00 ⌃</span
+                  >
+                </span>
+              </li>
+              <li>
+                <span class="list-row">
+                  <span class="list-title"
+                    >You
+                    <span style="font-size: 0.6875rem; font-weight: 400"
+                      >get back</span
+                    ></span
+                  >
+                  <span
+                    class="tabular-nums"
+                    style="font-weight: 600; color: var(--positive-ink)"
+                    >↙ 248.00</span
+                  >
+                </span>
+              </li>
+              <li>
+                <span class="list-row">
+                  <span class="list-title"
+                    >Jonas
+                    <span style="font-size: 0.6875rem; font-weight: 400"
+                      >owes</span
+                    ></span
+                  >
+                  <span
+                    class="tabular-nums"
+                    style="font-weight: 600; color: var(--negative-ink)"
+                    >↗ 148.60</span
+                  >
+                </span>
+              </li>
+              <li>
+                <span class="list-row" style="background: var(--muted)">
+                  <span class="list-title" style="font-size: 0.75rem"
+                    >Jonas pays you back 148.60</span
+                  >
+                  <button class="btn btn--outline btn--xs">Remind</button>
+                </span>
+              </li>
+              <li>
+                <span class="list-row">
+                  <span class="list-main">
+                    <span class="list-title">CHF</span>
+                    <span class="list-sub">CHF 96.00 spent · 1 repayment</span>
+                  </span>
+                  <span
+                    class="tabular-nums"
+                    style="font-weight: 600; color: var(--negative-ink)"
+                    >↗ 62.20 ⌄</span
+                  >
+                </span>
+              </li>
+              <li>
+                <span class="list-row">
+                  <span class="list-main">
+                    <span class="list-title">View suggested repayments</span>
+                    <span class="list-sub"
+                      >5 repayments clear all 2 currencies</span
+                    >
+                  </span>
+                </span>
+              </li>
+            </ul>
+          </section>
+        </div>
+
+        <div class="overview-col" style="gap: 1.25rem">
+          <ul class="list" style="background: var(--card)">
+            <li>
+              <span class="list-row">
+                <span class="list-main">
+                  <span class="list-title"
+                    >Amélie added Dinner at Trattoria Il Ponte</span
+                  >
+                  <span class="list-sub"
+                    >Since your last visit · 2 hours ago</span
+                  >
+                </span>
+                <span class="tabular-nums">€128.40</span>
+              </span>
+            </li>
+          </ul>
+
+          <!-- Spending, as a group with several currencies has it: a line per
+               currency, then — from lg up — what each spent its money on, a
+               block per currency headed by its code. -->
+          <div class="card">
+            <div
+              class="card-content"
+              style="display: flex; flex-direction: column; gap: 0.75rem"
+            >
+              <p class="card-desc" style="margin: 0">Spending · All time</p>
+              <div class="row" style="justify-content: space-between">
+                <span style="font-size: 0.75rem; font-weight: 600">EUR</span>
+                <span class="tabular-nums" style="font-weight: 600"
+                  >1,411.00</span
+                >
+              </div>
+              <div class="row" style="justify-content: space-between">
+                <span style="font-size: 0.75rem; font-weight: 600">CHF</span>
+                <span class="tabular-nums" style="font-weight: 600">96.00</span>
+              </div>
+              <p class="note" style="margin: 0">
+                Bar shows your share of each total.
+              </p>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 0.625rem;
+                  border-top: 1px solid var(--border);
+                  padding-top: 0.75rem;
+                "
+              >
+                <p class="cat-bars-head">Categories <b>EUR</b></p>
+                <ul class="cat-bars">
+                  <li>
+                    <span>Lodging</span
+                    ><i style="width: 100%; background: var(--chart-1)"></i
+                    ><span class="cat-figure">€485.00</span>
+                  </li>
+                  <li>
+                    <span>Activities</span
+                    ><i style="width: 63%; background: var(--chart-3)"></i
+                    ><span class="cat-figure">€306.00</span>
+                  </li>
+                  <li>
+                    <span>Groceries</span
+                    ><i style="width: 49%; background: var(--chart-4)"></i
+                    ><span class="cat-figure">€241.20</span>
+                  </li>
+                  <li>
+                    <span>Restaurants</span
+                    ><i style="width: 42%; background: var(--chart-5)"></i
+                    ><span class="cat-figure">€205.80</span>
+                  </li>
+                  <li>
+                    <span>Transport</span
+                    ><i
+                      style="
+                        width: 35%;
+                        background: color-mix(
+                          in oklch,
+                          var(--chart-1) 45%,
+                          var(--card)
+                        );
+                      "
+                    ></i
+                    ><span class="cat-figure">€173.00</span>
+                  </li>
+                </ul>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 0.625rem;
+                  border-top: 1px solid var(--border);
+                  padding-top: 0.75rem;
+                "
+              >
+                <p class="cat-bars-head">Categories <b>CHF</b></p>
+                <ul class="cat-bars">
+                  <li>
+                    <span>Transport</span
+                    ><i style="width: 100%; background: var(--chart-1)"></i
+                    ><span class="cat-figure">CHF 96.00</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <ul class="list" style="background: var(--card)">
+            <li>
+              <span class="list-row">
+                <span class="list-main">
+                  <span class="list-title">Statistics</span>
+                  <span class="list-sub">Per person and per category</span>
+                </span>
+              </span>
+            </li>
+            <li>
+              <span class="list-row">
+                <span class="list-main">
+                  <span class="list-title">Activity</span>
+                  <span class="list-sub">Every change, deletions included</span>
+                </span>
+              </span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>columns</dt>
+      <dd>
+        <code>OverviewColumns</code>: halves at <code>lg</code>,
+        <code>minmax(0, 7fr) minmax(0, 5fr)</code> from <code>xl</code>, 24px
+        apart, inside <code>--app-content-max</code>. An empty group keeps its
+        one column at every width: "Start here" is two steps, not a dashboard.
+      </dd>
+      <dt>position</dt>
+      <dd>
+        One currency keeps the hero and its one figure; several keep the
+        position card, each figure on its own line with its own sign. At width
+        only the actions move: the buttons stop being halves of the card and sit
+        at their own width, with "How this is calculated" at the far end of
+        their row. The hero's position strip lines up with the wide column.
+      </dd>
+      <dt>balances</dt>
+      <dd>
+        Unchanged at width. A group with one currency lists everyone, the verb
+        under each name; a group with several keeps one collapsed row per
+        currency, one open at a time.
+      </dd>
+      <dt>categories</dt>
+      <dd>
+        Inside the spending card, from <code>lg</code> up only, after the totals
+        and before the Statistics row: what the chosen period's spending went
+        on, largest first, five rows at most with the rest folded into
+        "Everything else". Spending, not anybody's balance, so the figures are
+        plain ink and unsigned, and the bars take the chart colours by rank —
+        never <code>--chart-2</code>, which is the accent and the "you" series,
+        and never green, red or amber. Each currency is its own block, headed by
+        its code, scaled to its own largest row; nothing is summed across two of
+        them. They add up to the period's total, to the cent.
+      </dd>
+    </dl>
   </section>
 
   <section>

@@ -433,6 +433,10 @@ export default async function GroupOverviewPage({
                     groupSpent: stat.groupSpent.toString(),
                     youPaid: stat.youPaid.toString(),
                     yourShare: stat.yourShare.toString(),
+                    categories: stat.categories.map((slice) => ({
+                      category: slice.category,
+                      amount: slice.amount.toString(),
+                    })),
                   })),
                 }))}
               />
