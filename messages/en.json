@@ -2800,6 +2800,7 @@
     "ownerCannotLeave": "You own this group, so you cannot leave it. Archive it or delete it instead.",
     "participantHasAccount": "This person already signs in with their own account, so they do not need a guest link.",
     "groupArchived": "This group is archived. Restore it before making changes.",
+    "endsBeforeFirst": "The end date is before the first one.",
     "noPermission": "You cannot do that in this group. Ask its owner.",
     "fileEmpty": "That file is empty.",
     "fileTooLarge": "That file is larger than the {limit} MB upload limit.",
@@ -3399,6 +3400,7 @@
       "nextLabel": "Next",
       "andAfter": "and {rule} after that",
       "noOccurrences": "That rule never happens.",
+      "endsBeforeFirst": "The end date is before the first one.",
       "weeks": {
         "1": "first",
         "2": "second",

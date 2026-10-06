@@ -2800,6 +2800,7 @@
     "ownerCannotLeave": "Ce groupe t’appartient, tu ne peux donc pas le quitter. Archive-le ou supprime-le plutôt.",
     "participantHasAccount": "Cette personne se connecte déjà avec son propre compte, elle n’a donc pas besoin de lien d’invitation.",
     "groupArchived": "Ce groupe est archivé. Restaure-le avant d’y apporter des modifications.",
+    "endsBeforeFirst": "La date de fin tombe avant la première date.",
     "noPermission": "Tu ne peux pas faire cela dans ce groupe. Demande à son propriétaire.",
     "fileEmpty": "Ce fichier est vide.",
     "fileTooLarge": "Ce fichier dépasse la limite d’envoi de {limit} Mo.",
@@ -3399,6 +3400,7 @@
       "nextLabel": "Ensuite",
       "andAfter": "puis {rule}",
       "noOccurrences": "Cette règle ne se produit jamais.",
+      "endsBeforeFirst": "La date de fin tombe avant la première date.",
       "weeks": {
         "1": "premier",
         "2": "deuxième",

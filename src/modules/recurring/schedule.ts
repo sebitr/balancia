@@ -83,9 +83,22 @@ export interface RecurrenceRule {
 }
 
 export class RecurrenceError extends Error {
-  constructor(message: string) {
+  /**
+   * A reason a reader is told about, as a key under `serverErrors`, with the
+   * values its sentence needs. Absent on the ones only a malformed request can
+   * reach, whose English message is answer enough — see `describeError`.
+   */
+  readonly code?: string;
+  readonly params?: Record<string, string>;
+
+  constructor(
+    message: string,
+    reason?: { code: string; params?: Record<string, string> },
+  ) {
     super(message);
     this.name = "RecurrenceError";
+    this.code = reason?.code;
+    this.params = reason?.params;
   }
 }
 

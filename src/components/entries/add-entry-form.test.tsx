@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import type { ReactElement } from "react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
@@ -2119,6 +2125,42 @@ describe("recurrence", () => {
       }),
     );
     expect(createExpense).not.toHaveBeenCalled();
+  });
+
+  /**
+   * An end before the first date used to reach the server and come back as a
+   * failed write with no reason given. The sheet will not close on it with
+   * Done, but its scrim will.
+   */
+  it("refuses a rule that ends before its first date, and says why", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await enterAmount(user, "90");
+    await user.type(screen.getByLabelText("Description"), "Internet");
+
+    await user.click(screen.getByRole("switch", { name: "Repeats" }));
+    await user.click(screen.getByRole("button", { name: /Monthly/ }));
+    const repeat = sheet("Repeat");
+    await user.click(repeat.getByRole("button", { name: /^Ends/ }));
+    await user.click(repeat.getByRole("button", { name: "On a date" }));
+    fireEvent.change(repeat.getByLabelText("On a date"), {
+      target: { value: "2020-01-01" },
+    });
+
+    expect(repeat.getByLabelText("On a date")).toHaveAccessibleDescription(
+      "The end date is before the first one.",
+    );
+    expect(repeat.getByRole("button", { name: "Done" })).toBeDisabled();
+
+    await user.keyboard("{Escape}");
+    await user.click(
+      screen.getByRole("button", { name: "Save recurring expense" }),
+    );
+
+    expect(createRecurring).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "The end date is before the first one.",
+    );
   });
 
   /**

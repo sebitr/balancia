@@ -1340,6 +1340,13 @@ export function AddEntryForm({
     .join(", ");
 
   /**
+   * A repeating rule that ends before its first date, which has nothing to
+   * add and is refused before the save. See `RecurrenceSheet`.
+   */
+  const endsTooSoon =
+    recurrence.enabled && recurrence.endDate !== null && upcoming.length === 0;
+
+  /**
    * "Monthly, day 1" — the rule in one line, wherever it is named.
    *
    * A daily rule has no second half at all: "Daily, day 12" would name a
@@ -1712,6 +1719,12 @@ export function AddEntryForm({
     }
     if (!isSettle && !preview.ok) {
       refuseSplit();
+      return;
+    }
+    // The repeat sheet's Done will not close on such a rule, but its scrim
+    // will, and so does moving the date past the end afterwards.
+    if (!isSettle && endsTooSoon) {
+      refuse(t("repeat.endsBeforeFirst"));
       return;
     }
 
@@ -2735,10 +2748,19 @@ export function AddEntryForm({
                 <span className="block text-sm font-semibold">
                   {t("repeat.label")}
                 </span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  {recurrence.enabled && upcomingLabel !== ""
-                    ? t("repeat.next", { dates: upcomingLabel })
-                    : t("repeat.schedule")}
+                <span
+                  className={cn(
+                    "block truncate text-xs",
+                    endsTooSoon
+                      ? "text-destructive-ink"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {endsTooSoon
+                    ? t("repeat.endsBeforeFirst")
+                    : recurrence.enabled && upcomingLabel !== ""
+                      ? t("repeat.next", { dates: upcomingLabel })
+                      : t("repeat.schedule")}
                 </span>
               </span>
               <Switch
