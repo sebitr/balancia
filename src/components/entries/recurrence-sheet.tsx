@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useDateFormatter } from "@/i18n/format-context";
 import { Check } from "lucide-react";
@@ -208,6 +208,13 @@ export function RecurrenceSheet({
   );
   const shown = upcoming.slice(0, PREVIEW_COUNT);
   const more = upcoming.length > PREVIEW_COUNT;
+  /*
+   * A rule with an end and no dates ends before its first one: every other
+   * way to have none is a rule this sheet cannot produce. Said as that, on
+   * the field that caused it, rather than as a rule that "never happens".
+   */
+  const endsTooSoon = shown.length === 0 && state.endDate !== null;
+  const endsTooSoonId = useId();
 
   /**
    * The rule in words — the hero's first line, and the sentence in Custom.
@@ -316,7 +323,7 @@ export function RecurrenceSheet({
                hero is where that has to be said — the Done button below only
                refuses. */
             <p className="mt-3 text-xs text-destructive-ink">
-              {t("noOccurrences")}
+              {endsTooSoon ? t("endsBeforeFirst") : t("noOccurrences")}
             </p>
           )}
         </div>
@@ -553,10 +560,19 @@ export function RecurrenceSheet({
                   value={state.endDate}
                   min={startDate}
                   aria-label={t("onADate")}
+                  aria-invalid={endsTooSoon || undefined}
+                  aria-describedby={endsTooSoon ? endsTooSoonId : undefined}
                   onChange={(event) =>
                     set({ endDate: event.target.value || null })
                   }
                 />
+              )}
+              {/* Under the field as well as in the hero, which a phone has
+                  scrolled out of sight by the time anybody is down here. */}
+              {endsTooSoon && (
+                <p id={endsTooSoonId} className="text-xs text-destructive-ink">
+                  {t("endsBeforeFirst")}
+                </p>
               )}
 
               {state.count !== null && (

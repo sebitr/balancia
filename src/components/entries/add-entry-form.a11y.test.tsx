@@ -254,7 +254,7 @@ describe("the split sheet's payer", () => {
     await user.click(screen.getByRole("button", { name: /^Paid by/ }));
 
     const split = sheet("Payment and split");
-    const seb = split.getByRole("radio", { name: "Paid by Seb" });
+    const seb = split.getByRole("radio", { name: "Paid by you" });
     expect(seb).toHaveAttribute("tabindex", "0");
     seb.focus();
     await user.keyboard("{ArrowRight}");

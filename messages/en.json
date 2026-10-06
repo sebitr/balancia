@@ -2181,7 +2181,7 @@
     "balanceCurrencyLabel": "That balance is in",
     "balanceCurrency": "Balance currency",
     "modeFixedShort": "Fixed once the group exists.",
-    "timezoneFootnote": "Days end at {city} time, from this device. Change it in the group’s settings.",
+    "timezoneFootnote": "{city} time, from this device, decides what counts as today for new entries, when recurring expenses are added and the times shown in Activity. Change it in the group’s settings.",
     "iconTitle": "Group icon",
     "chooseIcon": "Choose an icon",
     "iconColorLabel": "Colour",
@@ -2246,7 +2246,6 @@
     "failed": "That did not work."
   },
   "receipts": {
-    "attach": "Attach a receipt",
     "removeFile": "Remove {name} from this expense",
     "formats": "JPEG, PNG, WebP, GIF, HEIC or PDF. Stored on this server, visible only to this group.",
     "uploadFailed": "That file could not be uploaded.",
@@ -2816,6 +2815,7 @@
     "ownerCannotLeave": "You own this group, so you cannot leave it. Archive it or delete it instead.",
     "participantHasAccount": "This person already signs in with their own account, so they do not need a personal link.",
     "groupArchived": "This group is archived. Restore it before making changes.",
+    "endsBeforeFirst": "The end date is before the first one.",
     "noPermission": "You cannot do that in this group. Ask its owner.",
     "fileEmpty": "That file is empty.",
     "fileTooLarge": "That file is larger than the {limit} MB upload limit.",
@@ -3287,6 +3287,7 @@
       "creditedTo": "Credited to",
       "splitBetween": "Split between",
       "everyone": "Everyone",
+      "you": "You",
       "someOf": "{count} of {total}",
       "done": "Done",
       "methods": {
@@ -3308,13 +3309,14 @@
         "percentage": "Percentages must add up to 100."
       },
       "inputLabels": {
-        "equal": "Share for {name}",
-        "shares": "Shares for {name}",
-        "exact": "Exact amount for {name}",
-        "percentage": "Percentage for {name}"
+        "equal": "{you, select, yes {Your share} other {Share for {name}}}",
+        "shares": "{you, select, yes {Your shares} other {Shares for {name}}}",
+        "exact": "{you, select, yes {Your exact amount} other {Exact amount for {name}}}",
+        "percentage": "{you, select, yes {Your percentage} other {Percentage for {name}}}"
       },
       "summary": {
         "equalEach": "Split equally between {count} · {amount} each",
+        "equalAbout": "Split equally between {count} · about {amount} each",
         "exactAmounts": "Split by exact amounts · {count} people",
         "percentages": "Split by percentage · {count} people",
         "shares": "Split by shares · {count} people",
@@ -3327,9 +3329,9 @@
         "sharesZero": "Shares · every share is zero",
         "unreadable": "{method, select, exact {Exact amounts} percentage {Percentages} other {Shares}} · one value is not a number"
       },
-      "payerOption": "Paid by {name}",
-      "receiverOption": "Received by {name}",
-      "includeOption": "Include {name} in the split",
+      "payerOption": "{you, select, yes {Paid by you} other {Paid by {name}}}",
+      "receiverOption": "{you, select, yes {Received by you} other {Received by {name}}}",
+      "includeOption": "{you, select, yes {Include yourself in the split} other {Include {name} in the split}}",
       "notes": {
         "nobody": "Pick at least one person to split this with.",
         "roundedUp": "{you, select, yes {{count, plural, =0 {You pay} one {You and {names} pay} other {You, {names} pay}}} other {{count, plural, one {{names} pays} other {{names} pay}}}} {amount} more so it adds up to {total}.",
@@ -3343,13 +3345,13 @@
       "alwaysHint": "Saves it as this group's default",
       "addSomeone": "Add someone",
       "several": "Several",
-      "payerAmount": "Amount paid by {name}",
+      "payerAmount": "{you, select, yes {Amount you paid} other {Amount paid by {name}}}",
       "justOnePaid": "Just one person paid",
       "splitPayment": "Split the payment equally",
-      "giveRest": "Give the rest to {name}",
-      "giveRemaining": "Give the remaining {amount} to {name}",
-      "shareFewer": "One share fewer for {name}",
-      "shareMore": "One more share for {name}",
+      "giveRest": "{you, select, yes {Give yourself the rest} other {Give the rest to {name}}}",
+      "giveRemaining": "{you, select, yes {Give yourself the remaining {amount}} other {Give the remaining {amount} to {name}}}",
+      "shareFewer": "{you, select, yes {One share fewer for you} other {One share fewer for {name}}}",
+      "shareMore": "{you, select, yes {One more share for you} other {One more share for {name}}}",
       "payerShort": "{amount} still to assign to a payer.",
       "payerOver": "{amount} more than the total was paid.",
       "payerNobody": "Say how much at least one person paid."
@@ -3391,7 +3393,6 @@
       "ends": "Ends",
       "never": "Never",
       "onADate": "On a date",
-      "preview": "Next: {dates}. Created automatically, {timezone} time.",
       "done": "Done",
       "label": "Repeats",
       "schedule": "Create this entry again on a schedule",
@@ -3410,6 +3411,7 @@
       "nextLabel": "Next",
       "andAfter": "and {rule} after that",
       "noOccurrences": "That rule never happens.",
+      "endsBeforeFirst": "The end date is before the first one.",
       "presetCustom": "Custom…",
       "timezoneNote": "Created in {timezone} time."
     },

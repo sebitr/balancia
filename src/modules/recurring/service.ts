@@ -282,6 +282,19 @@ export async function createRecurringExpense(
   };
   const first = firstOccurrence(rule);
 
+  /*
+   * A valid rule has no first date only when its end comes before it. It has
+   * nothing to add, and an end before the start is a pair the table refuses
+   * outright — which used to reach the reader as a write that failed for no
+   * reason they were given. The repeat sheet refuses it first; this is for
+   * any caller that gets past it.
+   */
+  if (first === null) {
+    throw new RecurrenceError("The end date is before the first one.", {
+      code: "endsBeforeFirst",
+    });
+  }
+
   // A template's rate is entered once, so its provenance is decided once too —
   // against the day the template starts. Occurrences look up their own day's
   // rate where they can, and fall back on this one; see `occurrenceRate`.

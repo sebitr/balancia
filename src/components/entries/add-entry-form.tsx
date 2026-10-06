@@ -109,6 +109,7 @@ import { CurrencyPicker } from "@/components/money/currency-picker";
 import {
   confirmationKey,
   directionOf,
+  equalShare,
   hasAmount,
   noteAfterTypeSwitch,
   primaryActionKey,
@@ -1248,10 +1249,8 @@ export function AddEntryForm({
     [members, effectiveIncluded],
   );
 
-  const eachFormatted =
-    preview.ok && preview.allocations.length > 0
-      ? preview.allocations[0].formatted
-      : null;
+  // What most people carry, and whether all of them do: see `equalShare`.
+  const each = preview.ok ? equalShare(preview.allocations) : null;
 
   /**
    * The half of a dictated proposal that still says something new.
@@ -1310,7 +1309,8 @@ export function AddEntryForm({
   const summary = summariseSplit({
     method,
     participantCount: effectiveIncluded.length,
-    eachFormatted,
+    eachFormatted: each?.formatted ?? null,
+    eachExact: each?.exact ?? true,
     byItem,
     problem: splitNote,
   });
@@ -1399,6 +1399,13 @@ export function AddEntryForm({
   const upcomingLabel = upcoming
     .map((day) => dates.plain(day, "dayMonth"))
     .join(", ");
+
+  /**
+   * A repeating rule that ends before its first date, which has nothing to
+   * add and is refused before the save. See `RecurrenceSheet`.
+   */
+  const endsTooSoon =
+    recurrence.enabled && recurrence.endDate !== null && upcoming.length === 0;
 
   /**
    * "Every month on the 1st" — the rule in one line, in the words the repeat
@@ -1779,6 +1786,12 @@ export function AddEntryForm({
     }
     if (!isSettle && !preview.ok) {
       refuseSplit();
+      return;
+    }
+    // The repeat sheet's Done will not close on such a rule, but its scrim
+    // will, and so does moving the date past the end afterwards.
+    if (!isSettle && endsTooSoon) {
+      refuse(t("repeat.endsBeforeFirst"));
       return;
     }
 
@@ -2743,6 +2756,7 @@ export function AddEntryForm({
         {!isSettle && (
           <SplitSummaryRow
             payerName={payerName}
+            payerIsYou={payerId === selfId}
             included={includedMembers}
             memberCount={members.length}
             summary={summary}
@@ -2834,10 +2848,19 @@ export function AddEntryForm({
                 <span className="block text-sm font-semibold">
                   {t("repeat.label")}
                 </span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  {recurrence.enabled && upcomingLabel !== ""
-                    ? t("repeat.next", { dates: upcomingLabel })
-                    : t("repeat.schedule")}
+                <span
+                  className={cn(
+                    "block truncate text-xs",
+                    endsTooSoon
+                      ? "text-destructive-ink"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {endsTooSoon
+                    ? t("repeat.endsBeforeFirst")
+                    : recurrence.enabled && upcomingLabel !== ""
+                      ? t("repeat.next", { dates: upcomingLabel })
+                      : t("repeat.schedule")}
                 </span>
               </span>
               <Switch
@@ -2916,7 +2939,7 @@ export function AddEntryForm({
             // A recurring template has no attachment of its own to carry,
             // so say so where the files are rather than after the entry has
             // been saved without them.
-            note={recurrence.enabled ? t("attach.notRepeating") : null}
+            unavailable={recurrence.enabled ? t("attach.notRepeating") : null}
           />
         )}
 
@@ -3034,6 +3057,7 @@ export function AddEntryForm({
           {sheet === "split" && (
             <SplitSheet
               members={members}
+              selfId={selfId}
               title={isIncome ? t("split.titleIncome") : t("split.title")}
               totalFormatted={amountFormatted}
               currency={currency}

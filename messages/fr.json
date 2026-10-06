@@ -2181,7 +2181,7 @@
     "balanceCurrencyLabel": "Ce solde est en",
     "balanceCurrency": "Devise du solde",
     "modeFixedShort": "Figé dès que le groupe existe.",
-    "timezoneFootnote": "Les journées se terminent à l’heure de {city}, d’après cet appareil. À changer dans les paramètres du groupe.",
+    "timezoneFootnote": "L’heure de {city}, d’après cet appareil, détermine ce qui compte comme aujourd’hui pour les nouvelles transactions, quand les dépenses récurrentes sont ajoutées et les heures affichées dans Activité. À changer dans les paramètres du groupe.",
     "iconTitle": "Icône du groupe",
     "chooseIcon": "Choisir une icône",
     "iconColorLabel": "Couleur",
@@ -2246,7 +2246,6 @@
     "failed": "Cela n’a pas fonctionné."
   },
   "receipts": {
-    "attach": "Joindre un reçu",
     "removeFile": "Retirer {name} de cette dépense",
     "formats": "JPEG, PNG, WebP, GIF, HEIC ou PDF. Stocké sur ce serveur, visible uniquement par ce groupe.",
     "uploadFailed": "Ce fichier n’a pas pu être envoyé.",
@@ -2816,6 +2815,7 @@
     "ownerCannotLeave": "Ce groupe t’appartient, tu ne peux donc pas le quitter. Archive-le ou supprime-le plutôt.",
     "participantHasAccount": "Cette personne se connecte déjà avec son propre compte, elle n’a donc pas besoin de lien personnel.",
     "groupArchived": "Ce groupe est archivé. Restaure-le avant d’y apporter des modifications.",
+    "endsBeforeFirst": "La date de fin tombe avant la première date.",
     "noPermission": "Tu ne peux pas faire cela dans ce groupe. Demande à son propriétaire.",
     "fileEmpty": "Ce fichier est vide.",
     "fileTooLarge": "Ce fichier dépasse la limite d’envoi de {limit} Mo.",
@@ -3287,6 +3287,7 @@
       "creditedTo": "Crédité à",
       "splitBetween": "Partagé entre",
       "everyone": "Tout le monde",
+      "you": "Toi",
       "someOf": "{count} sur {total}",
       "done": "Terminé",
       "methods": {
@@ -3308,13 +3309,14 @@
         "percentage": "Les pourcentages doivent totaliser 100."
       },
       "inputLabels": {
-        "equal": "Part de {name}",
-        "shares": "Parts de {name}",
-        "exact": "Montant exact de {name}",
-        "percentage": "Pourcentage de {name}"
+        "equal": "{you, select, yes {Ta part} other {Part de {name}}}",
+        "shares": "{you, select, yes {Tes parts} other {Parts de {name}}}",
+        "exact": "{you, select, yes {Ton montant exact} other {Montant exact de {name}}}",
+        "percentage": "{you, select, yes {Ton pourcentage} other {Pourcentage de {name}}}"
       },
       "summary": {
         "equalEach": "Partagé à parts égales entre {count} · {amount} chacun",
+        "equalAbout": "Partagé à parts égales entre {count} · environ {amount} chacun",
         "exactAmounts": "Montants exacts · {count} personnes",
         "percentages": "Par pourcentage · {count} personnes",
         "shares": "Par parts · {count} personnes",
@@ -3327,9 +3329,9 @@
         "sharesZero": "Parts · toutes les parts sont à zéro",
         "unreadable": "{method, select, exact {Montants exacts} percentage {Pourcentages} other {Parts}} · une valeur n’est pas un nombre"
       },
-      "payerOption": "Payé par {name}",
-      "receiverOption": "Reçu par {name}",
-      "includeOption": "Inclure {name} dans le partage",
+      "payerOption": "{you, select, yes {Payé par toi} other {Payé par {name}}}",
+      "receiverOption": "{you, select, yes {Reçu par toi} other {Reçu par {name}}}",
+      "includeOption": "{you, select, yes {T’inclure dans le partage} other {Inclure {name} dans le partage}}",
       "notes": {
         "nobody": "Choisis au moins une personne pour ce partage.",
         "roundedUp": "{you, select, yes {{count, plural, =0 {Tu paies} one {Toi et {names} payez} other {Toi, {names} payez}}} other {{count, plural, one {{names} paie} other {{names} paient}}}} {amount} de plus pour que le total fasse {total}.",
@@ -3343,13 +3345,13 @@
       "alwaysHint": "Enregistré comme paramètre par défaut du groupe",
       "addSomeone": "Ajouter quelqu’un",
       "several": "Plusieurs",
-      "payerAmount": "Montant payé par {name}",
+      "payerAmount": "{you, select, yes {Montant que tu as payé} other {Montant payé par {name}}}",
       "justOnePaid": "Une seule personne a payé",
       "splitPayment": "Partager le paiement à parts égales",
-      "giveRest": "Donner le reste à {name}",
-      "giveRemaining": "Donner les {amount} restants à {name}",
-      "shareFewer": "Une part de moins pour {name}",
-      "shareMore": "Une part de plus pour {name}",
+      "giveRest": "{you, select, yes {Te donner le reste} other {Donner le reste à {name}}}",
+      "giveRemaining": "{you, select, yes {Te donner les {amount} restants} other {Donner les {amount} restants à {name}}}",
+      "shareFewer": "{you, select, yes {Une part de moins pour toi} other {Une part de moins pour {name}}}",
+      "shareMore": "{you, select, yes {Une part de plus pour toi} other {Une part de plus pour {name}}}",
       "payerShort": "Il reste {amount} à attribuer à un payeur.",
       "payerOver": "Le total est dépassé de {amount}.",
       "payerNobody": "Indique combien au moins une personne a payé."
@@ -3391,7 +3393,6 @@
       "ends": "Fin",
       "never": "Jamais",
       "onADate": "À une date",
-      "preview": "Prochaines : {dates}. Créées automatiquement, heure de {timezone}.",
       "done": "Terminé",
       "label": "Récurrence",
       "schedule": "Recréer cette transaction selon un calendrier",
@@ -3410,6 +3411,7 @@
       "nextLabel": "Ensuite",
       "andAfter": "puis {rule}",
       "noOccurrences": "Cette règle ne se produit jamais.",
+      "endsBeforeFirst": "La date de fin tombe avant la première date.",
       "presetCustom": "Personnalisé…",
       "timezoneNote": "Créé à l’heure de {timezone}."
     },
