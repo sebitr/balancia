@@ -61,7 +61,8 @@
     "owes": "doit",
     "settledUp": "soldé",
     "settledUpBadge": "Soldé",
-    "settled": "Soldé"
+    "settled": "Soldé",
+    "approximately": "≈ {amount}"
   },
   "currencyPicker": {
     "back": "Retour",
@@ -522,6 +523,7 @@
     "searchPlaceholder": "{count, plural, one {Rechercher dans # groupe} other {Rechercher dans # groupes}}",
     "noMatch": "Aucun groupe ne correspond à « {query} »",
     "sectionYouAreOwed": "On te doit",
+    "sectionNoExpenses": "Pas encore de dépense",
     "sectionSettled": "Soldés · {count}",
     "sectionArchived": "Archivés · {count}",
     "addExpense": "Ajouter une dépense",
@@ -530,6 +532,7 @@
     "archivedGroups": "{count, plural, one {# groupe archivé} other {# groupes archivés}}",
     "nothingOutstanding": "Rien en cours dans {groups, plural, one {# groupe} other {# groupes}}",
     "nothingOutstandingSince": "Rien en cours dans {groups, plural, one {# groupe} other {# groupes}} · dernier remboursement {when} dans {group}",
+    "nothingRecorded": "Rien d’enregistré dans {groups, plural, one {# groupe} other {# groupes}} pour l’instant",
     "nameNudgeTitle": "Dis-nous comment t’appeler",
     "nameNudgeBody": "Tes groupes te voient sous le nom {name}, qui est ton adresse e-mail. Donne-leur un vrai nom à la place.",
     "nameNudgeAction": "Choisir mon nom",
@@ -550,6 +553,7 @@
     "pickerSearchPlaceholder": "Rechercher un groupe",
     "peopleCount": "{count, plural, one {# personne} other {# personnes}}",
     "settledWord": "Soldé",
+    "noExpensesWord": "Pas encore de dépense",
     "archivedWord": "Archivé"
   },
   "group": {
@@ -1012,6 +1016,13 @@
         "created": "t’a envoyé un lien personnel",
         "revoked": "a révoqué ton lien personnel"
       }
+    },
+    "repaymentRecorded": {
+      "between": "a enregistré un remboursement de {amount} versé par {from} à {to}",
+      "toYou": "a enregistré un remboursement de {amount} qui t’a été versé par {from}",
+      "yours": "a enregistré un remboursement de {amount} que tu as versé à {to}",
+      "theirs": "a enregistré avoir remboursé {amount} à {to}",
+      "theirsToYou": "a enregistré t’avoir remboursé {amount}"
     }
   },
   "recurring": {
@@ -1973,6 +1984,8 @@
       "groupNamePlaceholder": "Voyage à Lisbonne",
       "nameLabel": "Ton nom",
       "namePlaceholder": "Ton nom",
+      "currencyLabel": "Devise du groupe",
+      "currencyNote": "Les montants dans d’autres devises y sont convertis. Elle ne change plus une fois le groupe créé.",
       "create": "Créer le groupe",
       "failed": "Le groupe n’a pas pu être créé. Réessaie dans un instant."
     },
@@ -2099,10 +2112,10 @@
     "revokeFailed": "Le lien n’a pas pu être révoqué.",
     "ready": {
       "title": "Ton groupe est prêt !",
-      "lede": "Partage le même lien avec tout le monde. {people} pourront choisir leur nom dans le groupe en l’ouvrant.",
-      "ledeAlone": "Partage le même lien avec tout le monde. Chacun peut choisir son nom dans le groupe ou rejoindre comme nouveau membre.",
-      "peopleTwo": "{first} et {second}",
-      "peopleMany": "{first}, {second} et {count, plural, one {1 autre} other {# autres}}"
+      "ledeNobody": "Partage le même lien avec tout le monde. Chaque personne qui l’ouvre rejoint le groupe sous son propre nom.",
+      "ledeOne": "Partage le même lien avec tout le monde. {first} pourra choisir son nom dans le groupe en l’ouvrant.",
+      "ledeTwo": "Partage le même lien avec tout le monde. {first} et {second} pourront choisir leur nom dans le groupe en l’ouvrant.",
+      "ledeMany": "Partage le même lien avec tout le monde. {first}, {second} et {count, plural, one {# autre} other {# autres}} pourront choisir leur nom dans le groupe en l’ouvrant."
     }
   },
   "guestWidget": {
@@ -3143,7 +3156,7 @@
     "payWithLine": "{method} : {detail}",
     "payWithChoose": "Quel moyen de paiement",
     "payCodeAttached": "Un code à scanner part avec",
-    "logActivity": "Visible dans le groupe",
+    "showInActivity": "Afficher dans l’activité du groupe",
     "sendPush": "Envoyer à {name} dans Balancia",
     "sendShare": "Partager avec {name}",
     "sendCaptionPush": "La notification part immédiatement, telle quelle.",
@@ -3153,7 +3166,10 @@
     "sentNextPush": "{name} suit, et le recevra dans l’application.",
     "copied": "Cet appareil ne peut pas partager directement : le message est dans ton presse-papiers.",
     "handoffFailed": "Cet appareil n’a pas accepté le message. Copie-le depuis le champ ci-dessus et envoie-le toi-même — rien n’a été enregistré.",
-    "discardEdit": "Changer de brouillon remplacera le message que tu as écrit. Continuer ?",
+    "replaceTitle": "Remplacer le message que tu as écrit ?",
+    "replaceBody": "Une nouvelle formulation prend la place de ce que tu as tapé, et tes propres mots ne pourront pas être récupérés.",
+    "replaceConfirm": "Remplacer mon message",
+    "replaceKeep": "Garder mon message",
     "failed": "Cette relance n’a pas pu être envoyée.",
     "drafts": {
       "gentle1": "Petit rappel : tu dois encore {amount} à {name} pour {group}. Rien ne presse.",

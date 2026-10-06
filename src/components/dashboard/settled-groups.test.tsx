@@ -114,6 +114,55 @@ describe("SettledGroups", () => {
     expect(within(row).queryByText(/2 people/)).not.toBeInTheDocument();
   });
 
+  /**
+   * A group with nothing in it has no balance, and it used to be filed under
+   * "Settled up" for that reason, with "Settled" beside its name.
+   */
+  it("keeps a group with nothing recorded out of the settled ones", () => {
+    renderWithIntl(
+      <SettledGroups
+        unstarted={[group("n", "Lisbon trip")]}
+        settled={SETTLED}
+        archived={[]}
+        now={NOW}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "No expenses yet" }),
+    ).toBeVisible();
+    // Counted without it: six settled groups, not seven.
+    expect(
+      screen.getByRole("heading", { name: "Settled up · 6" }),
+    ).toBeVisible();
+
+    const row = screen.getByRole("link", { name: /Lisbon trip/ });
+    expect(row).toHaveAttribute("href", "/groups/n");
+    expect(within(row).getByText("No expenses yet")).toBeVisible();
+    expect(within(row).queryByText("Settled")).not.toBeInTheDocument();
+    expect(within(row).getByText(/2 people/)).toBeVisible();
+
+    // Above the settled section, where the next thing to do is.
+    const [first] = screen.getAllByRole("heading");
+    expect(first).toHaveTextContent("No expenses yet");
+  });
+
+  it("shows a group with nothing recorded even when none is settled", () => {
+    renderWithIntl(
+      <SettledGroups
+        unstarted={[group("n", "Lisbon trip")]}
+        settled={[]}
+        archived={[]}
+        now={NOW}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: /Lisbon trip/ })).toBeVisible();
+    expect(
+      screen.queryByRole("heading", { name: /Settled up/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it("renders nothing at all when there is neither", () => {
     const { container } = renderWithIntl(
       <SettledGroups settled={[]} archived={[]} now={NOW} />,

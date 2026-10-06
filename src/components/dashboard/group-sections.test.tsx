@@ -42,6 +42,7 @@ describe("GroupList", () => {
     renderWithIntl(<GroupList groups={[row()]} now={NOW} />);
 
     // Whole units: the list is scanned, and the centimes are inside the group.
+    // This one is whole already, so it carries no "≈".
     expect(screen.getByText("€100")).toBeVisible();
     // The section label carries the direction visually, so the row's own word
     // is present but not shown — colour is never the only signal.
@@ -116,5 +117,69 @@ describe("GroupList", () => {
     );
 
     expect(screen.getByText("CHF 210")).toBeVisible();
+  });
+
+  /**
+   * Whole units are a choice (#100), and the widget above keeps the centimes
+   * whenever it shows a group's own currency. "− CHF 961" under "CHF 960.84"
+   * read as a second, different debt, so a rounded figure says it is one.
+   */
+  it("marks a figure the rounding has moved, and only that one", () => {
+    renderWithIntl(
+      <GroupList
+        groups={[
+          row({ amounts: [{ minorUnits: "-96084", currency: "CHF" }] }),
+          row({
+            id: "g2",
+            name: "Lisbon, March",
+            amounts: [{ minorUnits: "888", currency: "USD" }],
+          }),
+          row({
+            id: "g3",
+            name: "Tokyo",
+            amounts: [{ minorUnits: "4500", currency: "JPY" }],
+          }),
+        ]}
+        now={NOW}
+      />,
+    );
+
+    expect(screen.getByText("≈ CHF 961")).toBeVisible();
+    expect(screen.getByText("≈ $9")).toBeVisible();
+    // Nothing to round in a currency with no minor unit.
+    expect(screen.getByText("¥4,500")).toBeVisible();
+    // And a whole figure is not cast into doubt.
+    expect(screen.queryByText(/≈ €/)).not.toBeInTheDocument();
+  });
+
+  it("shows a debt smaller than one unit exactly, rather than as nothing", () => {
+    renderWithIntl(
+      <GroupList
+        groups={[row({ amounts: [{ minorUnits: "-40", currency: "CHF" }] })]}
+        now={NOW}
+      />,
+    );
+
+    expect(screen.getByText("CHF 0.40")).toBeVisible();
+    expect(screen.queryByText(/CHF 0$/)).not.toBeInTheDocument();
+  });
+
+  it("keeps a five-figure amount whole beside a long name", () => {
+    renderWithIntl(
+      <GroupList
+        groups={[
+          row({
+            name: "Summer house in the Engadine, shared by both families",
+            amounts: [{ minorUnits: "-1234567", currency: "CHF" }],
+          }),
+        ]}
+        now={NOW}
+      />,
+    );
+
+    // The name is the one that gives way; the figure never shrinks.
+    const figure = screen.getByText("≈ CHF 12,346");
+    expect(figure.closest(".shrink-0")).not.toBeNull();
+    expect(figure.closest(".truncate")).toBeNull();
   });
 });

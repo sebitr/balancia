@@ -61,7 +61,8 @@
     "owes": "owes",
     "settledUp": "settled up",
     "settledUpBadge": "Settled up",
-    "settled": "Settled"
+    "settled": "Settled",
+    "approximately": "≈ {amount}"
   },
   "currencyPicker": {
     "back": "Back",
@@ -522,6 +523,7 @@
     "searchPlaceholder": "{count, plural, one {Search # group} other {Search # groups}}",
     "noMatch": "No group matches “{query}”",
     "sectionYouAreOwed": "You're owed",
+    "sectionNoExpenses": "No expenses yet",
     "sectionSettled": "Settled up · {count}",
     "sectionArchived": "Archived · {count}",
     "addExpense": "Add expense",
@@ -530,6 +532,7 @@
     "archivedGroups": "{count, plural, one {# archived group} other {# archived groups}}",
     "nothingOutstanding": "Nothing outstanding in {groups, plural, one {# group} other {# groups}}",
     "nothingOutstandingSince": "Nothing outstanding in {groups, plural, one {# group} other {# groups}} · last cleared {when} in {group}",
+    "nothingRecorded": "Nothing recorded in {groups, plural, one {# group} other {# groups}} yet",
     "nameNudgeTitle": "What should people call you?",
     "nameNudgeBody": "Your groups see you as “{name}”, which is your email address. Give them a name instead.",
     "nameNudgeAction": "Set my name",
@@ -550,6 +553,7 @@
     "pickerSearchPlaceholder": "Search groups",
     "peopleCount": "{count, plural, one {# person} other {# people}}",
     "settledWord": "Settled",
+    "noExpensesWord": "No expenses yet",
     "archivedWord": "Archived"
   },
   "group": {
@@ -1012,6 +1016,13 @@
         "created": "sent you a personal link",
         "revoked": "revoked your personal link"
       }
+    },
+    "repaymentRecorded": {
+      "between": "recorded {from}'s repayment of {amount} to {to}",
+      "toYou": "recorded {from}'s repayment of {amount} to you",
+      "yours": "recorded your repayment of {amount} to {to}",
+      "theirs": "recorded their repayment of {amount} to {to}",
+      "theirsToYou": "recorded their repayment of {amount} to you"
     }
   },
   "recurring": {
@@ -1888,6 +1899,8 @@
       "groupNamePlaceholder": "Lisbon trip",
       "nameLabel": "Your name",
       "namePlaceholder": "Your name",
+      "currencyLabel": "Group currency",
+      "currencyNote": "Amounts in other currencies are converted into it. Fixed once the group exists.",
       "create": "Create the group",
       "failed": "The group could not be created. Try again in a moment."
     },
@@ -2099,10 +2112,10 @@
     "revokeFailed": "The link could not be revoked.",
     "ready": {
       "title": "Your group is ready!",
-      "lede": "Share the same link with everyone. {people} can choose their existing name when they open it.",
-      "ledeAlone": "Share the same link with everyone. They can choose their existing name in the group or join as a new member.",
-      "peopleTwo": "{first} and {second}",
-      "peopleMany": "{first}, {second} and {count, plural, one {1 other} other {# others}}"
+      "ledeNobody": "Share the same link with everyone. Each person who opens it joins the group under their own name.",
+      "ledeOne": "Share the same link with everyone. {first} can choose their existing name when they open it.",
+      "ledeTwo": "Share the same link with everyone. {first} and {second} can choose their existing names when they open it.",
+      "ledeMany": "Share the same link with everyone. {first}, {second} and {count, plural, one {# other} other {# others}} can choose their existing names when they open it."
     }
   },
   "guestWidget": {
@@ -3143,7 +3156,7 @@
     "payWithLine": "{method}: {detail}",
     "payWithChoose": "Which way to pay",
     "payCodeAttached": "A code to scan goes with it",
-    "logActivity": "Visible to the group",
+    "showInActivity": "Show in group activity",
     "sendPush": "Send to {name} in Balancia",
     "sendShare": "Share with {name}",
     "sendCaptionPush": "The push goes out immediately, exactly as written.",
@@ -3153,7 +3166,10 @@
     "sentNextPush": "{name} is next, and gets it in the app.",
     "copied": "This device cannot share directly, so the message is on your clipboard.",
     "handoffFailed": "This device would not take the message. Copy it from the box above and send it yourself — nothing has been recorded.",
-    "discardEdit": "Shuffling replaces the message you wrote. Continue?",
+    "replaceTitle": "Replace the message you wrote?",
+    "replaceBody": "A new wording takes the place of what you typed, and your own words cannot be brought back.",
+    "replaceConfirm": "Replace my message",
+    "replaceKeep": "Keep my message",
     "failed": "That reminder could not be sent.",
     "drafts": {
       "gentle1": "Just a reminder: you still owe {name} {amount} for {group}. No rush.",

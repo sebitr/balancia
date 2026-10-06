@@ -6,6 +6,7 @@ import { requireGroupAccess } from "@/lib/actions";
 import {
   findRestorableDeletions,
   listGroupActivity,
+  namesInActivity,
 } from "@/modules/activity/service";
 
 /**
@@ -40,8 +41,11 @@ export default async function GroupActivityPage({
     getTranslations("common"),
   ]);
   // After the list rather than beside it: which deletions can still be taken
-  // back is a question about exactly these rows.
-  const restorable = await findRestorableDeletions(access, entries);
+  // back, and whom a repayment names, are questions about exactly these rows.
+  const [restorable, names] = await Promise.all([
+    findRestorableDeletions(access, entries),
+    namesInActivity(access.groupId, entries),
+  ]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -54,7 +58,7 @@ export default async function GroupActivityPage({
         groupId={access.groupId}
         restorable={restorable}
         timeZone={access.group.timezone}
-        viewerId={access.participantId}
+        people={{ you: access.participantId, names }}
       />
     </div>
   );

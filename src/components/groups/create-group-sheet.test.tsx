@@ -497,7 +497,11 @@ describe("CreateGroupSheet", () => {
     expect(push).toHaveBeenCalledWith("/groups/g1");
   });
 
-  it("names the people it was given, creator first", async () => {
+  /**
+   * The creator is the one reading this, and the one person who will never
+   * open the link to pick a name — so they are not in the list of who can.
+   */
+  it("names the people it was given, leaving out the creator", async () => {
     const { user } = renderSheet();
     await user.type(screen.getByPlaceholderText("Group name"), "Lisbon");
     await user.type(screen.getByLabelText("Add a person"), "Ana");
@@ -506,9 +510,10 @@ describe("CreateGroupSheet", () => {
 
     expect(
       await screen.findByText(
-        "Share the same link with everyone. Seb and Ana can choose their existing name when they open it.",
+        "Share the same link with everyone. Ana can choose their existing name when they open it.",
       ),
     ).toBeInTheDocument();
+    expect(screen.queryByText(/Seb/)).not.toBeInTheDocument();
   });
 
   it("keeps the description out of the way until it is asked for", async () => {

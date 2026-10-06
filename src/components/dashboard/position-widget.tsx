@@ -67,6 +67,12 @@ export interface PositionWidgetProps {
   readonly groups: readonly PickableGroup[];
   readonly groupCount: number;
   readonly lastCleared: { at: string; groupName: string } | null;
+  /**
+   * Set when no group on the screen has anything recorded in it yet, with how
+   * many groups that is. Nothing outstanding is then not a result, so the
+   * figure says "No expenses yet" rather than "Settled up".
+   */
+  readonly unstarted?: { readonly count: number } | null;
 }
 
 /** One currency's standing: what it nets to, and which way. */
@@ -272,6 +278,7 @@ export function PositionWidget({
   groups,
   groupCount,
   lastCleared,
+  unstarted = null,
 }: PositionWidgetProps) {
   const t = useTranslations("dashboard");
   const tMoney = useTranslations("money");
@@ -358,7 +365,9 @@ export function PositionWidget({
               TONE.neutral.ink,
             )}
           >
-            {tMoney("settledUpBadge")}
+            {/* Square because nothing has happened is not square because
+                everything was paid back, and only the second is settled. */}
+            {unstarted ? t("noExpensesWord") : tMoney("settledUpBadge")}
           </p>
         ) : ratesUnavailable && lead ? (
           <FigureDisclosure
@@ -431,16 +440,18 @@ export function PositionWidget({
 
         {allSquare && (
           <p className="border-t pt-3 text-xs text-muted-foreground">
-            {lastCleared
-              ? t("nothingOutstandingSince", {
-                  groups: groupCount,
-                  when: format.relativeTime(
-                    new Date(lastCleared.at),
-                    new Date(now),
-                  ),
-                  group: lastCleared.groupName,
-                })
-              : t("nothingOutstanding", { groups: groupCount })}
+            {unstarted
+              ? t("nothingRecorded", { groups: unstarted.count })
+              : lastCleared
+                ? t("nothingOutstandingSince", {
+                    groups: groupCount,
+                    when: format.relativeTime(
+                      new Date(lastCleared.at),
+                      new Date(now),
+                    ),
+                    group: lastCleared.groupName,
+                  })
+                : t("nothingOutstanding", { groups: groupCount })}
           </p>
         )}
       </div>

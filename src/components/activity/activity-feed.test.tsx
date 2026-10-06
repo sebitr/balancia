@@ -208,6 +208,47 @@ describe("the activity feed's clock", () => {
   });
 });
 
+describe("a repayment in the feed", () => {
+  it("says who paid whom and how much, and calls the reader you", async () => {
+    renderWithIntl(
+      await ActivityFeed({
+        entries: [
+          event({
+            id: "r1",
+            action: "settlement.created",
+            entityType: "settlement",
+            entityId: "s1",
+            actorLabel: "Sam",
+            actorParticipantId: "p-sam",
+            metadata: {
+              amount: "3000",
+              currency: "EUR",
+              from: "p-sam",
+              to: "p-ada",
+            },
+          }),
+        ],
+        groupId: "g1",
+        restorable: new Set(),
+        timeZone: "UTC",
+        people: {
+          you: "p-ada",
+          names: new Map([
+            ["p-sam", "Sam"],
+            ["p-ada", "Ada"],
+          ]),
+        },
+      }),
+      GROUP,
+    );
+
+    expect(screen.getByText("Sam")).toBeVisible();
+    expect(
+      screen.getByText("recorded their repayment of €30.00 to you"),
+    ).toBeVisible();
+  });
+});
+
 describe("restoring from the activity feed", () => {
   it("offers a restore only on deletions that still stand", async () => {
     renderWithIntl(await feed(["a1", "a2", "a3"]), GROUP);
@@ -617,7 +658,7 @@ describe("the lines about links", () => {
         groupId: "g1",
         restorable: new Set(),
         timeZone: "UTC",
-        viewerId,
+        people: { you: viewerId, names: new Map() },
       }),
       GROUP,
     );

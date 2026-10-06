@@ -165,6 +165,24 @@ export default async function DashboardPage() {
 
   const nowIso = now.toISOString();
 
+  /*
+   * Nothing outstanding, split by whether anything was ever recorded. The
+   * overview keeps both in one bucket — "no balance" is the same fact to the
+   * arithmetic — and this screen is where they are worded apart.
+   */
+  const unstarted = buckets.settled.filter(
+    (position) => position.hasEntries === false,
+  );
+  const settled = buckets.settled.filter(
+    (position) => position.hasEntries !== false,
+  );
+  /** Every group on the screen is one nobody has recorded anything in yet. */
+  const nothingRecorded =
+    unstarted.length > 0 &&
+    settled.length === 0 &&
+    buckets.needsYou.length === 0 &&
+    buckets.youAreOwed.length === 0;
+
   return (
     <>
       <div className="flex flex-col gap-[26px]">
@@ -209,6 +227,7 @@ export default async function DashboardPage() {
           converted={overview.converted}
           groups={active.map(toPickable)}
           groupCount={overview.groupCount}
+          unstarted={nothingRecorded ? { count: unstarted.length } : null}
           lastCleared={
             overview.lastCleared
               ? {
@@ -246,7 +265,8 @@ export default async function DashboardPage() {
           )}
 
           <SettledGroups
-            settled={buckets.settled.map(toQuiet)}
+            unstarted={unstarted.map(toQuiet)}
+            settled={settled.map(toQuiet)}
             archived={buckets.archived.map(toQuiet)}
             now={nowIso}
           />
