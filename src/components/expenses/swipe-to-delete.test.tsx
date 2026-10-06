@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { isInaccessible, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { SwipeToDelete } from "./swipe-to-delete";
@@ -60,25 +60,78 @@ function lastToast() {
   ];
 }
 
-function render(kind: "expense" | "settlement" = "expense") {
+function render(
+  kind: "expense" | "settlement" = "expense",
+  locale: "en" | "fr" = "en",
+) {
   return renderWithIntl(
     // The row itself is a stand-in: this wrapper is indifferent to what it
     // holds, and the real one is a link the list's own tests already cover.
     <SwipeToDelete groupId="g1" kind={kind} id="e1" description="Dinner">
       <span>Dinner</span>
     </SwipeToDelete>,
+    { locale },
   );
 }
 
 /**
- * The fallback button, found by the sentence it is labelled with rather than
- * by its visible word. Thirty rows would otherwise offer thirty buttons all
- * called "Delete", which is a list a screen reader cannot tell apart — so the
- * label names the entry and says what removing it does.
+ * The fallback button, found by the whole of its name rather than by its
+ * visible word. Thirty rows would otherwise offer thirty buttons all called
+ * "Delete", which is a list a screen reader cannot tell apart — so the name
+ * says which entry goes.
  */
 function deleteButton() {
-  return screen.getByRole("button", { name: /“Dinner” will be removed/ });
+  return screen.getByRole("button", { name: "Delete “Dinner”" });
 }
+
+/**
+ * What a keyboard or a screen reader meets on every row of the list.
+ *
+ * The name used to be the detail screen's confirmation sentence — "“Dinner”
+ * will be removed from the group and balances will be recalculated…" — which
+ * is a consequence rather than an action, read out in full on every row.
+ */
+describe("the delete control on a row", () => {
+  it("is named for what it does and which entry it does it to", () => {
+    render();
+
+    const button = deleteButton();
+    expect(button).toHaveAccessibleName("Delete “Dinner”");
+    expect(button).not.toHaveAccessibleName(/will be removed/);
+  });
+
+  it("says the same in French", () => {
+    render("expense", "fr");
+
+    // Non-breaking inside the guillemets, as everywhere in the French copy.
+    expect(
+      screen.getByRole("button", { name: "Supprimer « Dinner »" }),
+    ).toBeInTheDocument();
+  });
+
+  it("is the only Delete a screen reader finds on the row", () => {
+    render();
+
+    // The word painted behind the row for the swipe is the second "Delete" in
+    // the markup. It is paint, so it stays out of the accessibility tree —
+    // and the button, invisible until focused, must not go out with it.
+    const words = screen.getAllByText("Delete");
+    const painted = words.filter((word) => !word.closest("button"));
+    expect(painted).toHaveLength(1);
+    expect(isInaccessible(painted[0]!)).toBe(true);
+    expect(isInaccessible(deleteButton())).toBe(false);
+    expect(screen.getAllByRole("button")).toEqual([deleteButton()]);
+  });
+
+  it("is reached with Tab, as the swipe's stand-in", async () => {
+    const user = userEvent.setup();
+    render();
+
+    await user.tab();
+
+    expect(deleteButton()).toHaveFocus();
+  });
+});
 
 beforeEach(() => {
   vi.clearAllMocks();

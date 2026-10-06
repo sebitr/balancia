@@ -1,0 +1,344 @@
+<!-- @dsCard group="Patterns" name="A person's page" subtitle="What is between you, what to do about it, and the entries behind it" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Patterns</div>
+    <h1>A person's page</h1>
+    <p class="lede">
+      Tap a name in the overview's balances and you land on that person. The
+      page answers three questions in order: what is between the two of you,
+      what you can do about it, and which entries made it — and only then the
+      statistics. A figure that says "You owe Marta" and offers nothing to do
+      about it sends the reader to another screen to find the same number again.
+    </p>
+  </header>
+
+  <section>
+    <h2>Someone you owe</h2>
+    <div class="frame frame--phone" style="max-width: 24.375rem">
+      <div
+        style="
+          padding: 0.875rem 1rem 1.5rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.875rem;
+        "
+      >
+        <div style="display: flex; flex-direction: column; gap: 0.125rem">
+          <div class="screen-header" style="padding: 0; gap: 0.5rem">
+            <button class="screen-header-back" aria-label="Back to the group">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="m12 19-7-7 7-7" />
+                <path d="M19 12H5" />
+              </svg>
+            </button>
+            <span class="screen-title" style="flex: 0 1 auto">Marta</span>
+            <span class="badge badge--secondary">Member</span>
+          </div>
+          <p class="note" style="margin: 0; padding-left: 2.625rem">
+            In Verbier, February since 2 Feb 2026
+          </p>
+        </div>
+
+        <div
+          style="
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            border-radius: 17px;
+            background: var(--card);
+            padding: 0.875rem;
+            box-shadow: 0 0 0 1px var(--border);
+          "
+        >
+          <div class="spec-label" style="margin: 0">Between you two</div>
+          <div style="display: flex; flex-direction: column; gap: 0.25rem">
+            <span
+              class="balance balance--negative"
+              style="font-size: 1.5rem; font-weight: 600"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="width: 1.25rem; height: 1.25rem"
+              >
+                <path d="M7 7h10v10" />
+                <path d="M7 17 17 7" />
+              </svg>
+              <span class="tabular-nums">CHF 960.84</span>
+            </span>
+            <span style="padding-left: 1.625rem; font-weight: 500"
+              >You owe Marta</span
+            >
+          </div>
+          <button
+            class="btn btn--default"
+            style="
+              width: 100%;
+              height: 46px;
+              border-radius: 14px;
+              font-weight: 600;
+            "
+          >
+            I paid Marta
+          </button>
+          <dl
+            style="
+              display: grid;
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+              gap: 0.75rem;
+              margin: 0;
+              border-top: 1px solid var(--border);
+              padding-top: 0.75rem;
+            "
+          >
+            <div>
+              <dt class="note" style="font-size: 0.6875rem">
+                Marta's balance in this group
+              </dt>
+              <dd
+                class="balance--positive tabular-nums"
+                style="margin: 0; font-weight: 600"
+              >
+                + CHF 1,978.85
+              </dd>
+            </div>
+            <div>
+              <dt class="note" style="font-size: 0.6875rem">
+                Not settled with 2 people
+              </dt>
+              <dd class="tabular-nums" style="margin: 0; font-weight: 600">
+                CHF 1,978.85
+              </dd>
+            </div>
+          </dl>
+        </div>
+
+        <a
+          href="#"
+          class="list-row"
+          style="
+            border-radius: 1rem;
+            background: var(--card);
+            box-shadow: 0 0 0 1px var(--border);
+            justify-content: flex-start;
+          "
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="17"
+            height="17"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            style="flex-shrink: 0; color: var(--primary-ink)"
+          >
+            <path
+              d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"
+            />
+            <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
+            <path d="M12 17.5v-11" />
+          </svg>
+          <span class="list-main" style="flex: 1">
+            <span class="list-title" style="font-size: 0.75rem"
+              >Entries with Marta</span
+            >
+            <span class="list-sub"
+              >Everything Marta paid for or has a share in</span
+            >
+          </span>
+          <svg
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            style="flex-shrink: 0; color: var(--muted-foreground)"
+          >
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+        </a>
+
+        <dl class="list" style="margin: 0">
+          <div class="list-row" style="padding: 0.625rem 0.75rem">
+            <dt class="note" style="margin: 0; font-size: 0.875rem">Paid</dt>
+            <dd class="tabular-nums" style="margin: 0; font-weight: 600">
+              CHF 3,066.10
+            </dd>
+          </div>
+          <div
+            class="list-row"
+            style="
+              padding: 0.625rem 0.75rem;
+              border-top: 1px solid var(--border);
+            "
+          >
+            <dt class="note" style="margin: 0; font-size: 0.875rem">
+              Their share
+            </dt>
+            <dd class="tabular-nums" style="margin: 0; font-weight: 600">
+              CHF 1,087.25
+            </dd>
+          </div>
+          <div
+            class="list-row"
+            style="
+              padding: 0.625rem 0.75rem;
+              border-top: 1px solid var(--border);
+            "
+          >
+            <dt class="note" style="margin: 0; font-size: 0.875rem">Entries</dt>
+            <dd class="tabular-nums" style="margin: 0; font-weight: 600">5</dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      The button is the settle screen's own for this pair — one component,
+      <code>SettleActions</code>, drawn in both places. It records something the
+      reader has already done, so it says "I paid Marta", never "Pay Marta
+      back": nothing in Balancia moves money. Where Marta has said how she likes
+      to be paid, her payment panel (TWINT, a bank code) comes first and the
+      button sits at its foot, exactly as on the settle screen.
+    </p>
+  </section>
+
+  <section>
+    <h2>Someone who owes you</h2>
+    <div class="spec" style="max-width: 24.375rem">
+      <div style="display: flex; flex-direction: column; gap: 0.25rem">
+        <span
+          class="balance balance--positive"
+          style="font-size: 1.5rem; font-weight: 600"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            style="width: 1.25rem; height: 1.25rem"
+          >
+            <path d="M17 7 7 17" />
+            <path d="M17 17H7V7" />
+          </svg>
+          <span class="tabular-nums">CHF 1,018.01</span>
+        </span>
+        <span style="padding-left: 1.625rem; font-weight: 500"
+          >Jonas owes you</span
+        >
+      </div>
+      <div class="row" style="margin-top: 0.75rem; gap: 0.625rem">
+        <button
+          class="btn btn--default"
+          style="flex: 1; height: 46px; border-radius: 14px; font-weight: 600"
+        >
+          I was paid back
+        </button>
+        <button
+          class="btn btn--outline"
+          style="height: 46px; border-radius: 14px; padding: 0 1rem"
+          aria-label="Remind Jonas"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+            <path
+              d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"
+            />
+          </svg>
+          Remind
+        </button>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      The pair wraps, so a longer translation puts Remind on a line of its own
+      rather than cutting either label. Remind appears only when the reminder
+      flow has the person on its list, and turns into a disabled "Reminded" for
+      a day after it is used.
+    </p>
+  </section>
+
+  <section>
+    <h2>When there is nothing to do</h2>
+    <div class="dl">
+      <dt>Settled up</dt>
+      <dd>"You and Marta are settled up", and no buttons.</dd>
+      <dt>Your own page</dt>
+      <dd>
+        Headed "Your balance in this group". No buttons — there is nobody to pay
+        — and the row reads "Your entries".
+      </dd>
+      <dt>No place in the group</dt>
+      <dd>
+        A reader with no participant row of their own is a party to nothing:
+        "Marta's balance in this group", and no buttons.
+      </dd>
+      <dt>A guest</dt>
+      <dd>
+        A full financial participant, offered exactly what the settle screen
+        offers them.
+      </dd>
+      <dt>Several currencies</dt>
+      <dd>One card per currency, each with its own buttons. Never a total.</dd>
+    </div>
+  </section>
+
+  <section>
+    <h2>Rules</h2>
+    <div class="do-dont">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Give every figure the width it needs. Paid, share and entries are
+          rows, label left and figure right, so "CHF 12,345.67" fits at 360px
+          and anything wider wraps. Labels wrap too.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Truncate an amount. "CHF 3,066.…" is not a shorter figure, it is a
+          wrong one — the three tiles this replaced did exactly that at 375px.
+        </p>
+      </div>
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Say it the way a person would: "Marta's balance in this group", "Not
+          settled with 2 people", "Marta paid 2.8 times their share in this
+          period", "Smallest share of 3 people".
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Write like an analyst: "Net across the group", "Open with 2 people",
+          "median member", a ratio to two decimals.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>

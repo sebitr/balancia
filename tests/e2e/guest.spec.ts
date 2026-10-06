@@ -48,21 +48,18 @@ test("invite a guest and participate through the secure link", async ({
   ).toBeVisible();
 
   /*
-   * The guest route, which is four taps and asks for one thing.
+   * The guest route, which is two taps and asks for one thing.
    *
-   * Every screen between here and the group is deliberate: a name to be known
-   * by, the balance that name arrives at, and the list of what is left to set
-   * up. None of them asks for an address, which is the whole point of the
-   * guest option.
+   * A name to be known by, and then the group itself. Neither asks for an
+   * address, which is the whole point of the guest option; what an account
+   * would keep is the guest card's to say, on the overview.
    */
   await guestPage.getByRole("button", { name: /Continue as a guest/ }).click();
   await guestPage.getByRole("button", { name: "Join as a guest" }).click();
-  await guestPage.getByRole("button", { name: "See the group" }).click();
-  await expect(
-    guestPage.getByText("Guest access lives in this browser only"),
-  ).toBeVisible();
-  await guestPage.getByRole("button", { name: "Go to the group" }).click();
   await expect(guestPage).toHaveURL(new RegExp(`/groups/${groupId}$`));
+  await expect(guestPage.getByRole("status")).toContainText(
+    "This browser is the only place your access lives",
+  );
 
   // The guest sees the group and is labelled as a guest. Both are addressed
   // precisely: the guest widget below names the group again, and says "guest".
@@ -183,8 +180,6 @@ test("a guest keeps their group and expenses by creating an account", async ({
   await guestPage.goto(inviteUrl);
   await guestPage.getByRole("button", { name: /Continue as a guest/ }).click();
   await guestPage.getByRole("button", { name: "Join as a guest" }).click();
-  await guestPage.getByRole("button", { name: "See the group" }).click();
-  await guestPage.getByRole("button", { name: "Go to the group" }).click();
   await expect(guestPage).toHaveURL(new RegExp(`/groups/${groupId}$`));
 
   // Something worth not losing.
@@ -233,9 +228,10 @@ test("a guest keeps their group and expenses by creating an account", async ({
   await expect(
     guestPage.getByRole("heading", { name: /You're in, Grace/ }),
   ).toBeVisible();
-  await guestPage.getByRole("button", { name: "See the group" }).click();
+  // The button says it opens the checklist, and "Go to the group" sits under
+  // it for whoever would rather skip it.
+  await guestPage.getByRole("button", { name: "Finish setting up" }).click();
   await expect(guestPage.getByText("Account created")).toBeVisible();
-  await expect(guestPage.getByText("Claim your account")).toBeHidden();
 
   await guestPage.getByRole("button", { name: "Go to the group" }).click();
   await expect(guestPage).toHaveURL(new RegExp(`/groups/${groupId}$`));

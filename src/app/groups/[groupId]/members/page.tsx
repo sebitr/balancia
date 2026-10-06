@@ -137,11 +137,14 @@ export default async function MembersPage({
 
       <PeopleCard
         groupId={access.groupId}
+        groupName={access.group.name}
+        archived={access.group.archivedAt !== null}
         people={people}
         viewerId={access.participantId}
         canManage={access.permissions.manageParticipants}
         canInvite={access.permissions.manageInvitations}
         canRemove={access.permissions.removeParticipants}
+        canLeave={access.permissions.leaveGroup}
       />
 
       {invites && (

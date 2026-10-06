@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, type Mock } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
@@ -217,6 +217,203 @@ describe("signing in with a code", () => {
     expect(screen.getByLabelText("Email address")).toHaveValue(
       "ada@example.com",
     );
+  });
+});
+
+/**
+ * Where the caret is after the server says no.
+ *
+ * The submit button is disabled while the request is out, and a focused
+ * control that becomes disabled lets go of focus — so a wrong password used
+ * to leave a keyboard on the page body, with both fields still filled in and
+ * no way back to them but Tab from the top. The caret goes to the field to
+ * retype, with its contents selected, and only once the refusal is on screen
+ * for a screen reader to have announced.
+ */
+describe("after a refused attempt", () => {
+  /**
+   * Holds the server's next answer back, so the test can look at the form
+   * while the request is still out and then hand it the refusal.
+   */
+  function answerLater(action: Mock): (result: unknown) => void {
+    let answer: (result: unknown) => void = () => {};
+    action.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    return (result) => answer(result);
+  }
+
+  /** The alert's text at the moment `field` takes focus, or null if none. */
+  function alertWhenFocused(field: HTMLElement): () => string | null {
+    let seen: string | null = null;
+    field.addEventListener("focus", () => {
+      seen = document.querySelector('[role="alert"]')?.textContent ?? null;
+    });
+    return () => seen;
+  }
+
+  it("puts the caret back in the password, selected, once the refusal is shown", async () => {
+    const answer = answerLater(signInAction);
+    const user = userEvent.setup();
+    renderWithIntl(<SignInForm mailEnabled={false} />);
+
+    const email = screen.getByLabelText("Email address");
+    const password = screen.getByLabelText<HTMLInputElement>("Password");
+    await user.type(email, "ada@example.com");
+    await user.type(password, "not-the-password");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    await waitFor(() => expect(signInAction).toHaveBeenCalled());
+
+    const seen = alertWhenFocused(password);
+    expect(password).not.toHaveFocus();
+    answer({ ok: false, error: en.serverErrors.invalidCredentials });
+
+    await waitFor(() => expect(password).toHaveFocus());
+    // The refusal was already on screen when the caret arrived.
+    expect(seen()).toBe(en.serverErrors.invalidCredentials);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      en.serverErrors.invalidCredentials,
+    );
+    // Selected, so typing replaces the attempt rather than adding to it.
+    expect(password.selectionStart).toBe(0);
+    expect(password.selectionEnd).toBe("not-the-password".length);
+    // Nothing the reader typed is thrown away.
+    expect(email).toHaveValue("ada@example.com");
+    // And the field carries the reason, for a screen reader that stopped
+    // reading the alert to announce the field.
+    expect(password).toHaveAccessibleDescription(
+      en.serverErrors.invalidCredentials,
+    );
+    expect(email).not.toHaveAccessibleDescription(
+      en.serverErrors.invalidCredentials,
+    );
+  });
+
+  it("does it again on the next refusal", async () => {
+    signInAction.mockResolvedValue({
+      ok: false,
+      error: en.serverErrors.invalidCredentials,
+    });
+    const user = userEvent.setup();
+    renderWithIntl(<SignInForm mailEnabled={false} />);
+
+    await user.type(screen.getByLabelText("Email address"), "ada@example.com");
+    await user.type(screen.getByLabelText("Password"), "first-try");
+    const submit = screen.getByRole("button", { name: "Sign in" });
+    await user.click(submit);
+    await waitFor(() =>
+      expect(screen.getByLabelText("Password")).toHaveFocus(),
+    );
+
+    await user.keyboard("second-try");
+    await user.click(submit);
+
+    expect(signInAction).toHaveBeenLastCalledWith({
+      email: "ada@example.com",
+      password: "second-try",
+    });
+    await waitFor(() =>
+      expect(screen.getByLabelText("Password")).toHaveFocus(),
+    );
+  });
+
+  it("puts it in the address when the address is what was refused", async () => {
+    const answer = answerLater(signInAction);
+    const user = userEvent.setup();
+    renderWithIntl(<SignInForm mailEnabled={false} />);
+
+    const email = screen.getByLabelText("Email address");
+    await user.type(email, "ada@example.com");
+    await user.type(screen.getByLabelText("Password"), "the-password");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    await waitFor(() => expect(signInAction).toHaveBeenCalled());
+
+    const seen = alertWhenFocused(email);
+    answer({
+      ok: false,
+      error: en.serverErrors.emailUnverified,
+      code: "emailUnverified",
+    });
+
+    await waitFor(() => expect(email).toHaveFocus());
+    expect(seen()).toBe(en.serverErrors.emailUnverified);
+    expect(email).toHaveAccessibleDescription(en.serverErrors.emailUnverified);
+  });
+
+  it("puts it in the address when the address is not one", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<SignInForm mailEnabled />);
+
+    await user.type(screen.getByLabelText("Email address"), "ada@");
+    await user.type(screen.getByLabelText("Password"), "the-password");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+    expect(signInAction).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.getByLabelText("Email address")).toHaveFocus(),
+    );
+  });
+
+  it("puts it in the address when a code is asked for without one", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<SignInForm mailEnabled />);
+
+    await user.click(screen.getByRole("button", { name: /sign-in code/i }));
+
+    expect(requestSignInCodeAction).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.getByLabelText("Email address")).toHaveFocus(),
+    );
+  });
+
+  it("puts it in the address when no code could be sent to it", async () => {
+    requestSignInCodeAction.mockResolvedValue({
+      ok: false,
+      error: en.serverErrors.rateLimited,
+    });
+    const user = userEvent.setup();
+    renderWithIntl(<SignInForm mailEnabled />);
+
+    const email = screen.getByLabelText("Email address");
+    await user.type(email, "ada@example.com");
+    await user.click(screen.getByRole("button", { name: /sign-in code/i }));
+
+    await waitFor(() => expect(email).toHaveFocus());
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      en.serverErrors.rateLimited,
+    );
+  });
+
+  it("puts it back in the emptied boxes after a wrong code", async () => {
+    const answer = answerLater(signInWithCodeAction);
+    const user = userEvent.setup();
+    renderWithIntl(<SignInForm mailEnabled />);
+
+    await user.type(screen.getByLabelText("Email address"), "ada@example.com");
+    await user.click(screen.getByRole("button", { name: /sign-in code/i }));
+    const boxes = screen.getByLabelText("The six-digit code");
+    await user.type(boxes, "123456");
+    await waitFor(() => expect(signInWithCodeAction).toHaveBeenCalled());
+
+    const seen = alertWhenFocused(boxes);
+    // A browser lets go of the boxes' focus as they are disabled for the
+    // check; jsdom keeps it, and will not even blur a disabled control. So
+    // the caret is put somewhere else by hand, as a browser would have left
+    // it nowhere, and has to come back.
+    const elsewhere = document.body.appendChild(
+      document.createElement("button"),
+    );
+    elsewhere.focus();
+    answer({ ok: false, error: en.auth.signIn.codeWrong });
+
+    await waitFor(() => expect(boxes).toHaveFocus());
+    elsewhere.remove();
+    expect(seen()).toBe(en.auth.signIn.codeWrong);
+    expect(boxes).toHaveValue("");
+    expect(boxes).toHaveAccessibleDescription(en.auth.signIn.codeWrong);
   });
 });
 

@@ -139,8 +139,15 @@ function isSafeError(error: unknown): error is Error {
  * a translation — see `describeError` — and mean nothing to a screen; some,
  * like an allocation error's `internal`, are not reasons at all. Carrying them
  * all would make every refusal's shape depend on a field nobody reads.
+ *
+ * - `editConflict`: the edit form offers to reload the entry.
+ * - `emailUnverified`: the sign-in form puts the caret back in the address
+ *   rather than the password, since the password was not what was wrong.
  */
-const ACTIONABLE_CODES: ReadonlySet<string> = new Set(["editConflict"]);
+const ACTIONABLE_CODES: ReadonlySet<string> = new Set([
+  "editConflict",
+  "emailUnverified",
+]);
 
 function reasonCode(error: Error): string | undefined {
   const value = (error as { code?: unknown }).code;

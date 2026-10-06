@@ -51,7 +51,15 @@ export function SwipeToDelete({
   groupId,
   kind,
   id,
-  /** Read out by the fallback button, so a keyboard names what it removes. */
+  /**
+   * Read out by the fallback button, so a keyboard names what it removes.
+   *
+   * In the button's name and nowhere else: "Delete “Dinner”". What deleting
+   * does to the balances is a sentence, and a sentence repeated on every row
+   * of a thirty-row list is what a screen reader then reads thirty times
+   * instead of the action — the toast that follows says what happened and
+   * carries the Undo.
+   */
   description,
   children,
 }: {
@@ -118,6 +126,8 @@ export function SwipeToDelete({
      * from each side and drawn a seam down both edges of every row.
      */
     <div className="relative -mx-1.5 -my-[7px] overflow-hidden rounded-[10px]">
+      {/* Paint for the finger, not a word for a screen reader: the button
+          below is what says Delete, and says what it deletes. */}
       <span
         aria-hidden="true"
         className="absolute inset-0 flex items-center justify-end bg-destructive/15 pr-4"
@@ -141,7 +151,9 @@ export function SwipeToDelete({
           type="button"
           onClick={() => void onDelete()}
           disabled={pending}
-          aria-label={t("body", { entry: description })}
+          // Starts with the word it shows once focused, so a voice command
+          // that says what it sees still reaches it.
+          aria-label={t("named", { entry: description })}
           className="sr-only focus:not-sr-only focus:absolute focus:top-1 focus:right-0 focus:z-10 focus:rounded-md focus:bg-destructive/15 focus:px-2 focus:py-1 focus:text-2xs focus:font-semibold focus:text-destructive-ink focus:ring-2 focus:ring-ring focus:outline-none"
         >
           {t("confirm")}

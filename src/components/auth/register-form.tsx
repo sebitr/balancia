@@ -19,6 +19,10 @@ import {
 } from "@/modules/auth/common-passwords";
 import { useProofOfWork } from "@/components/auth/use-proof-of-work";
 import { AppleSignInButton } from "./apple-sign-in-button";
+import { describedBy, useRefusalFocus } from "./use-refusal-focus";
+
+/** The refusal's id, which the address field is described by. */
+const FORM_ERROR_ID = "register-error";
 
 /**
  * Field messages are catalogue keys rather than prose, translated at render
@@ -110,8 +114,20 @@ export function RegisterForm({
     return message ? tValidation(message as ValidationKey) : null;
   };
 
+  /*
+   * Every refusal sends the caret to the address. The password rules are all
+   * checked above before anything is sent, so what the server can still say
+   * no to is the address being taken — the one thing here worth retyping — or
+   * something no field can fix: registration closed, too many attempts. Those
+   * leave the caret on the same field rather than on nothing.
+   */
+  const [refused, refuse] = useRefusalFocus<"email">((field) =>
+    form.setFocus(field, { shouldSelect: true }),
+  );
+
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);
+    refuse(null);
     const result = await registerAction({
       name: values.name,
       email: values.email,
@@ -121,6 +137,7 @@ export function RegisterForm({
 
     if (!result.ok) {
       setFormError(result.error ?? t("createFailed"));
+      refuse("email");
       return;
     }
 
@@ -172,7 +189,7 @@ export function RegisterForm({
       </div>
 
       {formError && (
-        <Alert variant="destructive">
+        <Alert id={FORM_ERROR_ID} variant="destructive">
           <AlertDescription>{formError}</AlertDescription>
         </Alert>
       )}
@@ -216,9 +233,10 @@ export function RegisterForm({
             type="email"
             autoComplete="username"
             aria-invalid={Boolean(form.formState.errors.email)}
-            aria-describedby={
-              form.formState.errors.email ? "email-error" : undefined
-            }
+            aria-describedby={describedBy(
+              form.formState.errors.email && "email-error",
+              formError && refused === "email" && FORM_ERROR_ID,
+            )}
             {...form.register("email")}
           />
           {fieldError("email") && (

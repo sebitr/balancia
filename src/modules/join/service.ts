@@ -168,14 +168,6 @@ function reservedForCreator() {
   )`;
 }
 
-/** One of the last expenses touching a claimable member. */
-export interface ClaimableExpense {
-  readonly id: string;
-  readonly description: string;
-  readonly amount: bigint;
-  readonly currency: string;
-}
-
 export interface ClaimableMember {
   readonly id: string;
   readonly displayName: string;
@@ -186,11 +178,7 @@ export interface ClaimableMember {
     readonly currency: string;
     readonly amount: bigint;
   }[];
-  readonly recentExpenses: readonly ClaimableExpense[];
 }
-
-/** How many expenses the confirmation screen lists under a name. */
-const RECENT_EXPENSE_LIMIT = 2;
 
 /**
  * Everyone in the group who has no account yet.
@@ -235,7 +223,7 @@ export async function listClaimableMembers(
   if (rows.length === 0) return [];
   const ids = rows.map((row) => row.id);
 
-  const [balances, counts, recent] = await Promise.all([
+  const [balances, counts] = await Promise.all([
     loadGroupBalances({ groupId, group }),
     db
       .select({
@@ -252,47 +240,11 @@ export async function listClaimableMembers(
         ),
       )
       .groupBy(expenseShares.participantId),
-    // The two most recent per member, decided in SQL: pulling every expense
-    // back to slice it in JavaScript is the same query with more bytes.
-    db
-      .select({
-        participantId: expenseShares.participantId,
-        id: expenses.id,
-        description: expenses.description,
-        amount: expenses.amount,
-        currency: expenses.currency,
-        rank: sql<number>`row_number() over (
-          partition by ${expenseShares.participantId}
-          order by ${expenses.expenseDate} desc, ${expenses.createdAt} desc
-        )`.as("rank"),
-      })
-      .from(expenseShares)
-      .innerJoin(expenses, eq(expenses.id, expenseShares.expenseId))
-      .where(
-        and(
-          inArray(expenseShares.participantId, ids),
-          eq(expenses.groupId, groupId),
-          isNull(expenses.deletedAt),
-        ),
-      ),
   ]);
 
   const countsById = new Map(
     counts.map((row) => [row.participantId, row.total]),
   );
-
-  const recentById = new Map<string, ClaimableExpense[]>();
-  for (const row of recent) {
-    if (row.rank > RECENT_EXPENSE_LIMIT) continue;
-    const list = recentById.get(row.participantId) ?? [];
-    list.push({
-      id: row.id,
-      description: row.description,
-      amount: row.amount,
-      currency: row.currency,
-    });
-    recentById.set(row.participantId, list);
-  }
 
   const positionsById = new Map<
     string,
@@ -312,7 +264,6 @@ export async function listClaimableMembers(
     displayName: row.displayName,
     expenseCount: countsById.get(row.id) ?? 0,
     balances: positionsById.get(row.id) ?? [],
-    recentExpenses: recentById.get(row.id) ?? [],
   }));
 }
 
@@ -625,4 +576,4 @@ export async function joinAsGuest(
   });
 }
 
-export { FACE_LIMIT, RECENT_EXPENSE_LIMIT };
+export { FACE_LIMIT };

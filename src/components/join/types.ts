@@ -22,30 +22,22 @@ export interface JoinSummaryView {
   readonly faces: readonly string[];
 }
 
-export interface JoinExpenseView {
-  readonly id: string;
-  readonly description: string;
-  readonly minorUnits: string;
-  readonly currency: string;
-}
-
+/**
+ * A name on the shared link's list, with what comes with it.
+ *
+ * The balance and the count are all a link-holder is shown about a name: the
+ * row carries both, and that is what makes picking one checkable rather than a
+ * guess at spelling. No expense is listed under it — the screen that did that
+ * is gone, and what it showed was each expense's total rather than this
+ * person's part of it, which no balance adds up from.
+ */
 export interface JoinMemberView {
   readonly id: string;
   readonly displayName: string;
   readonly expenseCount: number;
+  /** Per currency; negative owes, positive gets back. Empty when settled. */
   readonly balances: readonly JoinMoney[];
-  readonly recentExpenses: readonly JoinExpenseView[];
 }
-
-/**
- * Where the reader is.
- *
- * `confirm` and `match` share a step number, and `account` is reached from
- * either — from `confirm` when claiming, straight from `match` when adding
- * themselves — which is what the back map in the flow encodes.
- */
-export type JoinScreen =
-  "invite" | "name" | "match" | "confirm" | "account" | "done";
 
 /** Two letters where the name has two words, one where it does not. */
 export function initialsOf(name: string): string {

@@ -177,6 +177,7 @@ function AppleRow({ linked }: { linked: boolean }) {
         title={tApple("unlinkTitle")}
         body={tApple("unlinkBody")}
         confirmLabel={t("appleUnlink")}
+        cancelLabel={tApple("unlinkCancel")}
         destructive
         onConfirm={unlink}
       />

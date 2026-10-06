@@ -29,7 +29,7 @@ export default function SettingsError({
     <SettingsScreen
       title={tError("title")}
       {...(hub
-        ? { close: { href: "/dashboard", label: t("close") } }
+        ? { close: { label: t("close") } }
         : { back: { href: "/settings", label: t("backToSettings") } })}
     >
       <RouteError

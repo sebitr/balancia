@@ -27,7 +27,6 @@ export const ARRIVALS = ["cold", "personal", "shared"] as const;
 export const STEPS = [
   "welcome",
   "whichOne",
-  "confirm",
   "keepIt",
   "identity",
   "profile",
