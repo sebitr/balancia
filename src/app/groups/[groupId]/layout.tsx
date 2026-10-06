@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
-import { GroupNav } from "@/components/layout/group-nav";
+import { GroupNav, GroupRail } from "@/components/layout/group-nav";
 import { GroupSwitcher } from "@/components/layout/group-switcher";
 import { OfflineEntryProvider } from "@/components/offline/offline-entry";
 import { OutboxFlusher } from "@/components/offline/outbox-flusher";
@@ -77,6 +77,10 @@ export default async function GroupLayout({
           isGuest: access.actor.kind === "guest",
         }}
         bottomNav={<GroupNav groupId={access.groupId} />}
+        // The same navigation, for the rail the header becomes from `lg` up.
+        // Inside the offline provider for the same reason as the bar: its Add
+        // opens the local drawer when the routed one cannot load.
+        rail={<GroupRail groupId={access.groupId} />}
         // The name is already resolved by the authorization above, so the header
         // costs no query of its own; the switcher asks for the rest on opening.
         leading={

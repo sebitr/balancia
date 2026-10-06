@@ -152,7 +152,9 @@ export const users = pgTable(
      * A name from `modules/profile/accent.ts` — "mint", not an oklch triple —
      * so the palette can be retuned without a migration, and so a value that
      * reaches `--primary` is one of seven rather than whatever was stored.
-     * Null is the coral the app has always used.
+     * Every account made since plum became the default is written with a
+     * name; null is an account from before, which reads as coral — see
+     * `UNCHOSEN_ACCOUNT_ACCENT`.
      */
     accentColor: text("accent_color"),
     /**
@@ -243,7 +245,7 @@ export const users = pgTable(
       "users_number_format_known",
       sql`${table.numberFormat} IS NULL OR ${table.numberFormat} IN ('comma-dot', 'dot-comma', 'space-comma')`,
     ),
-    // Same rule as the two above: NULL is "never chose one", which is coral.
+    // NULL is an account from before plum became the default, read as coral.
     check(
       "users_accent_color_known",
       sql`${table.accentColor} IS NULL OR ${table.accentColor} IN ('coral', 'amber', 'mint', 'ocean', 'lavender', 'raspberry', 'plum')`,

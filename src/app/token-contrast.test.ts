@@ -11,6 +11,8 @@ import {
 import {
   ACCENT_COLORS,
   ACCENT_SEEDS,
+  accentTokens,
+  DEFAULT_ACCENT,
   MONEY_ROLES,
   type Theme,
 } from "@/modules/profile/accent";
@@ -39,10 +41,13 @@ import {
  * of them. Under increased contrast the bar is 7:1, and the captions and the
  * lines that it exists for are checked too.
  *
- * What this file sees is the palette as drawn — coral, with the fallback the
- * one accent-aware token carries. The other six accents are
- * `src/modules/profile/accent.test.ts`'s job; what is checked here about the
- * accent is that the chart colours keep out of its way, whichever one it is.
+ * What this file reads is the palette as drawn — coral, with the fallback the
+ * one accent-aware token carries. No reader of the app sees that fallback:
+ * the root layout paints an accent on every page, plum for anybody who has
+ * not chosen. So the accent's ink is checked a second time, painted, for all
+ * seven in every cascade here — Midnight included, which
+ * `src/modules/profile/accent.test.ts` does not reach — along with the chart
+ * colours keeping out of its way, whichever one it is.
  */
 
 const CSS = readFileSync(new URL("./globals.css", import.meta.url), "utf8");
@@ -274,6 +279,48 @@ describe.each(CASCADES)("$name", ({ theme, selectors, more }) => {
       });
     }
   }
+
+  describe("the accent, as the root layout paints it", () => {
+    /**
+     * `--primary-ink` with the painted ink in place of the fallback: the
+     * declaration this cascade ends on is `var(--accent-ink-…, <coral>)`, and
+     * `accentTokens` supplies the variable it names.
+     */
+    const paintedInk = (painted: Record<string, string>): Oklch => {
+      const value = tokens.get("primary-ink")!;
+      const indirect = value.match(/^var\((--[a-z0-9-]+),\s*(.+)\)$/i);
+      const literal = indirect
+        ? (painted[indirect[1]!] ?? indirect[2]!)
+        : value;
+      const parsed = parseOklch(literal);
+      if (!parsed) throw new Error(`not a plain oklch() colour: ${literal}`);
+      return parsed;
+    };
+
+    // The default first, by name: it is the one most readers never change.
+    it.each([
+      DEFAULT_ACCENT,
+      ...ACCENT_COLORS.filter((accent) => accent !== DEFAULT_ACCENT),
+    ])(
+      `%s: --primary-ink reads as text on card, background and tint at ${textFloor}:1`,
+      (accent) => {
+        const painted = accentTokens(accent);
+        const ink = oklchToHex(paintedInk(painted));
+        const fill = oklchToHex(parseOklch(painted["--primary"]!)!);
+        const grounds = [
+          colour("card"),
+          colour("background"),
+          ...[0.15, 0.18].map((alpha) => blend(fill, alpha, colour("card"))),
+        ];
+        for (const ground of grounds) {
+          expect(
+            Number(contrastRatio(ink, ground).toFixed(2)),
+            `${accent} ink on ${ground}`,
+          ).toBeGreaterThanOrEqual(textFloor);
+        }
+      },
+    );
+  });
 
   it(`--muted-foreground reads as a caption at ${textFloor}:1`, () => {
     for (const surface of ["card", "background"]) {

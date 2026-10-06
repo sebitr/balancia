@@ -49,9 +49,15 @@ import { cn } from "@/lib/utils";
  * `calc` alone, so it survives losing the two newest pieces, `dvh` and `min()`.
  * It never binds while the height applies: `100%` of a fixed element is the
  * large viewport, so it can only ever be the looser of the two.
+ *
+ * From `md` up it is held to a phone's width and centred, as every bottom
+ * sheet is (see `SheetContent`). Said here as well because the drawer's
+ * loading boundary is not a `SheetContent` — it borrows this class and pins
+ * itself — and a skeleton the width of the window that became a 28rem drawer
+ * when the form arrived would be the drawer changing shape under the reader.
  */
 export const ENTRY_SHEET_CLASS =
-  "h-[min(800px,calc(100dvh-28px-env(safe-area-inset-top)))] max-h-[calc(100%-28px-env(safe-area-inset-top))] gap-0 overflow-hidden rounded-t-[24px] bg-background p-0 text-foreground";
+  "h-[min(800px,calc(100dvh-28px-env(safe-area-inset-top)))] max-h-[calc(100%-28px-env(safe-area-inset-top))] gap-0 overflow-hidden rounded-t-[24px] bg-background p-0 text-foreground md:mx-auto md:max-w-md";
 
 /**
  * Open on the amount, because that is the field every entry starts with.
