@@ -33,15 +33,19 @@ import type { SplitSummary } from "./entry-logic";
 /**
  * How many faces the stack shows before it starts counting instead.
  *
- * Four 28px avatars overlapping at -8px is 88px, which sits inside the right
- * half of the row at 360px with the count word beside it. The fifth would
- * push the word onto its own line, and a `+3` says what three more faces the
- * size of a fingernail do not.
+ * Three 28px avatars overlapping at -8px is 68px. The right half of the row
+ * is about 120px on a 375px phone, so that leaves room for "2 of 5" beside
+ * them at the phone's 15px. Four was the number once, at 88px, and it was
+ * not: the word beside the faces came out as "Ever…". Past three, a `+3` says
+ * what three more faces the size of a fingernail do not.
+ *
+ * Everyone gets no faces at all — see the stack below.
  */
-const FACES = 4;
+const FACES = 3;
 
 export function SplitSummaryRow({
   payerName,
+  payerIsYou = false,
   included,
   memberCount,
   summary,
@@ -49,6 +53,8 @@ export function SplitSummaryRow({
   onOpen,
 }: {
   payerName: string;
+  /** The reader paid, and the row says "You" as the split sheet does. */
+  payerIsYou?: boolean;
   /** Everybody the entry is split between, in roster order. */
   included: readonly EntryMember[];
   /** How many people are in the group, for "3 of 5". */
@@ -62,8 +68,13 @@ export function SplitSummaryRow({
 
   const count = included.length;
   const everyone = count === memberCount;
-  const shown = included.slice(0, FACES);
-  const overflow = count - shown.length;
+  /*
+   * Everyone is a word, not a picture. The faces are there to say *which*
+   * people, and when the answer is all of them the word says it whole — with
+   * the faces beside it, it was the word that lost, cut to "Ever…" on a phone.
+   */
+  const shown = everyone ? [] : included.slice(0, FACES);
+  const overflow = everyone ? 0 : count - shown.length;
 
   return (
     <button
@@ -89,7 +100,7 @@ export function SplitSummaryRow({
             />
           </span>
           <span className="min-w-0 truncate text-sm font-semibold">
-            {payerName}
+            {payerIsYou ? t("you") : payerName}
           </span>
         </Side>
 

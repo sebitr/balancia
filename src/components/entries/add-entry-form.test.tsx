@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
@@ -54,6 +54,7 @@ const {
   createExpense,
   createSettlement,
   createRecurring,
+  updateRecurring,
   updateExpense,
   updateSettlement,
   toSettlement,
@@ -73,6 +74,7 @@ const {
   createExpense: vi.fn(),
   createSettlement: vi.fn(),
   createRecurring: vi.fn(),
+  updateRecurring: vi.fn(),
   updateExpense: vi.fn(),
   updateSettlement: vi.fn(),
   toSettlement: vi.fn(),
@@ -104,6 +106,7 @@ vi.mock("@/modules/expenses/actions", () => ({
 }));
 vi.mock("@/modules/recurring/actions", () => ({
   createRecurringAction: createRecurring,
+  updateRecurringAction: updateRecurring,
 }));
 vi.mock("@/lib/offline/outbox", () => ({ enqueueEntry: enqueue }));
 vi.mock("@/components/expenses/upload-receipt", () => ({
@@ -575,7 +578,9 @@ describe("the buttons that finish a sheet", () => {
     const user = userEvent.setup();
     renderForm();
     await user.click(screen.getByRole("switch", { name: "Repeats" }));
-    await user.click(screen.getByRole("button", { name: /Monthly/ }));
+    await user.click(
+      screen.getByRole("button", { name: /Every month on the/ }),
+    );
 
     const repeat = screen.getByRole("dialog", { name: "Repeat" });
     expectPinned(repeat, within(repeat).getByRole("button", { name: "Done" }));
@@ -654,6 +659,22 @@ describe("the default expense path", () => {
     ).toBeInTheDocument();
     // And states the total once, in the amount card above, rather than twice.
     expect(row).not.toHaveTextContent("84.60");
+  });
+
+  /**
+   * CHF 100 three ways is 33.34 beside two 33.33s. The row used to say
+   * "CHF 33.34 each", which is true of one person in three.
+   */
+  it("says about when the shares are a cent apart", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await enterAmount(user, "100");
+
+    expect(
+      screen.getByText(/Split equally between 3 · about CHF 33\.33 each/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/33\.34 each/)).not.toBeInTheDocument();
   });
 
   it("will not save until there is an amount", async () => {
@@ -745,9 +766,9 @@ describe("the split sheet", () => {
     await openSplit(user);
 
     const split = sheet("Payment and split");
-    expect(split.queryByLabelText("Shares for Seb")).not.toBeInTheDocument();
+    expect(split.queryByLabelText("Your shares")).not.toBeInTheDocument();
     await user.click(split.getByRole("button", { name: "Shares" }));
-    expect(split.getByLabelText("Shares for Seb")).toBeInTheDocument();
+    expect(split.getByLabelText("Your shares")).toBeInTheDocument();
   });
 
   it("prints an exact amount once, in the field it was typed into", async () => {
@@ -767,12 +788,12 @@ describe("the split sheet", () => {
 
     // A weight is not an amount, so that row has to say what it came to.
     await user.click(split.getByRole("button", { name: "Shares" }));
-    expect(rowFor("Seb").getByText("CHF 28.20")).toBeInTheDocument();
+    expect(rowFor("You").getByText("CHF 28.20")).toBeInTheDocument();
 
     // An exact amount is the number in the field already.
     await user.click(split.getByRole("button", { name: "Exact" }));
-    expect(split.getByLabelText("Exact amount for Seb")).toHaveValue("28.20");
-    expect(rowFor("Seb").queryByText(/CHF/)).not.toBeInTheDocument();
+    expect(split.getByLabelText("Your exact amount")).toHaveValue("28.20");
+    expect(rowFor("You").queryByText(/CHF/)).not.toBeInTheDocument();
   });
 
   it("keeps split rows the same height in every method", async () => {
@@ -838,12 +859,12 @@ describe("an empty split", () => {
     await enterAmount(user, "84.60");
     await openSplit(user);
     const split = sheet("Payment and split");
-    for (const member of MEMBERS) {
-      await user.click(
-        split.getByRole("button", {
-          name: `Include ${member.displayName} in the split`,
-        }),
-      );
+    for (const name of [
+      "Include yourself in the split",
+      "Include Hervé in the split",
+      "Include Cyril in the split",
+    ]) {
+      await user.click(split.getByRole("button", { name }));
     }
     return split;
   }
@@ -921,7 +942,7 @@ describe("the split note", () => {
 
     const split = sheet("Payment and split");
     await user.click(split.getByRole("button", { name: "Percent" }));
-    expect(split.getByLabelText("Percentage for Seb")).toHaveValue("33.34");
+    expect(split.getByLabelText("Your percentage")).toHaveValue("33.34");
     expect(split.getAllByText("CHF 30.00")).toHaveLength(3);
     expect(split.queryByText(/more so it adds up/)).not.toBeInTheDocument();
     expect(split.queryByText(/does not divide evenly/)).not.toBeInTheDocument();
@@ -944,7 +965,9 @@ describe("a split that does not add up", () => {
     const split = sheet("Payment and split");
     await user.click(split.getByRole("button", { name: "Exact" }));
     for (const [name, value] of Object.entries(amounts)) {
-      const field = split.getByLabelText(`Exact amount for ${name}`);
+      const field = split.getByLabelText(
+        name === "You" ? "Your exact amount" : `Exact amount for ${name}`,
+      );
       await user.clear(field);
       await user.type(field, value);
     }
@@ -956,7 +979,7 @@ describe("a split that does not add up", () => {
   it("says on the row how far over the total it is", async () => {
     const user = userEvent.setup();
     renderForm();
-    const split = await exactSplit(user, { Seb: "50" });
+    const split = await exactSplit(user, { You: "50" });
 
     expect(split.getByText("CHF 20.00 over the total.")).toBeInTheDocument();
     // Leaving to look at the total is allowed; the row says what is left.
@@ -971,7 +994,7 @@ describe("a split that does not add up", () => {
   it("says on the row how much is left to assign", async () => {
     const user = userEvent.setup();
     renderForm();
-    const split = await exactSplit(user, { Seb: "25" });
+    const split = await exactSplit(user, { You: "25" });
     await user.click(split.getByRole("button", { name: "Done" }));
 
     expect(row()).toHaveTextContent("Exact amounts · CHF 5.00 left to assign");
@@ -984,8 +1007,12 @@ describe("a split that does not add up", () => {
     await openSplit(user);
     const split = sheet("Payment and split");
     await user.click(split.getByRole("button", { name: "Percent" }));
-    for (const name of ["Seb", "Hervé", "Cyril"]) {
-      const field = split.getByLabelText(`Percentage for ${name}`);
+    for (const label of [
+      "Your percentage",
+      "Percentage for Hervé",
+      "Percentage for Cyril",
+    ]) {
+      const field = split.getByLabelText(label);
       await user.clear(field);
       await user.type(field, "30");
     }
@@ -1001,10 +1028,12 @@ describe("a split that does not add up", () => {
     await openSplit(user);
     const split = sheet("Payment and split");
     await user.click(split.getByRole("button", { name: "Shares" }));
-    for (const name of ["Seb", "Hervé", "Cyril"]) {
-      await user.click(
-        split.getByRole("button", { name: `One share fewer for ${name}` }),
-      );
+    for (const name of [
+      "One share fewer for you",
+      "One share fewer for Hervé",
+      "One share fewer for Cyril",
+    ]) {
+      await user.click(split.getByRole("button", { name }));
     }
 
     expect(
@@ -1022,7 +1051,7 @@ describe("a split that does not add up", () => {
     const user = userEvent.setup();
     renderForm();
     await user.type(screen.getByLabelText("Description"), "Dinner");
-    const split = await exactSplit(user, { Seb: "50" });
+    const split = await exactSplit(user, { You: "50" });
     await user.click(split.getByRole("button", { name: "Done" }));
 
     await user.click(screen.getByRole("button", { name: "Add expense" }));
@@ -1036,7 +1065,7 @@ describe("a split that does not add up", () => {
     // The alert follows the fields rather than repeating the first sentence.
     await openSplit(user);
     const again = sheet("Payment and split");
-    const seb = again.getByLabelText("Exact amount for Seb");
+    const seb = again.getByLabelText("Your exact amount");
     await user.clear(seb);
     await user.type(seb, "25");
     await user.click(again.getByRole("button", { name: "Done" }));
@@ -1046,8 +1075,8 @@ describe("a split that does not add up", () => {
 
     await openSplit(user);
     const fixed = sheet("Payment and split");
-    await user.clear(fixed.getByLabelText("Exact amount for Seb"));
-    await user.type(fixed.getByLabelText("Exact amount for Seb"), "30");
+    await user.clear(fixed.getByLabelText("Your exact amount"));
+    await user.type(fixed.getByLabelText("Your exact amount"), "30");
     await user.click(fixed.getByRole("button", { name: "Done" }));
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
@@ -1058,14 +1087,14 @@ describe("a split that does not add up", () => {
     const user = userEvent.setup();
     renderForm();
     await user.type(screen.getByLabelText("Description"), "Dinner");
-    const split = await exactSplit(user, { Seb: "50" });
+    const split = await exactSplit(user, { You: "50" });
     await user.click(split.getByRole("button", { name: "Done" }));
     await user.click(screen.getByRole("button", { name: "Add expense" }));
     expect(screen.getByRole("alert")).toBeInTheDocument();
 
     await openSplit(user);
     const sheetNow = sheet("Payment and split");
-    const seb = sheetNow.getByLabelText("Exact amount for Seb");
+    const seb = sheetNow.getByLabelText("Your exact amount");
     await user.clear(seb);
     await user.type(seb, "30");
     // Broken again before anybody pressed Save: the row says so, the alert
@@ -1093,7 +1122,7 @@ describe("the rest of an exact split", () => {
     const user = userEvent.setup();
     renderForm();
     const split = await exact(user);
-    const seb = split.getByLabelText("Exact amount for Seb");
+    const seb = split.getByLabelText("Your exact amount");
     await user.clear(seb);
     await user.type(seb, "25");
 
@@ -1106,7 +1135,7 @@ describe("the rest of an exact split", () => {
     );
 
     expect(split.getByLabelText("Exact amount for Cyril")).toHaveValue("35.00");
-    expect(split.getByLabelText("Exact amount for Seb")).toHaveValue("25");
+    expect(split.getByLabelText("Your exact amount")).toHaveValue("25");
     expect(split.queryByText(/still to assign/)).not.toBeInTheDocument();
     expect(
       split.queryByRole("button", { name: /Give the remaining/ }),
@@ -1117,7 +1146,7 @@ describe("the rest of an exact split", () => {
     const user = userEvent.setup();
     renderForm();
     const split = await exact(user);
-    const seb = split.getByLabelText("Exact amount for Seb");
+    const seb = split.getByLabelText("Your exact amount");
     await user.clear(seb);
     await user.type(seb, "50");
 
@@ -1156,11 +1185,11 @@ describe("the share steppers", () => {
     renderForm();
     const split = await shares(user);
     const fewer = split.getByRole("button", {
-      name: "One share fewer for Seb",
+      name: "One share fewer for you",
     });
 
     await user.click(fewer);
-    expect(split.getByLabelText("Shares for Seb")).toHaveValue("0");
+    expect(split.getByLabelText("Your shares")).toHaveValue("0");
     expect(fewer).toBeDisabled();
   });
 
@@ -1183,7 +1212,7 @@ describe("the share steppers", () => {
     renderForm();
     const split = await shares(user);
 
-    for (const name of ["One more share for Seb", "One share fewer for Seb"]) {
+    for (const name of ["One more share for you", "One share fewer for you"]) {
       expect(split.getByRole("button", { name })).toHaveClass("tap-target");
     }
   });
@@ -1291,6 +1320,28 @@ describe("attaching a file", () => {
     await user.click(screen.getByRole("tab", { name: "Expense" }));
 
     expect(screen.queryByText("bill.pdf")).not.toBeInTheDocument();
+  });
+
+  /**
+   * A repeating entry's template keeps no file. The row used to stay live and
+   * the save left the file behind; now it is off, and says why, while Repeats
+   * is on.
+   */
+  it("turns the row off and says why while the entry repeats", async () => {
+    const user = userEvent.setup();
+    renderForm({}, "/groups/g1/expenses/new");
+
+    const attach = screen.getByRole("button", { name: "Attach a file" });
+    expect(attach).toBeEnabled();
+
+    await user.click(screen.getByRole("switch", { name: "Repeats" }));
+    expect(attach).toBeDisabled();
+    expect(attach).toHaveAccessibleDescription(
+      "Files are not kept on a repeating entry.",
+    );
+
+    await user.click(screen.getByRole("switch", { name: "Repeats" }));
+    expect(attach).toBeEnabled();
   });
 });
 
@@ -2046,11 +2097,198 @@ describe("recurrence", () => {
     const user = userEvent.setup();
     renderForm();
 
-    expect(screen.queryByText(/^Monthly/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Every month/)).not.toBeInTheDocument();
     await user.click(screen.getByRole("switch", { name: "Repeats" }));
 
-    await user.click(screen.getByRole("button", { name: /Monthly/ }));
+    await user.click(
+      screen.getByRole("button", { name: /Every month on the/ }),
+    );
     expect(screen.getByRole("heading", { name: "Repeat" })).toBeInTheDocument();
+  });
+
+  /**
+   * The row, the sheet and the Recurring list say a rule one way. The row used
+   * to read "Monthly, Day 5" against the sheet's "Every month on the 5", and a
+   * weekly rule as "Weekly, 1" — the number of its weekday.
+   */
+  it("words the rule as the sheet and the list do", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole("switch", { name: "Repeats" }));
+    await user.click(
+      screen.getByRole("button", { name: /Every month on the/ }),
+    );
+
+    const repeat = screen.getByRole("dialog", { name: "Repeat" });
+    await user.click(
+      within(repeat).getByRole("radio", { name: /^Every week on / }),
+    );
+    const weekly = within(repeat)
+      .getByRole("radio", { name: /^Every week on / })
+      .textContent?.trim();
+    await user.click(within(repeat).getByRole("button", { name: "Done" }));
+
+    expect(weekly).toBe("Every week on Monday");
+    expect(
+      screen.getByRole("button", { name: /Every week on Monday/ }),
+    ).toBeInTheDocument();
+  });
+
+  /** The Recurring screen's "Add a recurring expense" is this form, facing the other way. */
+  it("opens with Repeats on when the link asks for it", () => {
+    renderForm({}, "/groups/g1/expenses/new#repeat=1");
+
+    expect(screen.getByRole("switch", { name: "Repeats" })).toBeChecked();
+    expect(
+      screen.getByRole("button", { name: "Save recurring expense" }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens with Repeats off otherwise", () => {
+    renderForm({}, "/groups/g1/expenses/new");
+
+    expect(screen.getByRole("switch", { name: "Repeats" })).not.toBeChecked();
+  });
+
+  /**
+   * A recurring expense, reopened from the Recurring screen's Edit.
+   *
+   * Rent of 2,400 on the 1st, split three ways, with the next one due on 1
+   * November; the reader is changing it to 2,550.
+   */
+  describe("changing a recurring expense", () => {
+    const RULE = {
+      id: "r1",
+      fields: {
+        type: "expense" as const,
+        amountText: "2400.00",
+        currency: "CHF",
+        description: "Rent",
+        notes: "",
+        category: "",
+        subcategory: "",
+        categoryChosen: false,
+        date: "2026-11-01",
+        payerId: "seb",
+        includedIds: ["seb", "herve", "cyril"],
+        splitMethod: "equal" as const,
+        splitValues: {},
+        recurrence: {
+          enabled: true,
+          frequency: "monthly" as const,
+          interval: 1,
+          weekday: 1,
+          dayOfMonth: 1,
+          weekOfMonth: null,
+          endDate: null,
+          count: null,
+        },
+        attachmentIds: [],
+      },
+      exchangeRate: "",
+      earliest: "2026-10-06",
+      paused: false,
+    };
+
+    function renderRule(rule: Partial<typeof RULE> = {}) {
+      const rendered = renderForm(
+        { rule: { ...RULE, ...rule }, entryTypes: ["expense", "income"] },
+        "/groups/g1/recurring/r1/edit",
+      );
+      updateRecurring.mockClear();
+      updateRecurring.mockResolvedValue({
+        ok: true,
+        data: { id: "r1", next: "2026-11-01", paused: false },
+      });
+      return rendered;
+    }
+
+    it("opens on the rule, with Repeats on and kept on", () => {
+      renderRule();
+
+      expect(
+        screen.getByRole("heading", { name: "Edit recurring expense" }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue(
+        "2400.00",
+      );
+      expect(screen.getByLabelText("Description")).toHaveValue("Rent");
+      const repeats = screen.getByRole("switch", { name: "Repeats" });
+      expect(repeats).toBeChecked();
+      expect(repeats).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: /Every month on the 1st/ }),
+      ).toBeInTheDocument();
+      // A rule is an expense or an income; a repayment cannot repeat.
+      expect(
+        screen.queryByRole("tab", { name: "Repayment" }),
+      ).not.toBeInTheDocument();
+    });
+
+    /** The button says what it touches, which is not the entries already added. */
+    it("saves for the entries still to come, and says so", async () => {
+      const user = userEvent.setup();
+      renderRule();
+
+      const amount = screen.getByRole("textbox", { name: "Amount" });
+      await user.clear(amount);
+      await user.type(amount, "2550");
+      await user.click(
+        screen.getByRole("button", { name: "Save for future expenses" }),
+      );
+
+      expect(updateRecurring).toHaveBeenCalledWith(
+        "g1",
+        "r1",
+        expect.objectContaining({
+          description: "Rent",
+          amount: "255000",
+          frequency: "monthly",
+          dayOfMonth: 1,
+          startDate: "2026-11-01",
+        }),
+      );
+      expect(createRecurring).not.toHaveBeenCalled();
+      expect(success).toHaveBeenCalledWith(
+        "Rent updated from Nov 1, 2026. Entries already added stay as they were.",
+        expect.anything(),
+      );
+    });
+
+    it("says a paused rule is still paused", async () => {
+      const user = userEvent.setup();
+      renderRule({ paused: true });
+      updateRecurring.mockResolvedValue({
+        ok: true,
+        data: { id: "r1", next: "2026-11-01", paused: true },
+      });
+
+      await user.click(
+        screen.getByRole("button", { name: "Save for future expenses" }),
+      );
+
+      expect(success).toHaveBeenCalledWith(
+        "Rent updated, and still paused. Entries already added stay as they were.",
+        expect.anything(),
+      );
+    });
+
+    /** A rule stays a rule: the sheet has no way to turn it into a one-off. */
+    it("offers no way out of repeating in the sheet", async () => {
+      const user = userEvent.setup();
+      renderRule();
+
+      await user.click(
+        screen.getByRole("button", { name: /Every month on the 1st/ }),
+      );
+
+      const repeat = screen.getByRole("dialog", { name: "Repeat" });
+      expect(
+        within(repeat).queryByRole("button", {
+          name: "Don’t repeat this entry",
+        }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it("writes a template rather than a single entry", async () => {
@@ -2073,6 +2311,42 @@ describe("recurrence", () => {
       }),
     );
     expect(createExpense).not.toHaveBeenCalled();
+  });
+
+  /**
+   * An end before the first date used to reach the server and come back as a
+   * failed write with no reason given. The sheet will not close on it with
+   * Done, but its scrim will.
+   */
+  it("refuses a rule that ends before its first date, and says why", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await enterAmount(user, "90");
+    await user.type(screen.getByLabelText("Description"), "Internet");
+
+    await user.click(screen.getByRole("switch", { name: "Repeats" }));
+    await user.click(screen.getByRole("button", { name: /Every month on the/ }));
+    const repeat = sheet("Repeat");
+    await user.click(repeat.getByRole("button", { name: /^Ends/ }));
+    await user.click(repeat.getByRole("button", { name: "On a date" }));
+    fireEvent.change(repeat.getByLabelText("On a date"), {
+      target: { value: "2020-01-01" },
+    });
+
+    expect(repeat.getByLabelText("On a date")).toHaveAccessibleDescription(
+      "The end date is before the first one.",
+    );
+    expect(repeat.getByRole("button", { name: "Done" })).toBeDisabled();
+
+    await user.keyboard("{Escape}");
+    await user.click(
+      screen.getByRole("button", { name: "Save recurring expense" }),
+    );
+
+    expect(createRecurring).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "The end date is before the first one.",
+    );
   });
 
   /**
@@ -3852,7 +4126,7 @@ describe("what a dictated sentence says about people", () => {
     ).toBeInTheDocument();
     // And the row itself has not moved: a chip is an offer, not a write.
     const row = screen.getByRole("button", { name: /^Paid by/ });
-    expect(row).toHaveTextContent("Seb");
+    expect(row).toHaveTextContent("You");
     expect(row).toHaveTextContent("Everyone");
   });
 
@@ -3912,7 +4186,7 @@ describe("what a dictated sentence says about people", () => {
 
     expect(screen.queryByText("Also heard")).toBeNull();
     const row = screen.getByRole("button", { name: /^Paid by/ });
-    expect(row).toHaveTextContent("Seb");
+    expect(row).toHaveTextContent("You");
     expect(row).toHaveTextContent("Everyone");
   });
 

@@ -40,8 +40,25 @@ const METHODS: readonly SplitMethod[] = [
   "percentage",
 ];
 
+/**
+ * The reader first, then everyone else in the order they came.
+ *
+ * Only ever for drawing. The split itself keeps member order — the remainder
+ * of an equal split is handed out in it, see `toggle` — so moving the reader
+ * to the front of a list on screen must not move them to the front of the
+ * queue for the extra cent.
+ */
+function readerFirst<Member extends EntryMember>(
+  members: readonly Member[],
+  selfId: string | undefined,
+): Member[] {
+  const reader = members.filter((member) => member.id === selfId);
+  return [...reader, ...members.filter((member) => member.id !== selfId)];
+}
+
 export function SplitSheet({
   members,
+  selfId,
   title,
   totalFormatted,
   currency,
@@ -71,6 +88,15 @@ export function SplitSheet({
   onDone,
 }: {
   members: readonly EntryMember[];
+  /**
+   * The reader, who is "You" on every pill and row here, and first in each.
+   *
+   * The name stays what it is everywhere else; this sheet is the reader
+   * looking at their own entry, and finding themselves last under a name
+   * they would never call themselves was the one thing on it they had to
+   * read twice.
+   */
+  selfId?: string;
   title: string;
   totalFormatted: string;
   /** The entry's currency, which an exact amount is typed in. */
@@ -142,6 +168,12 @@ export function SplitSheet({
   const t = useTranslations("addEntry.split");
 
   const everyone = members.map((member) => member.id);
+  /** Who the pills and rows are drawn for, in the order they are drawn. */
+  const shown = readerFirst(members, selfId);
+  /** "You" for the reader, as the select every per-person label takes. */
+  const you = (id: string) => (id === selfId ? "yes" : "no");
+  const nameOf = (member: EntryMember) =>
+    member.id === selfId ? t("you") : member.displayName;
 
   // Rebuilt in member order rather than appended: the equal-split remainder is
   // handed out in this order, so a list that reordered itself on every tap
@@ -177,7 +209,7 @@ export function SplitSheet({
     onValueChange(id, value);
   };
 
-  /** The people in the split, in the order their rows are drawn. */
+  /** The people in the split, in member order — the order the units go in. */
   const rows = members.filter((member) => includedIds.includes(member.id));
 
   /*
@@ -195,12 +227,11 @@ export function SplitSheet({
           currency,
         })
       : null;
-  const remainingName = rows.find(
-    (member) => member.id === remainingTo,
-  )?.displayName;
+  const remainingMember = rows.find((member) => member.id === remainingTo);
 
   const payerKeys = rovingChoice({
-    values: everyone,
+    // The arrows walk the faces in the order they are drawn.
+    values: shown.map((member) => member.id),
     selected: several ? null : payerId,
     onSelect: onPayerChange,
   });
@@ -237,15 +268,17 @@ export function SplitSheet({
               aria-label={t(received ? "receivedBy" : "paidBy")}
               className="contents"
             >
-              {members.map((member) => (
+              {shown.map((member) => (
                 <MemberPill
                   key={member.id}
                   name={member.displayName}
+                  shownAs={nameOf(member)}
                   // Both halves of this sheet carry a control per person. The
                   // colours tell them apart on screen; these names do it for
                   // anyone who is not looking at the screen.
                   label={t(received ? "receiverOption" : "payerOption", {
                     name: member.displayName,
+                    you: you(member.id),
                   })}
                   selected={!several && member.id === payerId}
                   onToggle={() => onPayerChange(member.id)}
@@ -294,6 +327,7 @@ export function SplitSheet({
           {several && payerAmounts && onPayerAmountChange && (
             <MultiPayerPanel
               members={members}
+              selfId={selfId}
               amounts={payerAmounts}
               onAmountChange={onPayerAmountChange}
               note={payerNote}
@@ -313,11 +347,15 @@ export function SplitSheet({
             {t(received ? "creditedTo" : "splitBetween")}
           </h3>
           <div className="flex flex-wrap gap-2">
-            {members.map((member) => (
+            {shown.map((member) => (
               <MemberPill
                 key={member.id}
                 name={member.displayName}
-                label={t("includeOption", { name: member.displayName })}
+                shownAs={nameOf(member)}
+                label={t("includeOption", {
+                  name: member.displayName,
+                  you: you(member.id),
+                })}
                 selected={includedIds.includes(member.id)}
                 onToggle={() => toggle(member.id)}
                 guest={member.guest}
@@ -368,13 +406,14 @@ export function SplitSheet({
             they must overflow rather than compress: a squashed row is how a
             ten-person split loses its amounts. */}
         <ul className="max-h-[38vh] overflow-x-hidden overflow-y-auto rounded-[14px] bg-wash-1 [&>*]:shrink-0">
-          {rows.map((member) => {
+          {readerFirst(rows, selfId).map((member) => {
             const allocation = allocationFor(member.id);
             const field = method !== "equal" && (
               <Input
                 inputMode="decimal"
                 aria-label={t(`inputLabels.${method}`, {
                   name: member.displayName,
+                  you: you(member.id),
                 })}
                 className={cn(
                   "h-9 tabular-nums",
@@ -406,7 +445,7 @@ export function SplitSheet({
                   guest={member.guest}
                 />
                 <span className="min-w-0 flex-1 truncate text-sm">
-                  {member.displayName}
+                  {nameOf(member)}
                 </span>
 
                 {/* A share is 1, 2 or 3 nearly every time, and a keyboard is a
@@ -415,7 +454,10 @@ export function SplitSheet({
                 {method === "shares" ? (
                   <span className="flex shrink-0 items-center gap-2">
                     <StepButton
-                      label={t("shareFewer", { name: member.displayName })}
+                      label={t("shareFewer", {
+                        name: member.displayName,
+                        you: you(member.id),
+                      })}
                       disabled={hasNoShare(values[member.id])}
                       onClick={() =>
                         typeValue(member.id, stepShare(values[member.id], -1))
@@ -425,7 +467,10 @@ export function SplitSheet({
                     </StepButton>
                     {field}
                     <StepButton
-                      label={t("shareMore", { name: member.displayName })}
+                      label={t("shareMore", {
+                        name: member.displayName,
+                        you: you(member.id),
+                      })}
                       onClick={() =>
                         typeValue(member.id, stepShare(values[member.id], 1))
                       }
@@ -467,7 +512,7 @@ export function SplitSheet({
           </p>
         )}
 
-        {remainingTo && remainingName && onGiveRemaining && (
+        {remainingTo && remainingMember && onGiveRemaining && (
           <div className="-mt-2 flex flex-wrap gap-1.5">
             <ShortcutButton
               onClick={() => {
@@ -477,7 +522,8 @@ export function SplitSheet({
             >
               {t("giveRemaining", {
                 amount: String(note?.params?.amount ?? ""),
-                name: remainingName,
+                name: remainingMember.displayName,
+                you: you(remainingMember.id),
               })}
             </ShortcutButton>
           </div>
@@ -540,6 +586,7 @@ export function SplitSheet({
  */
 function MultiPayerPanel({
   members,
+  selfId,
   amounts,
   onAmountChange,
   note,
@@ -548,6 +595,8 @@ function MultiPayerPanel({
   onGiveRest,
 }: {
   members: readonly EntryMember[];
+  /** The reader, "You" and first here as on the rest of the sheet. */
+  selfId?: string;
   amounts: Readonly<Record<string, string>>;
   onAmountChange: (participantId: string, value: string) => void;
   note?: string | null;
@@ -565,11 +614,12 @@ function MultiPayerPanel({
   const restCandidate =
     members.find((member) => (amounts[member.id] ?? "").trim() === "") ??
     members[0];
+  const you = (id: string) => (id === selfId ? "yes" : "no");
 
   return (
     <div className="space-y-2 rounded-2xl bg-card p-3 shadow-hairline">
       <ul>
-        {members.map((member) => (
+        {readerFirst(members, selfId).map((member) => (
           <li
             key={member.id}
             className="flex h-13 items-center gap-3 border-b border-border px-1 last:border-b-0"
@@ -581,7 +631,7 @@ function MultiPayerPanel({
               guest={member.guest}
             />
             <span className="flex-1 truncate text-sm">
-              {member.displayName}
+              {member.id === selfId ? t("you") : member.displayName}
             </span>
             <Input
               value={amounts[member.id] ?? ""}
@@ -590,7 +640,10 @@ function MultiPayerPanel({
               }
               inputMode="decimal"
               placeholder="0.00"
-              aria-label={t("payerAmount", { name: member.displayName })}
+              aria-label={t("payerAmount", {
+                name: member.displayName,
+                you: you(member.id),
+              })}
               className="h-9 w-24 text-right tabular-nums"
             />
           </li>
@@ -617,7 +670,10 @@ function MultiPayerPanel({
         )}
         {onGiveRest && restCandidate && (
           <ShortcutButton onClick={() => onGiveRest(restCandidate.id)}>
-            {t("giveRest", { name: restCandidate.displayName })}
+            {t("giveRest", {
+              name: restCandidate.displayName,
+              you: you(restCandidate.id),
+            })}
           </ShortcutButton>
         )}
       </div>

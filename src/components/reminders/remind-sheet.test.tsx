@@ -735,14 +735,17 @@ describe("the link at the end", () => {
     expect(sentMessage()).toBe(text);
   });
 
-  /** Named for what it does in the hands of whoever opens it. */
-  it("calls it the invite link under the draft", () => {
+  /**
+   * Named for what it does in the hands of whoever opens it, and by the name
+   * the People screen gives it.
+   */
+  it("calls it the group link under the draft", () => {
     render([
       recipient({ channel: "share", link: { kind: "invite", url: INVITE } }),
     ]);
 
-    expect(screen.getByText("Invite link")).toBeInTheDocument();
-    expect(screen.queryByText("Group link")).not.toBeInTheDocument();
+    expect(screen.getByText("Group link")).toBeInTheDocument();
+    expect(screen.queryByText("Group page")).not.toBeInTheDocument();
     expect(
       screen.getByText(INVITE.replace("https://", "")),
     ).toBeInTheDocument();
@@ -753,8 +756,8 @@ describe("the link at the end", () => {
     const share = stubShare();
     render([recipient({ channel: "share" })]);
 
-    expect(screen.getByText("Group link")).toBeInTheDocument();
-    expect(screen.queryByText("Invite link")).not.toBeInTheDocument();
+    expect(screen.getByText("Group page")).toBeInTheDocument();
+    expect(screen.queryByText("Group link")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Share with Jonas" }));
 

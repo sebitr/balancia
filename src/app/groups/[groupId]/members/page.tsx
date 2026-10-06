@@ -15,7 +15,7 @@ import {
  * Who shares the expenses in this group.
  *
  * One card, one row per person, and everything a row can do folded inside it:
- * renaming, the invite link for someone with no account, and removal. The three
+ * renaming, the personal link for someone with no account, and removal. The three
  * used to be three separate blocks stacked under each name, which read as three
  * unrelated features rather than as one person's settings.
  *

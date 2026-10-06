@@ -129,15 +129,19 @@ describe("CreateGroupSheet", () => {
   });
 
   /**
-   * The zone decides which day an expense lands on and nothing else, so it is
-   * detected and stated rather than asked — named by its city, which is the
-   * half of `Europe/Zurich` a reader recognises.
+   * The zone decides days and times — what counts as today, when a recurring
+   * expense is added, what Activity shows — and the device already knows it,
+   * so it is detected and stated rather than asked: named by its city, which
+   * is the half of `Europe/Zurich` a reader recognises, and saying what it
+   * decides the way the group's settings do.
    */
   it("says which zone it detected instead of asking for one", () => {
     renderSheet();
 
     expect(
-      screen.getByText(/Days end at Zurich time, from this device\./),
+      screen.getByText(
+        /^Zurich time, from this device, decides what counts as today for new entries, when recurring expenses are added and the times shown in Activity\. Change it in the group’s settings\.$/,
+      ),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("combobox", { name: /time zone/i }),

@@ -183,7 +183,9 @@ export function OnboardingFlow({
   /** The listed name picked on a shared link; null for somebody new. */
   const [claimed, setClaimed] = useState<JoinMemberView | null>(null);
   /** Which way in was actually taken, for the checklist's first receipt. */
-  const [credential, setCredential] = useState<"passkey" | "code" | null>(null);
+  const [credential, setCredential] = useState<
+    "passkey" | "code" | "password" | null
+  >(null);
   const [email, setEmail] = useState(arrivedWith?.email ?? "");
   /** The group the flow produced, once it is known. */
   const [joinedGroupId, setJoinedGroupId] = useState<string | null>(null);
@@ -418,24 +420,30 @@ export function OnboardingFlow({
   /**
    * After the credential, on a shared link.
    *
-   * A signup and a code sign-in carry the join with them and say which group
-   * it put the account in. A passkey sign-in cannot: the credential names the
-   * account on its own, through a route that has never heard of the link, so
-   * the join follows it here — the account is signed in by now, which makes
-   * it exactly the signed-in reader's join. Any other way of coming back
-   * without a group means the name was taken or the link died in the
-   * meantime; the account still exists, so the dashboard is where it goes,
-   * and the reason is said rather than the group pretended.
+   * A passkey or code signup and a code sign-in carry the join with them and
+   * say which group it put the account in. A passkey sign-in cannot: the
+   * credential names the account on its own, through a route that has never
+   * heard of the link, so the join follows it here — the account is signed in
+   * by now, which makes it exactly the signed-in reader's join. A password
+   * signup is the same case: `registerAction` was written for a page with no
+   * link behind it and carries no join, but it leaves the new account signed
+   * in. Any other way of coming back without a group means the name was taken
+   * or the link died in the meantime; the account still exists, so the
+   * dashboard is where it goes, and the reason is said rather than the group
+   * pretended.
    */
   const finishOnSharedLink = async (outcome: {
-    credential: "passkey" | "code";
+    credential: "passkey" | "code" | "password";
     joinedGroupId: string | null;
   }) => {
     if (outcome.joinedGroupId) {
       arrive(outcome.joinedGroupId);
       return;
     }
-    if (outcome.credential === "passkey" && intent === "signin") {
+    if (
+      (outcome.credential === "passkey" && intent === "signin") ||
+      outcome.credential === "password"
+    ) {
       setJoining(true);
       const result = await joinWithAccountAction(joiner());
       setJoining(false);
@@ -644,6 +652,7 @@ export function OnboardingFlow({
           <IdentityScreen
             intent={intent}
             name={name}
+            onNameChange={setName}
             email={email}
             onEmailChange={setEmail}
             codeSignupAvailable={codeSignupAvailable}

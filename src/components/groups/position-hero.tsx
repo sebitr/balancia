@@ -122,14 +122,15 @@ export function PositionHero({
       */}
       {!settled && (
         <div data-slot="position-strip" aria-hidden="true">
-          <div className="mx-auto flex w-full max-w-3xl items-baseline gap-2.5 px-4 py-2">
+          {/* The overview's own column at every width: the phone's, and from
+              `lg` up the wide one its two columns sit in — see `<Screen>`. */}
+          <div className="mx-auto flex w-full max-w-3xl items-baseline gap-2.5 px-4 py-2 lg:max-w-5xl lg:px-6 xl:px-8">
             <span className="flex shrink-0 items-baseline gap-2.5">
               {open.map((position) => (
                 <Amount
                   key={position.currency}
                   minorUnits={position.minorUnits}
                   currency={position.currency}
-                  display="code"
                   signDisplay="exceptZero"
                   className={cn(
                     "text-sm font-semibold tabular-nums",
@@ -324,6 +325,12 @@ export function PositionHero({
   );
 }
 
+/**
+ * The screen's headline figure: the ISO code as a qualifier on the baseline,
+ * the numeral bare beside it, as the entry's total is drawn. It is one of the
+ * two exceptions written out at `formatMoney`; every other figure on this
+ * screen, the strip above included, is in the app's one notation.
+ */
 function HeroAmount({
   currency,
   minorUnits,

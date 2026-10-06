@@ -67,7 +67,11 @@ export function Amount({
   minorUnits: string;
   currency: string;
   className?: string;
-  display?: "symbol" | "code" | "none";
+  /**
+   * The app's one notation, or "none" for a bare number beside a currency
+   * the row has already named. There is no "code": see `formatMoney`.
+   */
+  display?: "symbol" | "none";
   signDisplay?: Intl.NumberFormatOptions["signDisplay"];
   /** Digits after the separator; defaults to the currency's own precision. */
   fractionDigits?: number;

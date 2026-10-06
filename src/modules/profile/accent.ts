@@ -30,14 +30,19 @@ import {
 
 export const ACCENT_COOKIE_NAME = "balancia_accent";
 
+/**
+ * In the order the appearance screen draws them: the default first, then the
+ * rest round the wheel from red. Plum leads because it is what a reader who
+ * has never been to that screen is already looking at.
+ */
 export const ACCENT_COLORS = [
+  "plum",
   "coral",
   "amber",
   "mint",
   "ocean",
   "lavender",
   "raspberry",
-  "plum",
 ] as const;
 
 export type AccentColor = (typeof ACCENT_COLORS)[number];
@@ -49,8 +54,31 @@ export const MONEY_ROLES = ["negative", "positive", "payer"] as const;
 
 export type MoneyRole = (typeof MONEY_ROLES)[number];
 
-/** Today's `--primary`, so an account that never chose one changes nothing. */
-export const DEFAULT_ACCENT: AccentColor = "coral";
+/**
+ * What a reader who has never chosen sees: every signed-out screen, and every
+ * account made since plum became the default.
+ *
+ * Plum is the brand's own ink, and it is the one accent that sits beside
+ * neither money colour. Coral, the default before it, is two degrees from the
+ * "you owe" red, which put a debt and the button that settles it in nearly
+ * the same colour, one above the other. Coral is still a choice.
+ */
+export const DEFAULT_ACCENT: AccentColor = "plum";
+
+/**
+ * What an account's empty column means: coral, for every account made before
+ * plum became the default.
+ *
+ * Those accounts stored "never chose" and "chose coral" as the same null —
+ * coral was the default then, and choosing the default cleared the column —
+ * so there is no telling the two apart, and an account that picked coral on
+ * purpose must not find it changed under them. Every account made since is
+ * written with `DEFAULT_ACCENT` from the start and every choice is stored by
+ * name, so null is only ever this one historical meaning. Moving it would
+ * take a migration that decides for those accounts, which is the owner's call
+ * and not a default's.
+ */
+export const UNCHOSEN_ACCOUNT_ACCENT: AccentColor = "coral";
 
 /**
  * What each name paints: the fill, from which the inks are derived.
@@ -64,7 +92,8 @@ export const DEFAULT_ACCENT: AccentColor = "coral";
  * Three of them are a near neighbour of a money colour: coral is two degrees
  * from the "you owe" red, mint is the "gets back" green to the last digit,
  * amber is the payer. That is accepted, on purpose, and it is not fixable —
- * see the note on `accentPalette` below.
+ * see the note on `accentPalette` below. It is why none of the three is the
+ * default.
  */
 export const ACCENT_SEEDS: Record<AccentColor, Oklch> = {
   coral: { l: 0.712, c: 0.168, h: 30 },
@@ -116,9 +145,19 @@ export function isAccentColor(value: unknown): value is AccentColor {
   );
 }
 
-/** The stored value if it is one we know how to paint, or the default. */
+/**
+ * A cookie's value if it is one we know how to paint, or the default.
+ *
+ * For a reader with no account behind them. An account's column is read with
+ * `resolveStoredAccent`, because its null means something else.
+ */
 export function resolveAccent(value: unknown): AccentColor {
   return isAccentColor(value) ? value : DEFAULT_ACCENT;
+}
+
+/** An account's column: the name it holds, or coral for a null. */
+export function resolveStoredAccent(value: string | null): AccentColor {
+  return isAccentColor(value) ? value : UNCHOSEN_ACCOUNT_ACCENT;
 }
 
 /** The grounds `fill` is read on as text, as hexes for the contrast maths. */
@@ -172,8 +211,8 @@ const palettes = new Map<AccentColor, AccentPalette>();
  *
  * **Why the accent is allowed to resemble a money colour.** It used to be the
  * other way round: a money hue within forty degrees of the accent was rotated
- * away from it. That is what turned "you owe" ruby for the default accent,
- * "gets back" olive for mint, and the payer chartreuse for amber — and it was
+ * away from it. That is what turned "you owe" ruby for coral, then the
+ * default, "gets back" olive for mint, and the payer chartreuse for amber — and it was
  * not a bug in the rule so much as the rule being unsatisfiable. In the dark
  * theme the seeds live at L 0.70–0.78 and the money fills at L 0.72–0.82, and
  * an ink is walked until it clears 4.5:1, so two inks of similar chroma land
@@ -229,7 +268,10 @@ export function accentCss(accent: AccentColor): string {
  *
  * Returned as a plain object so it can go straight into a React `style` prop
  * on `<html>` — an inline declaration outranks both `:root` and `.dark`, which
- * is exactly what a per-account override has to do.
+ * is exactly what a per-account override has to do. The root layout paints
+ * every page it renders, so the stylesheet's coral is what the emails and
+ * the app icon are drawn from, and never what a reader of the app sees by
+ * default: that is `DEFAULT_ACCENT`, painted like any other accent.
  */
 export function accentTokens(accent: AccentColor): Record<string, string> {
   const palette = accentPalette(accent);

@@ -1,6 +1,6 @@
 # Be findable in French, compared with Splitwise and tricount on the site, and stop the page counter following people into the app
 
-Branch: `feat/seo-geo-acquisition`
+Merged: 2026-10-05 in #424
 
 The public pages get an address per language (`/fr`), two comparison pages in
 each, a generated `/llms.txt`, and a `<head>` that says all of it. The page

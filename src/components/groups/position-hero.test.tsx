@@ -57,19 +57,19 @@ function chf(minorUnits: bigint): string {
   const magnitude = minorUnits < 0n ? -minorUnits : minorUnits;
   return (
     sign +
-    formatMoney(money(magnitude, "CHF"), {
-      locale: "en",
-      display: "code",
-    }).replace(/\u00a0/g, " ")
+    formatMoney(money(magnitude, "CHF"), { locale: "en" }).replace(
+      /\u00a0/g,
+      " ",
+    )
   );
 }
 
 /** A row's own total, which carries no sign: it is an amount, not an effect. */
 function raw(minorUnits: bigint): string {
-  return formatMoney(money(minorUnits, "CHF"), {
-    locale: "en",
-    display: "code",
-  }).replace(/\u00a0/g, " ");
+  return formatMoney(money(minorUnits, "CHF"), { locale: "en" }).replace(
+    /\u00a0/g,
+    " ",
+  );
 }
 
 async function openSheet(
@@ -253,7 +253,7 @@ describe("more than one currency", () => {
     expect(
       screen.getByText(`So you get back ${raw(1310533n)}.`),
     ).toBeInTheDocument();
-    expect(screen.getByText("So you owe EUR 45.00.")).toBeInTheDocument();
+    expect(screen.getByText("So you owe €45.00.")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: FIGURES })).toHaveLength(2);
   });
 

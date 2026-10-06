@@ -144,6 +144,57 @@ describe("a sheet's close button", () => {
 });
 
 /**
+ * A bottom sheet on a wide window.
+ *
+ * Every sheet in the app was drawn at a phone's width, and anchored to both
+ * sides of a 1280px window the entry form's rows ran a hand's width from their
+ * figures. From `md` up a bottom sheet is held to a phone's width and centred,
+ * as a dialog is. Below `md` it still runs edge to edge: nothing here is
+ * unprefixed.
+ */
+describe("a bottom sheet from md up", () => {
+  function renderBottomSheet(className?: string) {
+    renderWithIntl(
+      <Sheet open>
+        <SheetContent side="bottom" className={className}>
+          <SheetTitle>Add expense</SheetTitle>
+        </SheetContent>
+      </Sheet>,
+    );
+    return screen.getByRole("dialog");
+  }
+
+  it("is a phone's width, centred, instead of the window's", () => {
+    expect(renderBottomSheet()).toHaveClass("md:mx-auto", "md:max-w-md");
+  });
+
+  it("still runs edge to edge on a phone", () => {
+    const sheet = renderBottomSheet();
+    expect(sheet).not.toHaveClass("mx-auto");
+    expect(
+      [...sheet.classList].filter((name) => name.startsWith("max-w-")),
+    ).toEqual([]);
+  });
+
+  it("gives way to a caller that asks for another width", () => {
+    const sheet = renderBottomSheet("md:max-w-lg");
+    expect(sheet).toHaveClass("md:max-w-lg");
+    expect(sheet).not.toHaveClass("md:max-w-md");
+  });
+
+  it("leaves a side sheet alone", () => {
+    renderWithIntl(
+      <Sheet open>
+        <SheetContent side="right">
+          <SheetTitle>Filters</SheetTitle>
+        </SheetContent>
+      </Sheet>,
+    );
+    expect(screen.getByRole("dialog")).not.toHaveClass("md:max-w-md");
+  });
+});
+
+/**
  * Pushing a sheet away, and not pushing it away by accident.
  *
  * The interesting case is the tall sheet, which keeps its header and footer

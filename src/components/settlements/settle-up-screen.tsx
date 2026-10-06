@@ -344,7 +344,6 @@ function Hero({
           <Amount
             minorUnits={magnitude.toString()}
             currency={entry.currency}
-            display="code"
             className="text-2xl font-semibold tracking-[-0.02em]"
           />
         </p>
@@ -551,7 +550,6 @@ function PaymentBlock({
         <Amount
           minorUnits={transfer.minorUnits}
           currency={transfer.currency}
-          display="code"
           className={cn(
             "ml-auto shrink-0 text-xl font-semibold tracking-[-0.01em]",
             TONE[transfer.fromIsSelf ? "negative" : "positive"].ink,
@@ -630,7 +628,6 @@ function TheirRow({
       <Amount
         minorUnits={transfer.minorUnits}
         currency={transfer.currency}
-        display="code"
         className="ml-auto shrink-0 text-sm font-semibold text-neutral-balance-ink"
       />
       <ChevronRight
@@ -707,7 +704,6 @@ function NothingToSettle({
                 <Amount
                   minorUnits={repayment.minorUnits}
                   currency={repayment.currency}
-                  display="code"
                   className="ml-auto shrink-0 text-sm font-semibold text-neutral-balance-ink"
                 />
               </li>

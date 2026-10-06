@@ -159,7 +159,6 @@ export function SettlementList({
                 <Amount
                   minorUnits={suggestion.minorUnits}
                   currency={suggestion.currency}
-                  display="code"
                   className={cn("shrink-0 text-sm font-semibold", tone)}
                 />
                 <ChevronRight
@@ -223,7 +222,6 @@ export function SettlementList({
                 <Amount
                   minorUnits={active.minorUnits}
                   currency={active.currency}
-                  display="code"
                   className="text-xl font-semibold tracking-[-0.02em]"
                 />
               </div>

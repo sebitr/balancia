@@ -203,6 +203,7 @@ export function Transactions({
   byAmount,
   firstDate,
   today,
+  repeating = null,
 }: {
   groupId: string;
   eyebrow: ReactNode;
@@ -229,6 +230,11 @@ export function Transactions({
   firstDate: string | null;
   /** Today, in the group's timezone. */
   today: string;
+  /**
+   * The group's recurring expenses, counted, when it has any — the way to
+   * them beside the kind chips. See `RepeatingLink`.
+   */
+  repeating?: { readonly running: number } | null;
 }) {
   const t = useTranslations("expensesList");
   const dates = useDateFormatter();
@@ -551,34 +557,52 @@ export function Transactions({
           Full width, and above the spine rather than beside it. Three labels
           have never fitted the list's own column at the desk, where the spine
           stands in 80px of it, and the truncation that would follow lands on
-          exactly the word that tells the chips apart. */}
-      {present.length > 1 && (
-        <div
-          role="group"
-          aria-label={t("kindFilterLabel")}
-          className="flex gap-2"
-        >
-          {present.map((kind) => {
-            const on = wantedKinds.has(kind);
-            return (
-              <button
-                key={kind}
-                type="button"
-                onClick={() => toggleKind(kind)}
-                aria-pressed={on}
-                // Equal shares of the row, so the set reads as one control
-                // rather than as a sentence of different lengths.
-                className={cn(
-                  "tap-target h-[34px] flex-1 rounded-full px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
-                  on
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {t(`kind_${kind}`)}
-              </button>
-            );
-          })}
+          exactly the word that tells the chips apart.
+
+          The recurring expenses end the row: transactions that have not
+          happened yet, one tap from the ones that have. A link rather than a
+          chip, so it wraps to a line of its own before any chip is cut short
+          — which on a 360px phone in French it does. */}
+      {(present.length > 1 || repeating) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {present.length > 1 && (
+            <div
+              role="group"
+              aria-label={t("kindFilterLabel")}
+              className="flex flex-1 gap-2"
+            >
+              {present.map((kind) => {
+                const on = wantedKinds.has(kind);
+                return (
+                  <button
+                    key={kind}
+                    type="button"
+                    onClick={() => toggleKind(kind)}
+                    aria-pressed={on}
+                    // Equal shares of the row, so the set reads as one control
+                    // rather than as a sentence of different lengths.
+                    className={cn(
+                      "tap-target h-[34px] flex-1 rounded-full px-3 text-xs font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
+                      on
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {t(`kind_${kind}`)}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {repeating && (
+            <RepeatingLink
+              groupId={groupId}
+              running={repeating.running}
+              // At the end of the row beside the chips, and where a row of its
+              // own starts when it stands alone.
+              className={present.length > 1 ? "ml-auto" : undefined}
+            />
+          )}
         </div>
       )}
 
@@ -613,8 +637,12 @@ export function Transactions({
              * ResizeObserver groups enough lower categories into a remainder to
              * preserve every band's minimum readable, tappable size along
              * whichever axis it is running on.
+             *
+             * From `lg` up there is neither a header above nor a bar below —
+             * the group's rail has both — so it sticks at the screen's own top
+             * padding and runs to its bottom one.
              */
-            className="flex h-[4.5rem] w-full shrink-0 flex-row gap-[3px] overflow-hidden md:sticky md:top-[4.5rem] md:h-[calc(100dvh-12rem)] md:w-20 md:flex-col md:self-start"
+            className="flex h-[4.5rem] w-full shrink-0 flex-row gap-[3px] overflow-hidden md:sticky md:top-[4.5rem] md:h-[calc(100dvh-12rem)] md:w-20 md:flex-col md:self-start lg:top-8 lg:h-[calc(100dvh-5rem)]"
           >
             {visibleBands.map((band) => {
               const dimmed = selected.size > 0 && !hasSelection(band);
@@ -854,6 +882,49 @@ function FilterButton({
         </span>
       )}
     </div>
+  );
+}
+
+/**
+ * The way to the group's recurring expenses: "Repeating · 2", with the number
+ * that are running.
+ *
+ * They used to be two levels down, behind a shortcut at the foot of group
+ * settings, though they are the transactions that have not happened yet —
+ * which is the question somebody reading this list is closest to asking. So
+ * the way to them sits with the kind chips, but it is not one of them: it
+ * goes somewhere rather than filtering what is here, and it is drawn as the
+ * screen's links are — link ink, a chevron, no fill — so it cannot be taken
+ * for a chip that toggles.
+ *
+ * Shown whenever the group has one, paused or not; a group with none has
+ * nothing to lead to, and the entry form's Repeats is how its first is made.
+ * The number counts only the running ones, and drops out when none are.
+ */
+export function RepeatingLink({
+  groupId,
+  running,
+  className,
+}: {
+  groupId: string;
+  running: number;
+  className?: string;
+}) {
+  const t = useTranslations("expensesList");
+  const Glyph = TYPE_GLYPHS.recurring;
+  return (
+    <Link
+      href={`/groups/${groupId}/recurring`}
+      transitionTypes={PUSH}
+      className={cn(
+        "tap-target inline-flex h-[34px] shrink-0 items-center gap-1 rounded-full px-1.5 text-xs font-semibold whitespace-nowrap text-primary-ink underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        className,
+      )}
+    >
+      <Glyph aria-hidden="true" className="size-3.5 shrink-0" />
+      {t("repeating", { count: running })}
+      <ChevronRight aria-hidden="true" className="size-3.5 shrink-0" />
+    </Link>
   );
 }
 

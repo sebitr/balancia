@@ -1,6 +1,6 @@
 # The split row says what a split is out by, the rest of an exact split is one tap, and shares step without the keyboard
 
-Branch: `fix/split-sheet-feedback`
+Merged: 2026-10-05 in #431
 
 From the UX audit of 2026-10-05 (SPL-1, SPL-2, SPL-3). The row under the
 amount carries the sheet's own sentence in red ("Exact amounts · €20.00 over

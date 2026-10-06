@@ -79,7 +79,6 @@ function figure(
     sign +
     formatMoney(money(magnitude, currency), {
       locale: "en",
-      display: "code",
     }).replace(/ /g, " ")
   );
 }
@@ -147,10 +146,10 @@ describe("the opening sentence, about expenses", () => {
       `You paid ${figure(3000n)}, exactly your share.`,
       "So you are settled up.",
     ]);
-    expect(screen.queryByText(/EUR\s0\.00/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/€0\.00/)).not.toBeInTheDocument();
   });
 
-  /** "You paid EUR 0.00" is a figure the reader has to parse to read nothing. */
+  /** "You paid €0.00" is a figure the reader has to parse to read nothing. */
   it("says the reader paid nothing rather than naming a zero", () => {
     show(view({ share: "4000" }));
 
@@ -359,7 +358,7 @@ describe("the result", () => {
       }),
     );
 
-    expect(screen.queryByText(/[+−]\s*EUR/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/[+−]\s*€/)).not.toBeInTheDocument();
     expect(screen.queryByText("Expenses")).not.toBeInTheDocument();
   });
 
@@ -443,7 +442,7 @@ describe("the figures", () => {
     // Income: none at all, so no section.
     expect(within(panel).queryByText("Income")).not.toBeInTheDocument();
     expect(within(panel).queryByText("You received")).not.toBeInTheDocument();
-    expect(within(panel).queryByText(/EUR\s0\.00/)).not.toBeInTheDocument();
+    expect(within(panel).queryByText(/€0\.00/)).not.toBeInTheDocument();
   });
 
   it("list a remainder on a line of its own", async () => {

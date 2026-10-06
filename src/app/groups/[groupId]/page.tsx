@@ -19,6 +19,7 @@ import {
 } from "@/components/activity/activity-row";
 import { SinceLastOpened } from "@/components/activity/since-last-opened";
 import { GuestAccountWidget } from "@/components/guests/guest-account-widget";
+import { OverviewColumns } from "@/components/groups/overview-columns";
 import { requireGroupAccess } from "@/lib/actions";
 import { describeJoinLink } from "@/lib/security/join-link";
 import type { GroupAccess } from "@/lib/security/authorization";
@@ -199,10 +200,29 @@ export default async function GroupOverviewPage({
     access.actor.kind === "guest"
       ? access.actor.displayName
       : access.actor.name;
+
+  // Between every block on the screen, and so inside both columns as well.
+  const gap = multiCurrency ? "gap-5" : "gap-[26px]";
+
+  /* Last, and only for a guest: what they would lose by closing this browser
+     is the note to leave them on, not the one to open with. */
+  const guestWidget = isGuest && (
+    <GuestAccountWidget
+      groupName={access.group.name}
+      balance={
+        guestPosition
+          ? {
+              minorUnits: guestPosition.amount.toString(),
+              currency: guestPosition.currency,
+            }
+          : null
+      }
+      contributionCount={contributionCount}
+    />
+  );
+
   return (
-    <div
-      className={cn("flex flex-col", multiCurrency ? "gap-5" : "gap-[26px]")}
-    >
+    <div className={cn("flex flex-col", gap)}>
       {/* No visible title and no meta line: the switcher in the top bar
           already names the group, and counting people, expenses and days told
           the reader nothing they could act on. The heading stays for anyone
@@ -226,204 +246,206 @@ export default async function GroupOverviewPage({
       <DraftRow groupId={groupId} />
 
       {startHere ? (
-        <GroupEmptyState
-          groupId={groupId}
-          groupName={access.group.name}
-          canImport={access.permissions.importData}
-          people={startHere.people}
-          invite={startHere.invite}
-          now={now.toISOString()}
-        />
-      ) : (
         <>
-          {multiCurrency ? (
-            <>
-              {access.participantId && (
-                <PositionCard
-                  positions={overview.positions.map((position) => ({
-                    currency: position.currency,
-                    minorUnits: position.amount.toString(),
-                    counterparties: position.counterparties.map((party) => ({
-                      participantId: party.participantId,
-                      name: party.name,
-                      minorUnits: party.amount.toString(),
-                    })),
-                    breakdown: {
-                      paid: position.breakdown.paid.toString(),
-                      share: position.breakdown.share.toString(),
-                      revenueReceived:
-                        position.breakdown.revenueReceived.toString(),
-                      revenueCredited:
-                        position.breakdown.revenueCredited.toString(),
-                      settlementsPaid:
-                        position.breakdown.settlementsPaid.toString(),
-                      settlementsReceived:
-                        position.breakdown.settlementsReceived.toString(),
-                      otherAdjustments:
-                        position.breakdown.otherAdjustments.toString(),
-                    },
-                  }))}
-                  groupId={groupId}
-                  groupName={access.group.name}
-                  senderName={senderName}
-                  recipients={recipients}
-                />
-              )}
-
-              <CurrencyBalances
-                currencies={overview.currencies.map((entry) => ({
-                  currency: entry.currency,
-                  totalSpent: entry.totalSpent.toString(),
-                  position: entry.position.toString(),
-                  members: entry.members.map((member) => ({
-                    participantId: member.participantId,
-                    name: member.name,
-                    minorUnits: member.amount.toString(),
-                    isSelf: member.isSelf,
-                  })),
-                  transfers: entry.transfers.map((transfer) => ({
-                    fromParticipantId: transfer.fromParticipantId,
-                    fromName: transfer.fromName,
-                    toParticipantId: transfer.toParticipantId,
-                    toName: transfer.toName,
-                    minorUnits: transfer.amount.toString(),
-                    fromIsSelf: transfer.fromIsSelf,
-                    toIsSelf: transfer.toIsSelf,
-                  })),
-                }))}
-                groupId={groupId}
-                groupName={access.group.name}
-                senderName={senderName}
-                recipients={recipients}
-                participantCount={overview.participantCount}
-                defaultOpen={mainCurrencyOf(
-                  overview.currencies,
-                  access.group.baseCurrency,
-                )}
-              />
-            </>
-          ) : (
-            <>
-              {access.participantId && (
-                <PositionHero
-                  positions={overview.positions.map((position) => ({
-                    currency: position.currency,
-                    minorUnits: position.amount.toString(),
-                    counterparties: position.counterparties.map((party) => ({
-                      participantId: party.participantId,
-                      name: party.name,
-                      minorUnits: party.amount.toString(),
-                    })),
-                    breakdown: {
-                      paid: position.breakdown.paid.toString(),
-                      share: position.breakdown.share.toString(),
-                      revenueReceived:
-                        position.breakdown.revenueReceived.toString(),
-                      revenueCredited:
-                        position.breakdown.revenueCredited.toString(),
-                      settlementsPaid:
-                        position.breakdown.settlementsPaid.toString(),
-                      settlementsReceived:
-                        position.breakdown.settlementsReceived.toString(),
-                      otherAdjustments:
-                        position.breakdown.otherAdjustments.toString(),
-                    },
-                  }))}
-                  groupId={groupId}
-                  groupName={access.group.name}
-                  senderName={senderName}
-                  recipients={recipients}
-                  canArchive={
-                    access.permissions.manageGroupSettings &&
-                    access.group.archivedAt === null
-                  }
-                />
-              )}
-
-              {overview.rows.length > 0 && (
-                <BalanceList
-                  rows={overview.rows.map((row) => ({
-                    participantId: row.participantId,
-                    name: row.name,
-                    currency: row.currency,
-                    minorUnits: row.amount.toString(),
-                    isSelf: row.isSelf,
-                    remindedAt: null,
-                  }))}
-                  groupId={groupId}
-                  limit={BALANCE_ROWS}
-                  participantCount={overview.participantCount}
-                />
-              )}
-
-              <SettlementList
-                suggestions={overview.suggestions.map((suggestion) => ({
-                  fromParticipantId: suggestion.fromParticipantId,
-                  fromName: suggestion.fromName,
-                  toParticipantId: suggestion.toParticipantId,
-                  toName: suggestion.toName,
-                  currency: suggestion.currency,
-                  minorUnits: suggestion.amount.toString(),
-                  fromIsSelf: suggestion.fromIsSelf,
-                  toIsSelf: suggestion.toIsSelf,
-                }))}
-                groupId={groupId}
-                groupName={access.group.name}
-                senderName={senderName}
-                recipients={recipients}
-              />
-            </>
-          )}
-
-          {activity.length > 0 && (
-            <SinceLastOpened
-              entries={activity}
-              lastOpenedAt={overview.lastOpenedAt?.toISOString() ?? null}
-              groupId={groupId}
-              now={now.toISOString()}
-              people={{ you: access.participantId, names: activityNames }}
-            />
-          )}
-
-          <SpendingCard
-            compact={multiCurrency}
+          <GroupEmptyState
             groupId={groupId}
-            periods={overview.spendingPeriods.map((period) => ({
-              key: period.key,
-              stats: period.stats.map((stat) => ({
-                currency: stat.currency,
-                groupSpent: stat.groupSpent.toString(),
-                youPaid: stat.youPaid.toString(),
-                yourShare: stat.yourShare.toString(),
-              })),
-            }))}
+            groupName={access.group.name}
+            canImport={access.permissions.importData}
+            people={startHere.people}
+            invite={startHere.invite}
+            now={now.toISOString()}
           />
+
+          {/* On an empty group, the history only once something has been
+              deleted that Activity could put back. See `ActivityRow`. */}
+          {historyHoldsADeletion(activity) && <ActivityRow groupId={groupId} />}
+
+          {guestWidget}
         </>
-      )}
+      ) : (
+        /*
+         * Two columns from `lg` up, one on a phone: the money on the left, the
+         * context on the right, in that order in the document. An empty group
+         * above stays one column at every width — "Start here" is two steps,
+         * not a dashboard. See `OverviewColumns`.
+         */
+        <OverviewColumns
+          className={gap}
+          primary={
+            multiCurrency ? (
+              <>
+                {access.participantId && (
+                  <PositionCard
+                    positions={overview.positions.map((position) => ({
+                      currency: position.currency,
+                      minorUnits: position.amount.toString(),
+                      counterparties: position.counterparties.map((party) => ({
+                        participantId: party.participantId,
+                        name: party.name,
+                        minorUnits: party.amount.toString(),
+                      })),
+                      breakdown: {
+                        paid: position.breakdown.paid.toString(),
+                        share: position.breakdown.share.toString(),
+                        revenueReceived:
+                          position.breakdown.revenueReceived.toString(),
+                        revenueCredited:
+                          position.breakdown.revenueCredited.toString(),
+                        settlementsPaid:
+                          position.breakdown.settlementsPaid.toString(),
+                        settlementsReceived:
+                          position.breakdown.settlementsReceived.toString(),
+                        otherAdjustments:
+                          position.breakdown.otherAdjustments.toString(),
+                      },
+                    }))}
+                    groupId={groupId}
+                    groupName={access.group.name}
+                    senderName={senderName}
+                    recipients={recipients}
+                  />
+                )}
 
-      {/* The group's history, for whoever can open this screen — the Activity
-          screen asks for no more access than this one does, and a Restore
-          there is still offered only to whoever may press it. Always on a
-          group with money in it; on an empty one, only once something has
-          been deleted that Activity could put back. See `ActivityRow`. */}
-      {(!startHere || historyHoldsADeletion(activity)) && (
-        <ActivityRow groupId={groupId} />
-      )}
+                <CurrencyBalances
+                  currencies={overview.currencies.map((entry) => ({
+                    currency: entry.currency,
+                    totalSpent: entry.totalSpent.toString(),
+                    position: entry.position.toString(),
+                    members: entry.members.map((member) => ({
+                      participantId: member.participantId,
+                      name: member.name,
+                      minorUnits: member.amount.toString(),
+                      isSelf: member.isSelf,
+                    })),
+                    transfers: entry.transfers.map((transfer) => ({
+                      fromParticipantId: transfer.fromParticipantId,
+                      fromName: transfer.fromName,
+                      toParticipantId: transfer.toParticipantId,
+                      toName: transfer.toName,
+                      minorUnits: transfer.amount.toString(),
+                      fromIsSelf: transfer.fromIsSelf,
+                      toIsSelf: transfer.toIsSelf,
+                    })),
+                  }))}
+                  groupId={groupId}
+                  groupName={access.group.name}
+                  senderName={senderName}
+                  recipients={recipients}
+                  participantCount={overview.participantCount}
+                  defaultOpen={mainCurrencyOf(
+                    overview.currencies,
+                    access.group.baseCurrency,
+                  )}
+                />
+              </>
+            ) : (
+              <>
+                {access.participantId && (
+                  <PositionHero
+                    positions={overview.positions.map((position) => ({
+                      currency: position.currency,
+                      minorUnits: position.amount.toString(),
+                      counterparties: position.counterparties.map((party) => ({
+                        participantId: party.participantId,
+                        name: party.name,
+                        minorUnits: party.amount.toString(),
+                      })),
+                      breakdown: {
+                        paid: position.breakdown.paid.toString(),
+                        share: position.breakdown.share.toString(),
+                        revenueReceived:
+                          position.breakdown.revenueReceived.toString(),
+                        revenueCredited:
+                          position.breakdown.revenueCredited.toString(),
+                        settlementsPaid:
+                          position.breakdown.settlementsPaid.toString(),
+                        settlementsReceived:
+                          position.breakdown.settlementsReceived.toString(),
+                        otherAdjustments:
+                          position.breakdown.otherAdjustments.toString(),
+                      },
+                    }))}
+                    groupId={groupId}
+                    groupName={access.group.name}
+                    senderName={senderName}
+                    recipients={recipients}
+                    canArchive={
+                      access.permissions.manageGroupSettings &&
+                      access.group.archivedAt === null
+                    }
+                  />
+                )}
 
-      {/* Last, and only for a guest: what they would lose by closing this
-          browser is the note to leave them on, not the one to open with. */}
-      {isGuest && (
-        <GuestAccountWidget
-          groupName={access.group.name}
-          balance={
-            guestPosition
-              ? {
-                  minorUnits: guestPosition.amount.toString(),
-                  currency: guestPosition.currency,
-                }
-              : null
+                {overview.rows.length > 0 && (
+                  <BalanceList
+                    rows={overview.rows.map((row) => ({
+                      participantId: row.participantId,
+                      name: row.name,
+                      currency: row.currency,
+                      minorUnits: row.amount.toString(),
+                      isSelf: row.isSelf,
+                      remindedAt: null,
+                    }))}
+                    groupId={groupId}
+                    limit={BALANCE_ROWS}
+                    participantCount={overview.participantCount}
+                  />
+                )}
+
+                <SettlementList
+                  suggestions={overview.suggestions.map((suggestion) => ({
+                    fromParticipantId: suggestion.fromParticipantId,
+                    fromName: suggestion.fromName,
+                    toParticipantId: suggestion.toParticipantId,
+                    toName: suggestion.toName,
+                    currency: suggestion.currency,
+                    minorUnits: suggestion.amount.toString(),
+                    fromIsSelf: suggestion.fromIsSelf,
+                    toIsSelf: suggestion.toIsSelf,
+                  }))}
+                  groupId={groupId}
+                  groupName={access.group.name}
+                  senderName={senderName}
+                  recipients={recipients}
+                />
+              </>
+            )
           }
-          contributionCount={contributionCount}
+          secondary={
+            <>
+              {activity.length > 0 && (
+                <SinceLastOpened
+                  entries={activity}
+                  lastOpenedAt={overview.lastOpenedAt?.toISOString() ?? null}
+                  groupId={groupId}
+                  people={{ you: access.participantId, names: activityNames }}
+                  now={now.toISOString()}
+                />
+              )}
+
+              <SpendingCard
+                compact={multiCurrency}
+                groupId={groupId}
+                periods={overview.spendingPeriods.map((period) => ({
+                  key: period.key,
+                  stats: period.stats.map((stat) => ({
+                    currency: stat.currency,
+                    groupSpent: stat.groupSpent.toString(),
+                    youPaid: stat.youPaid.toString(),
+                    yourShare: stat.yourShare.toString(),
+                  })),
+                }))}
+              />
+
+              {/* The group's history, for whoever can open this screen — the
+                  Activity screen asks for no more access than this one does,
+                  and a Restore there is still offered only to whoever may
+                  press it. Always on a group with money in it. */}
+              <ActivityRow groupId={groupId} />
+
+              {guestWidget}
+            </>
+          }
         />
       )}
     </div>

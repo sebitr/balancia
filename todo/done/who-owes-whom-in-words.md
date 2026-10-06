@@ -1,6 +1,6 @@
 # Say who owes whom in words, and say "you" to the reader, on every screen
 
-Branch: `fix/who-owes-whom-in-words`
+Merged: 2026-10-05 in #427
 
 From the UX audit of 2026-10-05 (BAL-1, HOME-2, BAL-3, COPY-2). The Balances
 list, the transactions rows and the member hero said a debt with a sign and a

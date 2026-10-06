@@ -15,7 +15,9 @@ import {
   restoreRecurringExpense,
   setRecurringPaused,
   setUpRecurringExpense,
+  updateRecurringExpense,
   type RecurringSetUp,
+  type RecurringUpdate,
 } from "./service";
 
 /**
@@ -47,6 +49,37 @@ export async function createRecurringAction(
     revalidatePath(`/groups/${groupId}/settle`);
     revalidatePath(`/groups/${groupId}/recurring`);
   }
+  return result;
+}
+
+/**
+ * Changes a series for the entries still to come — see
+ * `updateRecurringExpense`. The answer says when the next one is and whether
+ * it is paused, which is what the confirmation is built from.
+ *
+ * Only the Recurring screen moves: nothing is added or changed in the group
+ * by an edit, so no balance has anything to show for it yet.
+ */
+export async function updateRecurringAction(
+  groupId: string,
+  templateId: string,
+  payload: unknown,
+): Promise<ActionResult<RecurringUpdate>> {
+  if (!z.uuid().safeParse(templateId).success) {
+    const t = await getTranslations("serverErrors");
+    return actionError(t("malformedRequest"));
+  }
+  const parsed = recurringInputSchema.safeParse(payload);
+  if (!parsed.success) {
+    return actionError(parsed.error.issues[0]?.message ?? "Check the form.");
+  }
+
+  const result = await runAction("recurring.update", async () => {
+    const access = await requireGroupAccess(groupId, { requireActive: true });
+    return updateRecurringExpense(access, templateId, parsed.data);
+  });
+
+  if (result.ok) revalidatePath(`/groups/${groupId}/recurring`);
   return result;
 }
 

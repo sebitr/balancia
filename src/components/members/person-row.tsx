@@ -14,8 +14,9 @@ import {
   UserMinus,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ChoicePill } from "@/components/entries/pills";
+import { Row, RowCard } from "@/components/entries/row-card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { toastUndoable } from "@/components/ui/sonner";
 import { useAutosave } from "@/components/ui/use-autosave";
 import { useDateFormatter, useNumberLocale } from "@/i18n/format-context";
@@ -76,7 +77,7 @@ function openings(
     name: hasAccount ? can.isSelf : can.manage,
     /** The email a person without an account can be reached at. */
     email: !hasAccount && can.manage,
-    /** The whole access block — invite links, and who has one. */
+    /** The whole access block — personal links, and who has one. */
     access: can.invite,
     /** Taking them out of the group. The owner never appears here. */
     remove: can.remove && !person.isOwner,
@@ -112,10 +113,22 @@ function emailReady(value: string): boolean {
   return addParticipantSchema.shape.email.safeParse(value.trim()).success;
 }
 
+/**
+ * The caption over each card in the open row, outside it, as the settings
+ * screens put theirs: it names the set of rows below rather than being the
+ * first of them.
+ */
 const EYEBROW =
-  "text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase";
+  "px-1.5 text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase";
+
+/**
+ * A field inside a row of the card. Borderless, as the entry sheet's are: the
+ * card is already its edge, and it rings whenever a field inside it has focus
+ * (see `RowCard`). The value sits at the trailing edge, opposite its label,
+ * the way a settings row puts its value opposite its name.
+ */
 const FIELD =
-  "h-[42px] rounded-lg border-input bg-[color-mix(in_oklch,var(--input)_30%,transparent)] px-3 text-base md:text-sm";
+  "min-w-0 flex-1 bg-transparent text-right text-base outline-none placeholder:text-muted-foreground md:text-sm";
 
 export function PersonRow({
   groupId,
@@ -323,10 +336,19 @@ function PersonPanel({
     useState<(typeof EXPIRIES)[number]["key"]>("never");
   const [pending, setPending] = useState(false);
   const [copied, setCopied] = useState(false);
+  /*
+   * Whether the reader has asked for a personal link yet. The offer is one
+   * quiet button under one sentence, and how long the link lasts only appears
+   * once it is pressed: the group link at the foot of the screen is the one
+   * to send nearly every time, and a row that led with an expiry and a filled
+   * "Create" button made this one look like the main thing to do.
+   */
+  const [offering, setOffering] = useState(false);
 
   const nameId = `person-name-${person.id}`;
   const emailId = `person-email-${person.id}`;
   const expiryId = `person-expiry-${person.id}`;
+  const offerId = `person-offer-${person.id}`;
 
   const { draft, saving, edit, flush } = useAutosave<Named>({
     initial: { name: person.name, email: person.email },
@@ -377,6 +399,9 @@ function PersonPanel({
         toast.error(result.error ?? t("createLinkFailed"));
         return;
       }
+      // Folded away again, so that revoking this link later comes back to
+      // the quiet offer rather than to a half-made second one.
+      setOffering(false);
       onReveal(result.data.url);
       router.refresh();
     } finally {
@@ -394,7 +419,7 @@ function PersonPanel({
       }
       onDismissReveal();
       router.refresh();
-      toast.success(t("revoked"));
+      toast.success(t("revoked", { name: person.name }));
     } finally {
       setPending(false);
     }
@@ -442,81 +467,92 @@ function PersonPanel({
 
   return (
     <div className="flex flex-col gap-4 bg-[color-mix(in_oklch,var(--muted)_42%,transparent)] px-3.5 pt-0.5 pb-[18px] motion-safe:animate-in motion-safe:duration-150 motion-safe:fade-in-0 motion-safe:slide-in-from-top-1">
+      {/*
+       * Two cards of rows, the way the entry sheet and the settings screens
+       * group what belongs together: who this person is, then how they get
+       * in. Each card is captioned from outside, and the way out of the group
+       * stays last, under a hairline, as it always was.
+       */}
       {may.name && (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2">
           <span className="flex items-center justify-between gap-2">
             <span className={EYEBROW}>{t("details")}</span>
             {/* For the eye only: the toast is what announces the outcome. */}
             {saving && (
               <span
                 aria-hidden="true"
-                className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                className="flex items-center gap-1.5 px-1.5 text-xs text-muted-foreground"
               >
                 <Loader2 className="size-3.5 animate-spin" />
                 {t("saving")}
               </span>
             )}
           </span>
-          <label htmlFor={nameId} className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium">
-              {may.email ? t("name") : t("nameHere")}
-            </span>
-            <Input
-              id={nameId}
-              value={draft.name}
-              maxLength={120}
-              onChange={(event) => edit({ name: event.target.value })}
-              onBlur={flush}
-              aria-invalid={nameMissing}
-              aria-describedby={nameMissing ? `${nameId}-error` : undefined}
-              className={FIELD}
-            />
-            {nameMissing && (
-              <span id={`${nameId}-error`} className="text-xs text-destructive">
-                {t("nameRequired")}
-              </span>
-            )}
-          </label>
-          {may.email && (
-            <label htmlFor={emailId} className="flex flex-col gap-1.5">
-              <span className="flex items-baseline gap-1.5 text-xs font-medium">
-                {t("email")}
-                <span className="text-xs font-normal text-muted-foreground">
-                  {tCommon("optional")}
-                </span>
-              </span>
-              <Input
-                id={emailId}
-                type="email"
-                inputMode="email"
-                value={draft.email}
-                placeholder="name@example.com"
-                onChange={(event) => edit({ email: event.target.value })}
+          <RowCard>
+            <Row>
+              <label htmlFor={nameId} className="shrink-0 text-sm font-medium">
+                {may.email ? t("name") : t("nameHere")}
+              </label>
+              <input
+                id={nameId}
+                value={draft.name}
+                maxLength={120}
+                autoComplete="off"
+                onChange={(event) => edit({ name: event.target.value })}
                 onBlur={flush}
-                aria-invalid={emailWrong}
-                aria-describedby={emailWrong ? `${emailId}-error` : undefined}
+                aria-invalid={nameMissing}
+                aria-describedby={nameMissing ? `${nameId}-error` : undefined}
                 className={FIELD}
               />
-              {emailWrong && (
-                <span
-                  id={`${emailId}-error`}
-                  className="text-xs text-destructive"
+            </Row>
+            {may.email && (
+              <Row>
+                <label
+                  htmlFor={emailId}
+                  className="flex shrink-0 items-baseline gap-1.5 text-sm font-medium"
                 >
-                  {t("emailInvalid")}
-                </span>
-              )}
-            </label>
+                  {t("email")}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {tCommon("optional")}
+                  </span>
+                </label>
+                <input
+                  id={emailId}
+                  type="email"
+                  inputMode="email"
+                  autoComplete="off"
+                  value={draft.email}
+                  placeholder="name@example.com"
+                  onChange={(event) => edit({ email: event.target.value })}
+                  onBlur={flush}
+                  aria-invalid={emailWrong}
+                  aria-describedby={emailWrong ? `${emailId}-error` : undefined}
+                  className={FIELD}
+                />
+              </Row>
+            )}
+          </RowCard>
+          {nameMissing && (
+            <span
+              id={`${nameId}-error`}
+              className="px-1.5 text-xs text-destructive"
+            >
+              {t("nameRequired")}
+            </span>
+          )}
+          {emailWrong && (
+            <span
+              id={`${emailId}-error`}
+              className="px-1.5 text-xs text-destructive"
+            >
+              {t("emailInvalid")}
+            </span>
           )}
         </div>
       )}
 
       {may.access && (
-        <div
-          className={cn(
-            "flex flex-col gap-2.5",
-            may.name && "border-t border-border pt-3.5",
-          )}
-        >
+        <div className="flex flex-col gap-2">
           <span className={EYEBROW}>{t("access")}</span>
 
           {revealUrl ? (
@@ -559,33 +595,37 @@ function PersonPanel({
               </Button>
             </div>
           ) : person.access === "account" ? (
-            <p className="text-pretty text-muted-foreground">
-              {/* Four phrasings rather than one assembled from fragments: an
-                owner reads a clause nobody else does, and naming the address
-                someone signs in with only works when there is one. */}
-              {person.email
-                ? person.isOwner
-                  ? t("accountOwnerEmail", {
-                      name: person.name,
-                      email: person.email,
-                    })
-                  : t("accountEmail", {
-                      name: person.name,
-                      email: person.email,
-                    })
-                : person.isOwner
-                  ? t("accountOwner", { name: person.name })
-                  : t("account", { name: person.name })}
-            </p>
+            <RowCard>
+              <p className="px-4 py-3.5 text-pretty text-muted-foreground">
+                {/* Four phrasings rather than one assembled from fragments: an
+                  owner reads a clause nobody else does, and naming the address
+                  someone signs in with only works when there is one. */}
+                {person.email
+                  ? person.isOwner
+                    ? t("accountOwnerEmail", {
+                        name: person.name,
+                        email: person.email,
+                      })
+                    : t("accountEmail", {
+                        name: person.name,
+                        email: person.email,
+                      })
+                  : person.isOwner
+                    ? t("accountOwner", { name: person.name })
+                    : t("account", { name: person.name })}
+              </p>
+            </RowCard>
           ) : person.access === "link" && person.link ? (
-            <div className="flex flex-col gap-2.5">
-              <span className="flex items-center gap-2 rounded-lg border border-border bg-[color-mix(in_oklch,var(--card)_70%,transparent)] px-3 py-2.5">
+            <RowCard>
+              <div className="flex items-center gap-3 px-4 py-3">
                 <Link2
                   aria-hidden="true"
-                  className="size-4 shrink-0 text-primary-ink"
+                  className="size-[18px] shrink-0 text-primary-ink"
                 />
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="text-xs font-medium">{t("linkIsLive")}</span>
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="text-sm font-medium text-pretty">
+                    {t("linkIsLive", { name: person.name })}
+                  </span>
                   <span className="text-xs text-muted-foreground">
                     {[
                       t("linkCreated", {
@@ -599,8 +639,8 @@ function PersonPanel({
                     ].join(" · ")}
                   </span>
                 </span>
-              </span>
-              <span className="flex flex-wrap gap-2">
+              </div>
+              <Row className="flex-wrap gap-2 py-2.5">
                 <Button
                   variant="outline"
                   className="h-[38px] px-3"
@@ -622,52 +662,81 @@ function PersonPanel({
                 >
                   {t("revoke")}
                 </Button>
-              </span>
-            </div>
+              </Row>
+            </RowCard>
           ) : (
-            <div className="flex flex-col gap-2.5">
-              <p className="text-pretty text-muted-foreground">
+            <RowCard>
+              <p className="px-4 py-3.5 text-pretty text-muted-foreground">
                 {t("noAccessBlurb", { name: person.name })}
               </p>
-              <span className="flex flex-wrap items-end gap-2">
-                <label htmlFor={expiryId} className="flex flex-col gap-1.5">
-                  <span className="text-xs font-medium">{t("expires")}</span>
-                  {/* Native, like every other select in the app: a phone's own
-                    picker beats a listbox that has to be scrolled. */}
-                  <select
-                    id={expiryId}
-                    value={expiry}
-                    onChange={(event) =>
-                      setExpiry(
-                        event.target.value as (typeof EXPIRIES)[number]["key"],
-                      )
-                    }
-                    className={cn(
-                      FIELD,
-                      "min-w-[118px] border pr-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-                    )}
-                  >
-                    {EXPIRIES.map((option) => (
-                      <option key={option.key} value={option.key}>
-                        {t(`expiry_${option.key}`)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <Button
-                  className="h-[42px] px-3.5 font-semibold"
-                  onClick={() => void onCreateLink()}
-                  disabled={pending}
-                >
-                  {pending ? (
-                    <Loader2 aria-hidden="true" className="animate-spin" />
-                  ) : (
-                    <Link2 aria-hidden="true" />
+              {/* Named for whom it is, so it can never be taken for the group
+                  link: that one is everybody's, and this one acts as them. */}
+              <button
+                type="button"
+                aria-expanded={offering}
+                aria-controls={offerId}
+                onClick={() => setOffering((open) => !open)}
+                className="flex min-h-[52px] w-full items-center gap-3 px-4 text-left text-sm font-semibold text-primary-ink transition-colors hover:bg-wash-1 focus-visible:bg-accent focus-visible:outline-none active:bg-accent"
+              >
+                <Link2 aria-hidden="true" className="size-[18px] shrink-0" />
+                <span className="min-w-0 flex-1">
+                  {t("personalLink", { name: person.name })}
+                </span>
+                <ChevronDown
+                  aria-hidden="true"
+                  className={cn(
+                    "size-[18px] shrink-0 text-muted-foreground transition-transform duration-150 motion-reduce:transition-none",
+                    offering && "rotate-180",
                   )}
-                  {t("createLink")}
-                </Button>
-              </span>
-            </div>
+                />
+              </button>
+              {offering && (
+                <div
+                  id={offerId}
+                  className="flex flex-col gap-3 px-4 pt-3.5 pb-4 motion-safe:animate-in motion-safe:duration-150 motion-safe:fade-in-0"
+                >
+                  {/* The entry sheet's chips rather than a native select: three
+                    choices fit on screen at once, and a picker hid two of
+                    them behind a tap. */}
+                  <div
+                    role="group"
+                    aria-labelledby={expiryId}
+                    className="flex flex-col gap-2"
+                  >
+                    <span
+                      id={expiryId}
+                      className="text-xs font-medium text-muted-foreground"
+                    >
+                      {t("expires")}
+                    </span>
+                    <span className="flex flex-wrap gap-2">
+                      {EXPIRIES.map((option) => (
+                        <ChoicePill
+                          key={option.key}
+                          selected={expiry === option.key}
+                          onClick={() => setExpiry(option.key)}
+                        >
+                          {t(`expiry_${option.key}`)}
+                        </ChoicePill>
+                      ))}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="h-10 font-semibold"
+                    onClick={() => void onCreateLink()}
+                    disabled={pending}
+                  >
+                    {pending ? (
+                      <Loader2 aria-hidden="true" className="animate-spin" />
+                    ) : (
+                      <Link2 aria-hidden="true" />
+                    )}
+                    {t("createLink")}
+                  </Button>
+                </div>
+              )}
+            </RowCard>
           )}
         </div>
       )}

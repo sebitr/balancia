@@ -15,11 +15,7 @@ import {
 import { clearSessionCookie } from "@/modules/auth/cookies";
 import { isSupportedCurrency } from "@/modules/currencies/iso-4217";
 import { getLatestEntryForUser } from "@/modules/expenses/service";
-import {
-  DEFAULT_ACCENT,
-  isAccentColor,
-  resolveAccent,
-} from "@/modules/profile/accent";
+import { isAccentColor, resolveStoredAccent } from "@/modules/profile/accent";
 import {
   DATE_FORMATS,
   DEFAULT_DATE_FORMAT,
@@ -45,9 +41,9 @@ import { trackRoute } from "@/lib/metrics/http";
  * action IDs change on every build; a native client needs a stable route, so
  * this one exposes the same service calls over JSON. It deliberately mirrors
  * those actions rather than inventing a second set of rules — the same
- * validation, the same "a chosen default is stored as absence" convention —
- * because two ends that disagree about what `null` means is how the accent on
- * a phone stops matching the accent in a browser.
+ * validation, the same reading of what is stored — because two ends that
+ * disagree about what `null` means is how the accent on a phone stops
+ * matching the accent in a browser.
  *
  * The one thing the actions do that this cannot is write the cookies. Those
  * exist so a *browser* render knows the answer before it reads the database;
@@ -103,11 +99,13 @@ async function handleGet() {
 /**
  * Null columns as the words the client speaks.
  *
- * The database stores "not chosen" as null; the wire stores it as `"auto"` and
- * `"coral"`, which is what the chips and swatches are labelled with. Doing the
- * translation here — rather than sending nulls and letting each client invent
- * a default — is what keeps a phone and a browser agreeing about which chip is
- * lit for an account that never touched the screen.
+ * The database stores "not chosen" as null; the wire says `"auto"` for the
+ * notation and the accent's name — coral, for an account from before plum
+ * became the default (`resolveStoredAccent`) — which is what the chips and
+ * swatches are labelled with. Doing the translation here, rather than sending
+ * nulls and letting each client invent a default, is what keeps a phone and a
+ * browser agreeing about which chip is lit for an account that never touched
+ * the screen.
  */
 function resolvedPreferences(stored: {
   locale: string | null;
@@ -123,7 +121,7 @@ function resolvedPreferences(stored: {
     numberFormat: isNumberFormat(stored.numberFormat)
       ? stored.numberFormat
       : DEFAULT_NUMBER_FORMAT,
-    accentColor: resolveAccent(stored.accentColor),
+    accentColor: resolveStoredAccent(stored.accentColor),
   };
 }
 
@@ -132,11 +130,10 @@ function resolvedPreferences(stored: {
  * save one chip without restating the rest of the account.
  *
  * `preferredCurrency: null` clears the choice, and the favourites list is the
- * whole ordered list each time — the star is a toggle, not a diff. The three
- * preferences below take `"auto"` and `"coral"` as the *words* for "not
- * chosen" and store them as null, exactly as the Server Actions do, so an
- * account that never opened the screen and one that came back to the default
- * are the same row.
+ * whole ordered list each time — the star is a toggle, not a diff. The two
+ * notation preferences take `"auto"` as the *word* for "not chosen" and store
+ * it as null, exactly as the Server Actions do. The accent is stored by name,
+ * whichever it is, as the Server Action stores it.
  */
 const patchSchema = z.object({
   name: z.string().trim().min(1, "Enter a name.").max(120).optional(),
@@ -187,10 +184,7 @@ async function handlePatch(request: Request) {
       await saveUserLocale(user.userId, input.locale);
     }
     if (input.accentColor !== undefined) {
-      await saveUserAccentColor(
-        user.userId,
-        input.accentColor === DEFAULT_ACCENT ? null : input.accentColor,
-      );
+      await saveUserAccentColor(user.userId, input.accentColor);
     }
     // Written together because the column pair is written together: sending
     // one alone must not clear the other, so the untouched half is restated.

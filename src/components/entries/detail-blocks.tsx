@@ -223,6 +223,10 @@ function currencyLeads(locale: string, currency: string): boolean {
  * qualifies the number rather than competing with it. The row wraps rather
  * than running off the card, so a seven-figure total on a narrow phone puts
  * its currency on a line of its own instead of losing digits under the edge.
+ *
+ * That makes this one of the two exceptions written out at `formatMoney`; the
+ * caption under it, like every other figure on the screen, is in the app's
+ * one notation.
  */
 export function BigAmount({
   minorUnits,
@@ -642,6 +646,11 @@ function FileGlyph() {
  * The `5rem` is the bottom bar's own height, the same constant `Screen`'s
  * inset is built from. Nothing here is translucent — the bar is what content
  * scrolls under, and a blur would show the rows sliding behind the buttons.
+ *
+ * From `lg` up there is no bar, only the group's rail down the left, so the
+ * actions dock at the foot of the window and start where the rail stops; the
+ * inner column takes the screen's own gutters there, so the buttons line up
+ * with the entry above them.
  */
 export const ACTION =
   "inline-flex h-[46px] shrink-0 items-center justify-center gap-2 rounded-[13px] text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none";
@@ -656,8 +665,8 @@ export const ACTION_DESTRUCTIVE =
 
 export function ActionBar({ children }: { children: React.ReactNode }) {
   return (
-    <div className="fixed inset-x-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 bg-background">
-      <div className="mx-auto flex w-full max-w-3xl gap-2 px-4 pt-2.5 pb-3.5">
+    <div className="fixed inset-x-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 bg-background lg:bottom-0 lg:left-(--app-rail-w)">
+      <div className="mx-auto flex w-full max-w-3xl gap-2 px-4 pt-2.5 pb-3.5 lg:px-6 xl:px-8">
         {children}
       </div>
     </div>

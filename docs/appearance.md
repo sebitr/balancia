@@ -6,11 +6,11 @@ them.
 
 ## The three decisions
 
-| Decision         | Choices                                              | Kept                                   |
-| ---------------- | ---------------------------------------------------- | -------------------------------------- |
-| **Theme**        | Auto (follow the system), Light, Dark                | In the browser (`localStorage`)        |
-| **Dark surface** | Plum or Midnight                                     | Cookie on this device                  |
-| **Accent**       | Coral, Amber, Mint, Ocean, Lavender, Raspberry, Plum | Cookie, and the account when signed in |
+| Decision         | Choices                                                            | Kept                                   |
+| ---------------- | ------------------------------------------------------------------ | -------------------------------------- |
+| **Theme**        | Auto (follow the system), Light, Dark                              | In the browser (`localStorage`)        |
+| **Dark surface** | Plum or Midnight                                                   | Cookie on this device                  |
+| **Accent**       | Plum (the default), Coral, Amber, Mint, Ocean, Lavender, Raspberry | Cookie, and the account when signed in |
 
 The theme is applied by a script that runs before the first paint, so a dark
 page never flashes light. The dark surface and the accent are read by the
@@ -65,10 +65,10 @@ same on every account, whichever accent is chosen.** A balance is the same red
 for everyone, which is the point of a colour that means something.
 
 For a while they were not. Three of the seven accents sit on a money colour —
-coral, the default, is two degrees from the "you owe" red; mint is the "gets
-back" green exactly; amber is the payer — so each money hue was rotated away
-from the accent until it was forty degrees clear. That gave a coral reader a
-ruby "you owe", a mint reader an olive "gets back" and an amber reader a
+coral, then the default, is two degrees from the "you owe" red; mint is the
+"gets back" green exactly; amber is the payer — so each money hue was rotated
+away from the accent until it was forty degrees clear. That gave a coral reader
+a ruby "you owe", a mint reader an olive "gets back" and an amber reader a
 chartreuse payer.
 
 It turned out the rule could not be satisfied and look like anything. In the
@@ -94,12 +94,56 @@ above, with the numbers behind it, is at the top of
 There is one red, not two: the colour a delete button uses shares a hue with
 the "you owe" red, at its own lightness.
 
+## The default accent
+
+What remained to decide was which accent somebody gets without asking, and it
+is **plum**: the brand's own ink, and the one accent near neither money colour.
+Until then it was coral, which put a "you owe" figure and the "Settle up"
+button directly under it two degrees apart — in the dark theme, very nearly
+the same colour. Coral is still on the list, second.
+
+Who gets which:
+
+| Reader                                                  | Accent                        |
+| ------------------------------------------------------- | ----------------------------- |
+| Signed out — sign-in, sign-up, the join flow            | Plum, or what they chose here |
+| An account made since plum became the default           | Plum, until they choose       |
+| An account made before, that never chose or chose coral | Coral                         |
+| Anybody who chose an accent                             | That accent                   |
+
+The third row is not a preference anybody expressed; it is what the data can
+say. Choosing the default used to clear the account's column, so an account
+that picked coral on purpose and one that never opened the screen are the
+same null. Repainting the null plum would take coral from people who chose
+it; so null keeps meaning coral, every new account is written with `plum`, and
+every choice is now stored by name.
+
+That leaves one thing the column still cannot say: whether a `plum` was chosen
+or written at sign-up. A later change of default would meet the same wall. The
+clean end state needs a data migration — every null set to `coral`, after
+which null can mean "never chose" again and sign-up can stop writing a name —
+or, if the old accounts should move too, every null set to `plum`. Both decide
+something for people who were never asked, which is why neither is done here.
+
+The server reads the cookie first. With none, a signed-out reader gets plum and
+a signed-in one gets their account's column, which is one read by primary key
+per page for an old account that never chose (`resolveAccentColor` in
+`src/i18n/preferences.ts`).
+
+The stylesheet's own `--primary` is still coral. That is the palette as drawn,
+and the brand's: the emails, the app icon and the share image are derived from
+it, and the homepage sets its own. No page of the app shows it, because the
+root layout paints an accent on every page it renders. The mark's dot is
+`--primary`, so in the app it is the reader's accent like any other — plum by
+default.
+
 ## For the phone app and the API
 
-`GET /api/auth/session` returns `user.accentColor` as a name, and
-`PATCH /api/profile` accepts `accentColor` — one of the seven names above, or
-`"coral"` to clear it. The dark surface is not on the API: it is a device
-setting, and the phone keeps its own.
+`GET /api/auth/session` returns `user.accentColor` as a name — coral for an
+account from before plum, as above — and `PATCH /api/profile` accepts
+`accentColor`, one of the seven names above, and stores it as given. The dark
+surface is not on the API: it is a device setting, and the phone keeps its
+own.
 
 The phone runs its own copy of the accent arithmetic, because it is given a
 name rather than a colour. Two things changed for it here. The money colours
