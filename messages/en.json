@@ -3295,6 +3295,7 @@
       },
       "summary": {
         "equalEach": "Split equally between {count} · {amount} each",
+        "equalAbout": "Split equally between {count} · about {amount} each",
         "exactAmounts": "Split by exact amounts · {count} people",
         "percentages": "Split by percentage · {count} people",
         "shares": "Split by shares · {count} people",

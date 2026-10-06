@@ -656,6 +656,22 @@ describe("the default expense path", () => {
     expect(row).not.toHaveTextContent("84.60");
   });
 
+  /**
+   * CHF 100 three ways is 33.34 beside two 33.33s. The row used to say
+   * "CHF 33.34 each", which is true of one person in three.
+   */
+  it("says about when the shares are a cent apart", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await enterAmount(user, "100");
+
+    expect(
+      screen.getByText(/Split equally between 3 · about CHF 33\.33 each/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/33\.34 each/)).not.toBeInTheDocument();
+  });
+
   it("will not save until there is an amount", async () => {
     const user = userEvent.setup();
     renderForm();

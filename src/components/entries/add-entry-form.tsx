@@ -99,6 +99,7 @@ import { CurrencyPicker } from "@/components/money/currency-picker";
 import {
   confirmationKey,
   directionOf,
+  equalShare,
   hasAmount,
   noteAfterTypeSwitch,
   primaryActionKey,
@@ -1194,10 +1195,8 @@ export function AddEntryForm({
     [members, effectiveIncluded],
   );
 
-  const eachFormatted =
-    preview.ok && preview.allocations.length > 0
-      ? preview.allocations[0].formatted
-      : null;
+  // What most people carry, and whether all of them do: see `equalShare`.
+  const each = preview.ok ? equalShare(preview.allocations) : null;
 
   /**
    * The half of a dictated proposal that still says something new.
@@ -1256,7 +1255,8 @@ export function AddEntryForm({
   const summary = summariseSplit({
     method,
     participantCount: effectiveIncluded.length,
-    eachFormatted,
+    eachFormatted: each?.formatted ?? null,
+    eachExact: each?.exact ?? true,
     byItem,
     problem: splitNote,
   });

@@ -121,6 +121,7 @@ export function hasAmount(text: string): boolean {
 export type SplitSummaryKey =
   | "nobody"
   | "equalEach"
+  | "equalAbout"
   | "exactAmounts"
   | "percentages"
   | "shares"
@@ -154,11 +155,46 @@ const WARNINGS: Partial<Record<SplitNoteKey, SplitSummaryKey>> = {
   unreadable: "unreadable",
 };
 
+/**
+ * What each person carries on an equal split, as the row can say it.
+ *
+ * An equal split that does not divide hands its spare minor units out one
+ * each, so €100 three ways is €33.34 beside two €33.33s. The row used to print
+ * the first allocation — "€33.34 each" — which is true of one person in
+ * three. This is the figure most people carry instead, the first of them on a
+ * tie, with whether everybody carries exactly that: when they do not, the row
+ * says "about", and the sheet's own note says who pays the cent.
+ */
+export function equalShare(
+  allocations: readonly { readonly amount: bigint; readonly formatted: string }[],
+): { readonly formatted: string; readonly exact: boolean } | null {
+  const [first] = allocations;
+  if (first === undefined) return null;
+
+  const counts = new Map<bigint, number>();
+  for (const { amount } of allocations) {
+    counts.set(amount, (counts.get(amount) ?? 0) + 1);
+  }
+  const most = allocations.reduce(
+    (best, candidate) =>
+      (counts.get(candidate.amount) ?? 0) > (counts.get(best.amount) ?? 0)
+        ? candidate
+        : best,
+    first,
+  );
+  return { formatted: most.formatted, exact: counts.size === 1 };
+}
+
 export function summariseSplit(input: {
   method: SplitMethod;
   participantCount: number;
-  /** The per-person amount, already formatted, when an equal split is even. */
+  /** The per-person amount, already formatted, on an equal split. */
   eachFormatted?: string | null;
+  /**
+   * False when the people in an equal split do not all carry exactly
+   * `eachFormatted`, a minor unit apart by rounding. See `equalShare`.
+   */
+  eachExact?: boolean;
   /** True once per-item assignment has written exact values. */
   byItem?: boolean;
   /**
@@ -171,7 +207,14 @@ export function summariseSplit(input: {
    */
   problem?: SplitNote | null;
 }): SplitSummary {
-  const { method, participantCount, eachFormatted, byItem, problem } = input;
+  const {
+    method,
+    participantCount,
+    eachFormatted,
+    eachExact = true,
+    byItem,
+    problem,
+  } = input;
 
   // An empty split is a state somebody chose, and it says so rather than
   // borrowing the one-person wording — "nobody else's balance moves" is true
@@ -198,7 +241,7 @@ export function summariseSplit(input: {
   switch (method) {
     case "equal":
       return {
-        key: "equalEach",
+        key: eachExact ? "equalEach" : "equalAbout",
         params: { count: participantCount, amount: eachFormatted ?? "" },
       };
     case "exact":

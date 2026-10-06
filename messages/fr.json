@@ -3295,6 +3295,7 @@
       },
       "summary": {
         "equalEach": "Partagé à parts égales entre {count} · {amount} chacun",
+        "equalAbout": "Partagé à parts égales entre {count} · environ {amount} chacun",
         "exactAmounts": "Montants exacts · {count} personnes",
         "percentages": "Par pourcentage · {count} personnes",
         "shares": "Par parts · {count} personnes",
