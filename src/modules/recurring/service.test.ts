@@ -49,7 +49,10 @@ describe("a recurring expense that ends before its first date", () => {
     ["before its start", { startDate: "2026-10-06", endDate: "2026-10-01" }],
     // The start is the 6th and the rule is on the 31st: the 20th is after
     // the start and still before the first date.
-    ["before its first date", { startDate: "2026-10-06", endDate: "2026-10-20" }],
+    [
+      "before its first date",
+      { startDate: "2026-10-06", endDate: "2026-10-20" },
+    ],
   ])("is refused when it ends %s", async (_, dates) => {
     const refusal = createRecurringExpense(ACCESS, rent(dates), {
       db: UNTOUCHED,

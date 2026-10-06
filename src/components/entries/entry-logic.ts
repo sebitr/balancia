@@ -166,7 +166,10 @@ const WARNINGS: Partial<Record<SplitNoteKey, SplitSummaryKey>> = {
  * says "about", and the sheet's own note says who pays the cent.
  */
 export function equalShare(
-  allocations: readonly { readonly amount: bigint; readonly formatted: string }[],
+  allocations: readonly {
+    readonly amount: bigint;
+    readonly formatted: string;
+  }[],
 ): { readonly formatted: string; readonly exact: boolean } | null {
   const [first] = allocations;
   if (first === undefined) return null;

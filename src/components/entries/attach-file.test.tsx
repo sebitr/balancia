@@ -9,7 +9,9 @@ vi.mock("@/components/expenses/upload-receipt", () => ({
   uploadReceipt: upload,
 }));
 
-function renderAttach(overrides: Partial<Parameters<typeof AttachFile>[0]> = {}) {
+function renderAttach(
+  overrides: Partial<Parameters<typeof AttachFile>[0]> = {},
+) {
   return renderWithIntl(
     <AttachFile
       groupId="g1"
@@ -40,9 +42,8 @@ describe("the attach row", () => {
     const user = userEvent.setup();
     renderAttach();
 
-    const input = document.querySelector<HTMLInputElement>(
-      'input[type="file"]',
-    );
+    const input =
+      document.querySelector<HTMLInputElement>('input[type="file"]');
     const click = vi.spyOn(input as HTMLInputElement, "click");
     await user.click(screen.getByRole("button", { name: "Attach a file" }));
 
