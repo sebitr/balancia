@@ -137,66 +137,71 @@ export function PositionCard({
           </p>
         )}
 
-        {/* Wraps for the reason the hero's row does: `flex-1` cannot shrink a
-            button below its own label, so a pair that does not fit overflows
-            the card rather than sharing it. */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Button
-            asChild={!settled}
-            disabled={settled}
-            aria-disabled={settled || undefined}
-            size="lg"
-            className="h-10 flex-1 rounded-lg text-sm font-semibold"
-          >
-            {/* Settled keeps the tick — it is the one state that is done.
-                The live button shows money changing hands instead. */}
-            {settled ? (
-              <>
-                <Check aria-hidden="true" className="size-4" />
-                {t("settleUp")}
-              </>
-            ) : (
-              <Link href={`/groups/${groupId}/settle`} transitionTypes={PUSH}>
-                <HandCoins aria-hidden="true" className="size-4" />
-                {t("settleUp")}
-              </Link>
-            )}
-          </Button>
-
-          {settled ? (
+        {/* One row from `lg` up, as the hero's is: the buttons at their own
+            width, "How this is calculated" at the far end. `contents` on a
+            phone, where the two below stay children of the card's column. */}
+        <div className="contents lg:flex lg:flex-wrap lg:items-center lg:gap-x-4 lg:gap-y-2">
+          {/* Wraps for the reason the hero's row does: `flex-1` cannot shrink a
+              button below its own label, so a pair that does not fit overflows
+              the card rather than sharing it. */}
+          <div className="flex flex-wrap items-center gap-2.5">
             <Button
-              variant="outline"
-              disabled
-              aria-disabled="true"
+              asChild={!settled}
+              disabled={settled}
+              aria-disabled={settled || undefined}
               size="lg"
-              className="h-10 flex-1 rounded-lg text-sm font-medium"
+              className="h-10 flex-1 rounded-lg text-sm font-semibold lg:flex-none lg:px-4"
             >
-              <Bell aria-hidden="true" className="size-4" />
-              {t("remindAll")}
+              {/* Settled keeps the tick — it is the one state that is done.
+                  The live button shows money changing hands instead. */}
+              {settled ? (
+                <>
+                  <Check aria-hidden="true" className="size-4" />
+                  {t("settleUp")}
+                </>
+              ) : (
+                <Link href={`/groups/${groupId}/settle`} transitionTypes={PUSH}>
+                  <HandCoins aria-hidden="true" className="size-4" />
+                  {t("settleUp")}
+                </Link>
+              )}
             </Button>
-          ) : (
-            <RemindButton
-              groupId={groupId}
-              groupName={groupName}
-              senderName={senderName}
-              recipients={recipients}
-              label={recipients.length === 1 ? t("remind") : t("remindAll")}
-              variant="outline"
-              className="h-10 flex-1 rounded-lg text-sm font-medium"
-            />
+
+            {settled ? (
+              <Button
+                variant="outline"
+                disabled
+                aria-disabled="true"
+                size="lg"
+                className="h-10 flex-1 rounded-lg text-sm font-medium lg:flex-none lg:px-4"
+              >
+                <Bell aria-hidden="true" className="size-4" />
+                {t("remindAll")}
+              </Button>
+            ) : (
+              <RemindButton
+                groupId={groupId}
+                groupName={groupName}
+                senderName={senderName}
+                recipients={recipients}
+                label={recipients.length === 1 ? t("remind") : t("remindAll")}
+                variant="outline"
+                className="h-10 flex-1 rounded-lg text-sm font-medium lg:flex-none lg:px-4"
+              />
+            )}
+          </div>
+
+          {!settled && (
+            <button
+              type="button"
+              onClick={() => setPositionOpen(true)}
+              className="-m-2 flex min-h-11 items-center self-start rounded-lg p-2 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none lg:ml-auto lg:self-center"
+            >
+              {t("howCalculated")}
+              <ChevronRight aria-hidden="true" className="ml-0.5 size-3.5" />
+            </button>
           )}
         </div>
-
-        {!settled && (
-          <button
-            type="button"
-            onClick={() => setPositionOpen(true)}
-            className="-m-2 flex min-h-11 items-center self-start rounded-lg p-2 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-          >
-            {t("howCalculated")}
-            <ChevronRight aria-hidden="true" className="ml-0.5 size-3.5" />
-          </button>
-        )}
       </section>
 
       <Sheet open={positionOpen} onOpenChange={setPositionOpen}>
