@@ -39,12 +39,17 @@ import { badgeOf, Position, TypeBadge } from "./row-parts";
  * query answers the question that actually matters, and keeps answering it
  * when the frame around the table changes.
  *
- * - Under 56rem (a 1024px window beside an expanded sidebar has ~740px):
+ * - Under 60rem (a 1024px window beside an expanded sidebar has ~740px):
  *   Date · Description · Amount. Category, who paid and the split fold into
  *   the description's second line, and the reader's line sits under the
  *   amount.
- * - From 56rem: Category, Paid by and Split stand as columns of their own.
- * - From 64rem: the reader's line gets its own column, For you.
+ * - From 60rem: Category, Paid by and Split stand as columns of their own.
+ * - From 68rem: the reader's line gets its own column, For you.
+ *
+ * The two steps are where the description keeps about 290px once the columns
+ * beside it have taken theirs — 672px of fixed columns at the first, 784px at
+ * the second. Any earlier and the one column a reader scans a table by would
+ * be the one cut short on every row.
  *
  * A figure is never truncated; a column that cannot fit one moves it to a
  * second line instead, which is what the folding is. Only the description
@@ -89,8 +94,8 @@ export interface TransactionsTableProps {
 const HEAD =
   "h-9 px-3 text-left align-middle text-xs font-medium tracking-[0.04em] whitespace-nowrap text-muted-foreground uppercase";
 
-/** Hidden in the folded table; a column of its own from 56rem of table. */
-const WIDE = "hidden @4xl:table-cell";
+/** Hidden in the folded table; a column of its own from 60rem of table. */
+const WIDE = "hidden @min-[60rem]:table-cell";
 
 export function TransactionsTable({
   rows,
@@ -182,7 +187,7 @@ export function TransactionsTable({
             <th
               scope="col"
               aria-sort={sort === "largest" ? "descending" : undefined}
-              className={cn(HEAD, "w-44 pr-4 text-right @5xl:w-28 @5xl:pr-3")}
+              className={cn(HEAD, "w-44 pr-4 text-right @min-[68rem]:w-28 @min-[68rem]:pr-3")}
             >
               {/* Only where the amounts are in one currency: across two,
                   "largest" is a coincidence of denominations, and the sheet
@@ -203,7 +208,7 @@ export function TransactionsTable({
               scope="col"
               className={cn(
                 HEAD,
-                "hidden w-44 pr-4 text-right @5xl:table-cell",
+                "hidden w-44 pr-4 text-right @min-[68rem]:table-cell",
               )}
             >
               {tt("forYou")}
@@ -389,7 +394,7 @@ function TableRow({
           </Link>
           {badge && <TypeBadge kind={badge} />}
           {row.receipts > 0 && (
-            <span className="hidden shrink-0 items-center gap-0.5 text-xs text-muted-foreground tabular-nums @4xl:inline-flex">
+            <span className="hidden shrink-0 items-center gap-0.5 text-xs text-muted-foreground tabular-nums @min-[60rem]:inline-flex">
               <Paperclip aria-hidden="true" className="size-3.5" />
               <span aria-hidden="true">{row.receipts}</span>
               <span className="sr-only">
@@ -398,13 +403,13 @@ function TableRow({
             </span>
           )}
         </span>
-        <span className="mt-0.5 block truncate text-xs text-muted-foreground @4xl:hidden">
+        <span className="mt-0.5 block truncate text-xs text-muted-foreground @min-[60rem]:hidden">
           {folded.filter(Boolean).join(" · ")}
         </span>
         {/* At width a repayment's own words still need a line: they are not
             a column, and the phone's row keeps them under the names too. */}
         {repayment && row.note && (
-          <span className="mt-0.5 hidden truncate text-xs text-muted-foreground @4xl:block">
+          <span className="mt-0.5 hidden truncate text-xs text-muted-foreground @min-[60rem]:block">
             {row.note}
           </span>
         )}
@@ -443,7 +448,7 @@ function TableRow({
         )}
       </td>
 
-      <td className="py-2 pr-4 pl-3 text-right align-middle @5xl:pr-3">
+      <td className="py-2 pr-4 pl-3 text-right align-middle @min-[68rem]:pr-3">
         <span className="flex flex-col items-end gap-0.5">
           {/* A cost has no direction, so the total takes no tone — the
               reader's line under it is what does. A repayment's total is
@@ -462,13 +467,13 @@ function TableRow({
               minorUnits={row.position}
               currency={row.currency}
               kind={kindOf(row)}
-              className="@5xl:hidden"
+              className="@min-[68rem]:hidden"
             />
           )}
         </span>
       </td>
 
-      <td className="hidden py-2 pr-4 pl-3 text-right align-middle @5xl:table-cell">
+      <td className="hidden py-2 pr-4 pl-3 text-right align-middle @min-[68rem]:table-cell">
         {row.position !== null && (
           <Position
             minorUnits={row.position}

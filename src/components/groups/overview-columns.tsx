@@ -20,9 +20,9 @@ import { cn } from "@/lib/utils";
  * columns are placed by the grid, never reordered by it.
  *
  * `data-layout="wide"` is how the screen around this knows to make room for
- * it: `<Screen>` widens its column for a screen that holds one, and leaves
- * every other screen — the transactions, the people, the settings — at the
- * one readable width it has always had.
+ * it: `<Screen>` widens its column for a screen that holds one — this, and
+ * the transactions table — and leaves every other screen — the people, the
+ * settings — at the one readable width it has always had.
  *
  * A half that renders nothing takes no space and no gap, so the other one
  * starts at the top of the screen rather than a gap's height below it.

@@ -970,6 +970,143 @@ a.list-row:focus-visible {
   font-variant-numeric: tabular-nums lining-nums;
 }
 
+/* The table at width — src/components/expenses/transactions-table.tsx. A card
+   box, a 36px header on a muted wash, 52px rows (60 with a second line), the
+   whole row one link, no zebra. Its columns are decided by the box, not the
+   window: under 60rem of table the middle columns fold into the description's
+   second line. */
+.tbl-box {
+  background: var(--card);
+  border-radius: 1rem;
+  box-shadow: 0 0 0 1px var(--border);
+  overflow: hidden;
+}
+.tbl-box .tbl {
+  table-layout: fixed;
+}
+.tbl-box .tbl thead {
+  background: color-mix(in oklch, var(--muted) 40%, var(--card));
+}
+.tbl-box .tbl td {
+  height: 3.25rem;
+  padding: 0.5rem 0.75rem;
+}
+.tbl-box .tbl th:first-child,
+.tbl-box .tbl td:first-child {
+  padding-left: 1rem;
+}
+.tbl-box .tbl th:last-child,
+.tbl-box .tbl td:last-child {
+  padding-right: 1rem;
+}
+.tbl-row {
+  position: relative;
+  transition: background-color 150ms ease;
+}
+.tbl-row:hover,
+.tbl-row:has(a:focus-visible) {
+  background: color-mix(in oklch, var(--foreground) 4%, transparent);
+}
+.tbl-link {
+  font-weight: 500;
+  color: inherit;
+  text-decoration: none;
+  outline: none;
+}
+.tbl-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.tbl-link:focus-visible::after {
+  box-shadow: inset 0 0 0 2px var(--ring);
+}
+.tbl-sub {
+  display: block;
+  margin-top: 0.125rem;
+  overflow: hidden;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tbl-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--foreground);
+}
+.tbl-sort svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.tbl-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklch, var(--muted) 30%, var(--card));
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+/* The filters on one row above that table — src/components/expenses/filter-row.tsx.
+   36px controls: the search field, the kind chips (several may be on), the
+   Category and When menus, More filters, and Add at the end. */
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.filter-row .input {
+  height: 2.25rem;
+  border-radius: 0.75rem;
+  background: var(--card);
+}
+.filter-chip {
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.filter-chip[aria-pressed="true"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+}
+.filter-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2.25rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--input);
+  border-radius: 0.75rem;
+  background: var(--card);
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.filter-select svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted-foreground);
+}
+.filter-select--on {
+  border-color: var(--primary);
+  background: color-mix(in oklch, var(--primary) 15%, transparent);
+}
+
 /* ── money — src/components/money/amount.tsx ── */
 .balance {
   display: inline-flex;
@@ -1515,7 +1652,8 @@ a[aria-current="page"] .nav-icon--primary {
       The divided list is the workhorse of this product — expenses, members,
       recurring rules, and activity all use it. Tables appear only where a
       genuine second dimension exists, and they still have to survive a 375px
-      screen.
+      screen — or be drawn from <code>lg</code> only, over the rows a phone's
+      list already draws.
     </p>
   </header>
 
@@ -1651,6 +1789,137 @@ a[aria-current="page"] .nav-icon--primary {
       accessibility failure in a different shape. Wide tables scroll inside
       their own container; the page body never scrolls sideways.
     </p>
+  </section>
+
+  <section>
+    <h2>Table at width</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      A table that cannot survive 375px is drawn from <code>lg</code> only, over
+      the same rows the phone's list draws below it — never a second loader. The
+      transactions are the first; the pattern is in Expense timeline.
+    </p>
+    <div class="spec">
+      <div class="tbl-box">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th scope="col" aria-sort="descending" style="width: 6rem">
+                <span class="tbl-sort"
+                  >Date<svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 5v14" />
+                    <path d="m19 12-7 7-7-7" /></svg
+                ></span>
+              </th>
+              <th scope="col">Description</th>
+              <th scope="col" style="width: 9rem">Paid by</th>
+              <th scope="col" class="num" style="width: 7rem">Amount</th>
+              <th scope="col" class="num" style="width: 11rem">For you</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="tbl-row">
+              <td style="color: var(--muted-foreground)">12 Aug</td>
+              <td>
+                <a class="tbl-link" href="#">Dinner at Trattoria Il Ponte</a>
+              </td>
+              <td>
+                <span class="row" style="gap: 0.5rem"
+                  ><span class="avatar">A</span>Amélie</span
+                >
+              </td>
+              <td class="num" style="font-weight: 500">€128.40</td>
+              <td
+                class="num"
+                style="
+                  font-size: 0.75rem;
+                  font-weight: 500;
+                  color: var(--negative-ink);
+                "
+              >
+                You owe €21.40
+              </td>
+            </tr>
+            <tr class="tbl-row">
+              <td style="color: var(--muted-foreground)">10 Aug</td>
+              <td><a class="tbl-link" href="#">Tram passes ×6</a></td>
+              <td>
+                <span class="row" style="gap: 0.5rem"
+                  ><span
+                    class="avatar"
+                    style="
+                      background: var(--primary);
+                      color: var(--primary-foreground);
+                    "
+                    >SB</span
+                  >You</span
+                >
+              </td>
+              <td class="num" style="font-weight: 500">€54.00</td>
+              <td
+                class="num"
+                style="
+                  font-size: 0.75rem;
+                  font-weight: 500;
+                  color: var(--positive-ink);
+                "
+              >
+                You get back €45.00
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="tbl-foot">
+          <span
+            >Showing 2 of 42 transactions · sorted by date, newest first</span
+          >
+        </div>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>box</dt>
+      <dd>
+        The card: 16px radius, a hairline ring, nothing scrolling sideways.
+      </dd>
+      <dt>header</dt>
+      <dd>
+        36px, 12px uppercase in the muted ink on a muted wash. A sortable column
+        is a button inside its <code>&lt;th&gt;</code>, and the order is the
+        <code>&lt;th&gt;</code>'s <code>aria-sort</code>; the arrow draws it.
+      </dd>
+      <dt>rows</dt>
+      <dd>
+        52px, 60px with a second line. One <code>&lt;a&gt;</code> per row, on
+        the first text cell, its <code>::after</code> stretched over the row
+        (<code>position: relative</code> on the <code>&lt;tr&gt;</code>): a
+        click anywhere opens it, a keyboard reaches each row with one Tab, and
+        the table stays a table to a screen reader.
+      </dd>
+      <dt>states</dt>
+      <dd>
+        Hover and keyboard focus wash the row with <code>--wash-1</code>; focus
+        also draws the ring inset around the whole row. No zebra.
+      </dd>
+      <dt>alignment</dt>
+      <dd>
+        Text left; every figure right and tabular, never truncated. A column
+        that cannot fit its figure folds onto the second line instead — decided
+        by the table's own box with a container query, not by the window,
+        because a sidebar beside it changes the box and not the window.
+      </dd>
+      <dt>footer</dt>
+      <dd>
+        12px muted on a lighter wash: how many rows of how many, and in which
+        order.
+      </dd>
+    </dl>
   </section>
 
   <section>
