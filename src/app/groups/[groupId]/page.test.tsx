@@ -316,6 +316,24 @@ describe("the overview's columns", () => {
     ).toBeTruthy();
   });
 
+  /*
+   * Halves at `lg`, where the sidebar leaves about 740px and each block needs
+   * its 360; seven to five from `xl`, the widths the overview was drawn at.
+   */
+  it("give the money the larger share once the window has room for it", async () => {
+    await renderOverview();
+
+    const layout = column(
+      screen.getByText("Position"),
+      "overview-primary",
+    )?.parentElement;
+    expect(layout).toHaveClass(
+      "lg:grid",
+      "lg:grid-cols-2",
+      "xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]",
+    );
+  });
+
   it("leave an empty group in the one column it has always had", async () => {
     loadGroupOverview.mockResolvedValue(overview(0));
 

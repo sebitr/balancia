@@ -60,8 +60,11 @@ import type { PersonView } from "./people-card";
  * reason, because "how do I leave this?" is a question an owner asks as well
  * and the answer is somewhere else. A guest's row has nothing: their way out
  * is the owner's to give (see `leaveGroup` in `authorization.ts`).
+ *
+ * Exported for the table the same people are drawn as from `lg` up, whose
+ * row menu holds this same panel and so has to ask the same question.
  */
-function openings(
+export function openings(
   person: PersonView,
   can: {
     isSelf: boolean;
@@ -304,8 +307,13 @@ function Pill({
  * Mounted only while open, which is what resets the name and email drafts — a
  * half-typed rename is not something to carry back after closing the row and
  * coming back to it.
+ *
+ * The phone opens it under the row; from `lg` up the table opens the same
+ * panel in the row's menu, so the two can never offer different things.
+ * `className` is how the menu takes away the wash and the inset that only
+ * make sense under a row.
  */
-function PersonPanel({
+export function PersonPanel({
   groupId,
   groupName,
   archived,
@@ -315,6 +323,7 @@ function PersonPanel({
   onDismissReveal,
   onAskRemove,
   may,
+  className,
 }: {
   groupId: string;
   groupName: string;
@@ -325,6 +334,7 @@ function PersonPanel({
   onDismissReveal: () => void;
   onAskRemove: () => void;
   may: ReturnType<typeof openings>;
+  className?: string;
 }) {
   const router = useRouter();
   const t = useTranslations("membersPage");
@@ -466,7 +476,12 @@ function PersonPanel({
         };
 
   return (
-    <div className="flex flex-col gap-4 bg-[color-mix(in_oklch,var(--muted)_42%,transparent)] px-3.5 pt-0.5 pb-[18px] motion-safe:animate-in motion-safe:duration-150 motion-safe:fade-in-0 motion-safe:slide-in-from-top-1">
+    <div
+      className={cn(
+        "flex flex-col gap-4 bg-[color-mix(in_oklch,var(--muted)_42%,transparent)] px-3.5 pt-0.5 pb-[18px] motion-safe:animate-in motion-safe:duration-150 motion-safe:fade-in-0 motion-safe:slide-in-from-top-1",
+        className,
+      )}
+    >
       {/*
        * Two cards of rows, the way the entry sheet and the settings screens
        * group what belongs together: who this person is, then how they get

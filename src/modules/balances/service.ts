@@ -74,9 +74,15 @@ export interface GroupBalances {
    * Spending facts retained for the overview's period picker. These are the
    * exact normalized rows already used by the balance engine, with the group
    * calendar date added; no second money query or conversion path is needed.
+   *
+   * The category pair rides along for the spending card's category bars, as
+   * stored — the overview normalises it the way the statistics screen does.
+   * Null wherever the rows were read without it: see `BalanceRows`.
    */
   readonly spendingFacts: readonly (BalanceInputExpense & {
     readonly expenseDate: string;
+    readonly category: string | null;
+    readonly subcategory: string | null;
   })[];
 }
 
@@ -96,6 +102,14 @@ export interface BalanceRows {
     expenseDate: string;
     currency: string;
     convertedCurrency: string | null;
+    /*
+     * Read by the one-group path only, inside the same snapshot as the money,
+     * because one group's overview draws its spending by category. The home
+     * screen's batch read leaves them out: it draws no category, and would be
+     * reading two more columns of every entry in every group for nothing.
+     */
+    category?: string | null;
+    subcategory?: string | null;
   }[];
   readonly payers: readonly {
     expenseId: string;
@@ -219,6 +233,8 @@ async function readBalanceRows(
           expenseDate: expenses.expenseDate,
           currency: expenses.currency,
           convertedCurrency: expenses.convertedCurrency,
+          category: expenses.category,
+          subcategory: expenses.subcategory,
         })
         .from(expenses)
         .where(and(eq(expenses.groupId, groupId), isNull(expenses.deletedAt)));
@@ -490,6 +506,8 @@ export function assembleBalances(
     id: row.id,
     direction: row.direction,
     expenseDate: row.expenseDate,
+    category: row.category ?? null,
+    subcategory: row.subcategory ?? null,
     currency: ledgerOf(row),
     payers: payersByExpense.get(row.id) ?? [],
     shares: sharesByExpense.get(row.id) ?? [],
