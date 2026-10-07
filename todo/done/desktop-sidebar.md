@@ -1,6 +1,6 @@
 # On a desktop, a sidebar with every group and where you stand in it, and the group's tabs under its name
 
-Branch: `feat/desktop-sidebar`
+Merged: 2026-10-06 in #446
 
 Design: https://claude.ai/artifact/Nwc4hfpwGTdcHj4e7suBHQ
 

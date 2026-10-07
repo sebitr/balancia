@@ -1,6 +1,6 @@
 # Read a group's transactions as a table on a desktop, with the filters on one row above it
 
-Branch: `feat/transactions-table`
+Merged: 2026-10-06 in #448
 
 Design: https://claude.ai/artifact/Nwc4hfpwGTdcHj4e7suBHQ (board 07 · Transactions, board 05 · 1024 px, and the table recipe on 25 · Rules)
 

@@ -1,6 +1,6 @@
 # A recurring expense can be edited, is set up one way, and is found from Transactions
 
-Branch: `feat/recurring-edit-one-path`
+Merged: 2026-10-06 in #435
 
 Design: https://claude.ai/artifact/EgbNf3ukJPi6vmNXV635Pf
 

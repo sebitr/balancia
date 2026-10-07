@@ -1,6 +1,6 @@
 # Call the two links on the People screen "Group link" and "Personal link for Alex", and draw a person's open row in the app's grouped cards
 
-Branch: `fix/people-links-and-row`
+Merged: 2026-10-06 in #439
 
 Design: https://claude.ai/artifact/BT9mySKPEWxgE9UAkxBaf2
 
