@@ -218,6 +218,18 @@ jobs:
 
       # Build only, into the runner's own Docker. Publishing is release.yml's
       # job, and release.yml runs this one before it builds anything.
+      #
+      # Every run reads the layer cache; only a run on main writes it. Writing
+      # is the expensive half — compressing and uploading every layer took
+      # about 150 s of a 300 s step — and on a pull request it bought nothing:
+      # an entry is stored under the ref that wrote it, `refs/pull/N/merge`,
+      # which no other pull request can read, while a pull request can read
+      # main's. So each one stored half a gigabyte or more that only its own
+      # next push would ever use, in the 10 GB the repository's whole Actions
+      # cache shares, and pushed main's entries out of it. On main the run is
+      # release.yml's call of this file, so `github.ref` is main there; on a
+      # tag it is the tag, which nothing reads either, and an empty `cache-to`
+      # exports nothing.
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
@@ -225,7 +237,7 @@ jobs:
           load: true
           tags: balancia:ci
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: ${{ github.ref == 'refs/heads/main' && 'type=gha,mode=max' || '' }}
 
       - name: Smoke-test the image
         run: |

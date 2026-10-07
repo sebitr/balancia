@@ -743,7 +743,10 @@ bootstrap.sh --update`, which touches nothing else.
 
 What happens, in order:
 
-1. New images build.
+1. New images build. In a checkout, the app build starts from what Next
+   cached the last time this host built it — a BuildKit cache mount of about
+   300 MB — so it compiles only what the pull changed. `docker builder prune`
+   gives the space back, and the build after it is a full one again.
 2. `app` restarts, and `worker` with it where the jobs have their own
    container. Each applies any new SQL migrations first — one transaction per
    migration, guarded by a PostgreSQL advisory lock, so two containers cannot
