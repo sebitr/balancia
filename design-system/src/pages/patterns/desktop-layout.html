@@ -209,21 +209,20 @@
       <dt>width</dt>
       <dd>
         The screen widens to <code>--app-content-max</code> (75rem, gutters
-        included) for a layout marked <code>data-layout="wide"</code> — the overview's
-        two columns and the transactions table — and only for one, which is
-        exactly what the expanded sidebar leaves at 1440px.
-        24px between the columns; the blocks inside each keep the overview's
-        own gap.
+        included) for a layout marked <code>data-layout="wide"</code> — the
+        overview's two columns and the transactions table — and only for one,
+        which is exactly what the expanded sidebar leaves at 1440px. 24px
+        between the columns; the blocks inside each keep the overview's own gap.
       </dd>
       <dt>columns</dt>
       <dd>
         Halves at <code>lg</code>: at 1024 the sidebar leaves about 740px, and
         360px each is what the balance rows' three columns and the spending
-        card's category rows need. Seven to five from <code>xl</code>
-        (<code>minmax(0, 7fr) minmax(0, 5fr)</code>): at 1440 the money gets
-        about 640px and the context about 460px. The left column is the money
-        at every width — first in the document, so the phone's reading order
-        survives — and is never the narrower one.
+        card's category rows need. Seven to five from <code>xl</code> (<code
+          >minmax(0, 7fr) minmax(0, 5fr)</code
+        >): at 1440 the money gets about 640px and the context about 460px. The
+        left column is the money at every width — first in the document, so the
+        phone's reading order survives — and is never the narrower one.
       </dd>
       <dt>group header</dt>
       <dd>
@@ -247,11 +246,13 @@
   <section>
     <h2>Every other screen</h2>
     <p class="note">
-      Home, Notifications, People, Settings, an entry, a person: one column, <code>max-w-3xl</code>, centred in the space beside the
-      sidebar, never stretched across it. Transactions is a table at this width
-      instead, with its filters on one row — see Expense timeline. Gutters open to 24px at
-      <code>lg</code> and 40px at <code>xl</code>. An entry's Edit and Remove, docked above the bar
-      on a phone, sit in the screen's header at this width (board 08).
+      Home, Notifications, People, Settings, an entry, a person: one column,
+      <code>max-w-3xl</code>, centred in the space beside the sidebar, never
+      stretched across it. Transactions is a table at this width instead, with
+      its filters on one row — see Expense timeline. Gutters open to 24px at
+      <code>lg</code> and 40px at <code>xl</code>. An entry's Edit and Remove,
+      docked above the bar on a phone, sit in the screen's header at this width
+      (board 08).
     </p>
   </section>
 
@@ -724,6 +725,105 @@
       <dd>
         The list beside "how do you want to join" — see
         <em>Joining from a group link</em>.
+      </dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Keys</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      From <code>lg</code> up the shell answers a handful of keys, from one
+      listener mounted once beside the screen
+      (<code>src/components/layout/use-shortcuts.ts</code>). Every key presses a
+      control that is already on the screen — the sidebar's Search, its Add
+      expense and its fold toggle carry a <code>data-shortcut</code> for it —
+      and none is the only way to anything. Below <code>lg</code> there is no
+      sidebar and no key does anything.
+    </p>
+    <dl class="dl">
+      <dt><span class="kbd">⌘</span> <span class="kbd">K</span></dt>
+      <dd>
+        Search or jump to: the command palette, from any screen and from inside
+        a field. Ctrl K off a Mac — and only there, because Ctrl K in a Mac's
+        text field deletes to the end of the line. Pressed again, it closes the
+        palette. Under another dialog it does nothing.
+      </dd>
+      <dt><span class="kbd">N</span></dt>
+      <dd>
+        Add expense: to this group inside one, through "Add to which group?"
+        outside. It presses the sidebar's own Add, so the offline form and the
+        chooser come with it.
+      </dd>
+      <dt><span class="kbd">S</span></dt>
+      <dd>Settle up in this group. Nothing outside a group.</dd>
+      <dt><span class="kbd">⌘</span> <span class="kbd">\</span></dt>
+      <dd>
+        Folds the sidebar to its icons, or opens it again, remembered for the
+        device as a click on the toggle is.
+      </dd>
+      <dt><span class="kbd">Esc</span></dt>
+      <dd>
+        Closes the topmost thing — a menu, then the palette, then the dialog
+        under it. It is each layer's own, never the shell's: a second listener
+        would close the palette under an open menu.
+      </dd>
+      <dt>
+        <span class="kbd">↑</span> <span class="kbd">↓</span>
+        <span class="kbd">↵</span>
+      </dt>
+      <dd>
+        Move and follow inside the palette; <span class="kbd">⌘</span>
+        <span class="kbd">↵</span> opens a row in a new tab. See
+        <em>Navigation › Command palette</em>.
+      </dd>
+    </dl>
+    <div class="spec" style="margin-top: 1rem">
+      <div class="spec-label">
+        Single-key shortcuts — Settings › Appearance &amp; language, from lg up
+      </div>
+      <div
+        class="card"
+        style="
+          flex-direction: row;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1rem;
+          max-width: 34rem;
+        "
+      >
+        <span>
+          <span style="font-weight: 500">Single-key shortcuts</span><br /><span
+            class="note"
+            style="margin: 0"
+            >N adds an expense and S settles up when no field has the cursor.
+            Stays on this device.</span
+          >
+        </span>
+        <span
+          class="switch"
+          role="switch"
+          aria-checked="true"
+          aria-label="Single-key shortcuts"
+          data-checked=""
+          ><span class="switch-thumb"></span
+        ></span>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>letters</dt>
+      <dd>
+        N and S are single characters, so they fire only when nothing is being
+        typed — no field, select, editable region or list with its own typeahead
+        has the focus — and nothing is open over the screen. A switch turns them
+        off (WCAG 2.1.4): a reader who drives the page by voice can say a letter
+        without meaning a command. Keys with a modifier are not covered and stay
+        on.
+      </dd>
+      <dt>device</dt>
+      <dd>
+        The switch is kept per device in a cookie, like the dark surface and the
+        folded sidebar, so it is drawn the way it stands. On is the absence of a
+        choice. It saves in silence, as every switch in settings does.
       </dd>
     </dl>
   </section>

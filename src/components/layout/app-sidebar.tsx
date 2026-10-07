@@ -20,6 +20,10 @@ import {
 import { POP } from "@/components/motion/transitions";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { cn } from "@/lib/utils";
+import {
+  openCommandPalette,
+  useCommandPaletteAvailable,
+} from "./command-palette";
 import { SidebarTip, useSidebar } from "./sidebar-context";
 import { useKnownGroups } from "./sidebar-groups";
 import { UserMenu } from "./user-menu";
@@ -63,7 +67,6 @@ export function AppSidebar({
   groups,
   guestCard,
   add,
-  onSearch,
 }: {
   actor: { label: string; isGuest: boolean };
   /** The group the screen belongs to, when it belongs to one. */
@@ -79,15 +82,13 @@ export function AppSidebar({
   groups?: ReactNode;
   /** A guest's reason to make an account. */
   guestCard?: ReactNode;
-  /**
-   * Opens "Search or jump to", the command palette. Not passed by anything
-   * yet: the palette and its ⌘K are a later piece of work, and until it lands
-   * the button is drawn, named and disabled rather than pressable and inert.
-   */
-  onSearch?: () => void;
 }) {
   const t = useTranslations("nav");
   const { collapsed, setCollapsed } = useSidebar();
+  // "Search or jump to" opens the command palette the shell mounts beside
+  // the sidebar. Drawn, named and disabled where there is none to open,
+  // rather than pressable and inert.
+  const canSearch = useCommandPaletteAvailable();
   const { isGuest } = actor;
 
   const toggleLabel = collapsed ? t("sidebarExpand") : t("sidebarCollapse");
@@ -147,7 +148,8 @@ export function AppSidebar({
           <button
             type="button"
             aria-label={toggleLabel}
-            // Package 3 binds ⌘\ to this; the attribute is where it looks.
+            // ⌘\ (Ctrl \) presses this; the attribute is where the key
+            // looks for it — see `use-shortcuts.ts`.
             data-shortcut="mod+backslash"
             onClick={() => setCollapsed(!collapsed)}
             className="tap-target inline-flex size-8 shrink-0 items-center justify-center rounded-[9px] text-muted-foreground transition-colors hover:bg-wash-2 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
@@ -166,9 +168,11 @@ export function AppSidebar({
       <SidebarTip content={searchLabel}>
         <button
           type="button"
-          onClick={onSearch}
-          disabled={!onSearch}
-          // Package 3's palette opens on ⌘K (Ctrl K) from anywhere.
+          onClick={openCommandPalette}
+          disabled={!canSearch}
+          aria-haspopup="dialog"
+          // The palette opens on ⌘K (Ctrl K) from anywhere too; see
+          // `use-shortcuts.ts`.
           data-shortcut="mod+k"
           aria-label={collapsed ? searchLabel : undefined}
           className={cn(
@@ -386,7 +390,7 @@ function ChooseGroupAdd() {
         <button
           type="button"
           aria-haspopup="dialog"
-          // Package 3 binds N to this.
+          // N presses this, outside a group; see `use-shortcuts.ts`.
           data-shortcut="n"
           onClick={() => setChoosingSince(new Date().toISOString())}
           className={addControlClass(collapsed)}

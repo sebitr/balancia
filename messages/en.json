@@ -48,6 +48,27 @@
     "sidebarKeepGroup": "Keep {group}",
     "sidebarGuestNote": "This browser is the only place your access lives."
   },
+  "palette": {
+    "label": "Search groups, people and transactions",
+    "results": "Results",
+    "transactionsIn": "Transactions in {group}",
+    "actions": "Actions",
+    "addExpense": "Add an expense",
+    "addExpenseTo": "Add an expense to {group}",
+    "settleUpIn": "Settle up in {group}",
+    "openSettings": "Open settings",
+    "paidLine": "{who, select, you {You paid} withYou {{names} paid} other {{count, plural, one {{names} paid} other {{names} paid}}}}",
+    "you": "You",
+    "repayment": "Repayment",
+    "income": "Income",
+    "nothing": "No group, person or transaction matches “{query}”.",
+    "resultCount": "{count, plural, one {# result} other {# results}}",
+    "failed": "Couldn't search just now. Try again.",
+    "move": "Move",
+    "open": "Open",
+    "openNewTab": "Open in a new tab",
+    "close": "Close"
+  },
   "theme": {
     "menu": "Theme"
   },
@@ -915,6 +936,8 @@
     "accentFailed": "That colour could not be saved.",
     "language": "Language",
     "languageNote": "Language changes the words. How dates and amounts are written lives in Money & formats, so you can read English and still write 13/08/2026.",
+    "singleKeys": "Single-key shortcuts",
+    "singleKeysHelp": "N adds an expense and S settles up when no field has the cursor. Stays on this device.",
     "currencyTitle": "Show my totals in",
     "currencyHelp": "Every group is converted into this on your home screen. Each group keeps its own currency.",
     "currencySaved": "Preferred currency saved",

@@ -1,4 +1,4 @@
-<!-- @dsCard group="Components" name="Navigation" subtitle="App shell header, screen header, a group's bottom bar, and the desktop sidebar and group tabs" -->
+<!-- @dsCard group="Components" name="Navigation" subtitle="App shell header, screen header, a group's bottom bar, and the desktop sidebar, group tabs and command palette" -->
 <div class="page">
   <header class="page-head">
     <div class="page-eyebrow">Components</div>
@@ -824,6 +824,227 @@
       <dd>
         Outside the part of the page that moves, so a switch between tabs fades
         the screen through and leaves the tabs where they are.
+      </dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Command palette — from lg up</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      "Search or jump to", opened by ⌘K (Ctrl K) on any signed-in screen or by
+      the sidebar's Search. One field over a list in four parts — the reader's
+      groups with where they stand in each, the transactions of the group they
+      are in, the people in their groups, and what this screen offers — and the
+      keys along the foot. An empty field lists the groups and the actions.
+      40rem wide, anchored 6rem from the top of the window, so the field stays
+      where it is while the list under it changes with every key.
+    </p>
+    <div
+      class="frame"
+      style="max-width: 46rem; padding: 1.5rem; background: var(--muted)"
+    >
+      <div class="palette" role="dialog" aria-label="Search or jump to">
+        <div class="palette-in">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <span class="palette-query">din</span>
+          <span class="kbd">Esc</span>
+        </div>
+        <div role="listbox" aria-label="Results" style="padding-bottom: 0.5rem">
+          <div role="group" aria-labelledby="pal-entries">
+            <div id="pal-entries" class="palette-sec" role="presentation">
+              Transactions in Lisbon, March
+            </div>
+            <a class="palette-row" href="#" role="option" aria-selected="true"
+              ><span class="palette-glyph"
+                ><svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8"
+                  />
+                  <path
+                    d="M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7"
+                  />
+                  <path d="m2.1 21.8 6.4-6.3" />
+                  <path d="m19 5-7 7" /></svg></span
+              ><span class="palette-row-text"
+                ><span
+                  ><span style="font-weight: 500"
+                    >Dinner at Trattoria Il Ponte</span
+                  >
+                  <span class="palette-row-sub"
+                    >· 12 Aug · Amélie paid</span
+                  ></span
+                ></span
+              ><span class="palette-fig">€128.40</span
+              ><span class="kbd">↵</span></a
+            >
+            <a class="palette-row" href="#" role="option" aria-selected="false"
+              ><span class="palette-glyph"
+                ><svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M8 3 4 7l4 4" />
+                  <path d="M4 7h16" />
+                  <path d="m16 21 4-4-4-4" />
+                  <path d="M20 17H4" /></svg></span
+              ><span class="palette-row-text"
+                ><span
+                  ><span style="font-weight: 500">Jonas paid Amélie</span>
+                  <span class="badge badge--outline">Repayment</span>
+                  <span class="palette-row-sub">· 11 Aug</span></span
+                ></span
+              ><span class="palette-fig">€120.00</span></a
+            >
+          </div>
+          <div role="group" aria-labelledby="pal-people">
+            <div id="pal-people" class="palette-sec" role="presentation">
+              People
+            </div>
+            <a class="palette-row" href="#" role="option" aria-selected="false"
+              ><span class="avatar">D</span
+              ><span class="palette-row-text"
+                ><span style="font-weight: 500">Dina</span
+                ><span class="palette-row-sub">Book club</span></span
+              ></a
+            >
+          </div>
+          <div role="group" aria-labelledby="pal-actions">
+            <div id="pal-actions" class="palette-sec" role="presentation">
+              Actions
+            </div>
+            <button
+              class="palette-row"
+              type="button"
+              role="option"
+              aria-selected="false"
+              aria-keyshortcuts="N"
+            >
+              <span class="palette-glyph"
+                ><svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M5 12h14" />
+                  <path d="M12 5v14" /></svg></span
+              ><span class="palette-row-text"
+                >Add an expense to Lisbon, March</span
+              ><span class="kbd">N</span>
+            </button>
+            <a
+              class="palette-row"
+              href="#"
+              role="option"
+              aria-selected="false"
+              aria-keyshortcuts="S"
+              ><span class="palette-glyph"
+                ><svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"
+                  />
+                  <path
+                    d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"
+                  /></svg></span
+              ><span class="palette-row-text">Settle up in Lisbon, March</span
+              ><span class="kbd">S</span></a
+            >
+          </div>
+        </div>
+        <div class="palette-foot" aria-hidden="true">
+          <span><span class="kbd">↑</span><span class="kbd">↓</span>Move</span>
+          <span><span class="kbd">↵</span>Open</span>
+          <span
+            ><span class="kbd">⌘</span><span class="kbd">↵</span>Open in a new
+            tab</span
+          >
+          <span style="margin-left: auto"
+            ><span class="kbd">Esc</span>Close</span
+          >
+        </div>
+      </div>
+    </div>
+    <div class="spec" style="margin-top: 1rem">
+      <div class="spec-label">A group, as the palette lists it</div>
+      <div class="palette" style="max-width: 40rem; padding: 0.5rem 0">
+        <div class="palette-row" role="option" aria-selected="true">
+          <span class="sidebar-tile">LM</span
+          ><span class="palette-row-text"
+            ><span style="font-weight: 500">Lisbon, March</span
+            ><span class="palette-row-sub"
+              ><span class="sidebar-pos--positive">you are owed €248.00</span> ·
+              <span class="sidebar-pos--negative">you owe CHF 62.20</span></span
+            ></span
+          ><span class="kbd">↵</span>
+        </div>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>pattern</dt>
+      <dd>
+        A combobox over a listbox. The field keeps the focus and names the row ↑
+        and ↓ have reached with <code>aria-activedescendant</code>; every row is
+        an option and the real thing behind it — a link to where it goes, or a
+        button for Add, which opens a dialog of its own once the palette has
+        closed. 44px rows, lit with <code>--sidebar-accent</code> where ↵ will
+        go, as the sidebar lights the current place.
+      </dd>
+      <dt>sections</dt>
+      <dd>
+        Groups, in the sidebar's order and words. Transactions in the group
+        being read, found as the list's own search finds them. People in the
+        reader's groups, the current group's first, the reader left out. Actions
+        — Add an expense to the group (N), Settle up in it (S), Open settings —
+        narrowed by what was typed like everything else. A guest has no list of
+        groups and no settings.
+      </dd>
+      <dt>money</dt>
+      <dd>
+        A group's position is the sidebar's phrase, one per currency, in the
+        tone's ink. A transaction's total is neutral: it is what the entry was
+        for, not where anybody stands. The accent never paints a figure.
+      </dd>
+      <dt>answers</dt>
+      <dd>
+        One Server Action per pause in typing, an answer to an older query
+        dropped. The groups narrow in the browser at every key; people and
+        transactions follow. Nothing found is said in a sentence, on the screen
+        and through the field's status line.
       </dd>
     </dl>
   </section>
