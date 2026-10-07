@@ -1079,6 +1079,21 @@ a.list-row:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* A line under the rows that is about all of them — a count, what an edit
+   does — on a fainter wash than the header. The recurring table's foot,
+   src/components/recurring/recurring-table.tsx. */
+.tbl-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 1.5rem;
+  padding: 0.625rem 1rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklch, var(--muted) 30%, var(--card));
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
 .tbl-sort {
   display: inline-flex;
   align-items: center;
@@ -2504,7 +2519,9 @@ a[aria-current="page"] .nav-icon--primary {
       from every accent and every money colour, so a bar is never mistaken for a
       balance. Chart colours are not balance colours: never reuse
       <code>--chart-3</code> to mean "positive" or <code>--chart-2</code> to
-      mean "owes".
+      mean "owes". A split by category takes the other four by rank, then grey,
+      and never <code>--chart-2</code>: a category drawn in the accent reads as
+      the reader's own.
     </p>
   </section>
 

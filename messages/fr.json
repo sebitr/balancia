@@ -2714,7 +2714,16 @@
     "next": "Prochaine : {date}",
     "pausedNote": "Suspendue — rien ne sera généré",
     "noFurther": "Aucune occurrence à venir",
-    "generatedSoFar": "{count, plural, one {# générée à ce jour} other {# générées à ce jour}}"
+    "generatedSoFar": "{count, plural, one {# générée à ce jour} other {# générées à ce jour}}",
+    "table": {
+      "description": "Description",
+      "repeats": "Récurrence",
+      "amount": "Montant",
+      "next": "Prochaine",
+      "actions": "Actions",
+      "footer": "{running, plural, one {# en cours} other {# en cours}}{paused, plural, =0 {} one { · # suspendue} other { · # suspendues}}",
+      "footerNote": "Modifier une règle change les dépenses qu’elle ajoutera désormais. Celles déjà ajoutées restent telles quelles."
+    }
   },
   "settingsPage": {
     "title": "Paramètres du groupe",

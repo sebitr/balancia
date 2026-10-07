@@ -9,6 +9,10 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Amount } from "@/components/money/amount";
 import { RecurringRowActions } from "@/components/recurring/recurring-row-actions";
 import {
+  RecurringTable,
+  type RecurringRowView,
+} from "@/components/recurring/recurring-table";
+import {
   scheduleSentence,
   weekdayName,
 } from "@/components/recurring/schedule-sentence";
@@ -39,6 +43,14 @@ export async function generateMetadata(): Promise<Metadata> {
  * Reached from the transactions list, beside its kind chips, and from the
  * shortcut at the foot of the group's settings. The way back is to whichever
  * one it was — the settings row says so in its link.
+ *
+ * The rules are read once and worded once, into `RecurringRowView`s, and laid
+ * out twice: as the phone's list below `lg`, and as `RecurringTable` from
+ * there up. Both are in the HTML and CSS shows one, `display: none` keeping
+ * the other out of the accessibility tree too. The transactions screen mounts
+ * only the renderer the window can see, because it can hold thousands of
+ * rows; a group's recurring expenses are a handful, and drawing them twice on
+ * the server costs less than a client island would.
  */
 export default async function RecurringPage({
   params,
@@ -69,6 +81,22 @@ export default async function RecurringPage({
     return tSchedule(sentence.key, sentence.values);
   };
 
+  const rows: RecurringRowView[] = templates.map((template) => ({
+    id: template.id,
+    description: template.description,
+    amount: template.amount.toString(),
+    currency: template.currency,
+    schedule: describeSchedule(template),
+    next:
+      template.nextRunAt && !template.pausedAt
+        ? // On the group's calendar, where the schedule runs. The server's
+          // clock put a Sydney group's 09:00 on the evening before.
+          dates.at(template.nextRunAt, { timeZone: access.group.timezone })
+        : null,
+    paused: template.pausedAt !== null,
+    generatedCount: template.generatedCount,
+  }));
+
   // Nothing to split a new one between until the group has people.
   const canAdd = access.permissions.manageRecurring && participants.length > 0;
   const addHref = withFragment(`/groups/${groupId}/expenses/new`, {
@@ -96,16 +124,34 @@ export default async function RecurringPage({
           label: tCommon("backToTransactions"),
         };
 
+  const listed = rows.length > 0;
+
   return (
-    <div className="space-y-6">
+    // `data-layout="wide"` asks the screen for the room the table needs from
+    // `lg` up, only when there is a table; the empty state keeps the readable
+    // column. Below `lg` the screen does not read it.
+    <div data-layout={listed ? "wide" : undefined} className="space-y-6">
       <div>
-        <PageHeader title={t("title")} back={back} />
+        <PageHeader
+          title={t("title")}
+          back={back}
+          // From `lg` up the button stands at the end of the title's row, as
+          // the board draws it, and the one under the list is not drawn: the
+          // table can run longer than the window, and the way to add one
+          // should not be at the bottom of it. Only one of the two is ever
+          // displayed, so a screen reader meets one.
+          trailing={
+            listed && addButton ? (
+              <div className="hidden shrink-0 lg:block">{addButton}</div>
+            ) : undefined
+          }
+        />
         <p className="pl-10.5 text-sm text-muted-foreground">
           {t("intro", { timezone: access.group.timezone })}
         </p>
       </div>
 
-      {templates.length === 0 ? (
+      {!listed ? (
         <EmptyState
           icon={RefreshCw}
           title={t("emptyTitle")}
@@ -114,56 +160,52 @@ export default async function RecurringPage({
         />
       ) : (
         <>
-          <ul className="divide-y rounded-lg border">
-            {templates.map((template) => (
+          <ul className="divide-y rounded-lg border lg:hidden">
+            {rows.map((row) => (
               <li
-                key={template.id}
+                key={row.id}
                 className="flex items-start justify-between gap-3 p-3"
               >
                 <div className="min-w-0 space-y-1">
                   <p className="flex flex-wrap items-center gap-2 font-medium">
-                    <span className="truncate">{template.description}</span>
-                    {template.pausedAt && (
+                    <span className="truncate">{row.description}</span>
+                    {row.paused && (
                       <Badge variant="secondary">{t("pausedBadge")}</Badge>
                     )}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    <Amount
-                      minorUnits={template.amount.toString()}
-                      currency={template.currency}
-                    />{" "}
-                    · {describeSchedule(template)}
+                    <Amount minorUnits={row.amount} currency={row.currency} /> ·{" "}
+                    {row.schedule}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {template.nextRunAt && !template.pausedAt
-                      ? t("next", {
-                          // On the group's calendar, where the schedule runs.
-                          // The server's clock put a Sydney group's 09:00 on
-                          // the evening before.
-                          date: dates.at(template.nextRunAt, {
-                            timeZone: access.group.timezone,
-                          }),
-                        })
-                      : template.pausedAt
+                    {row.next !== null
+                      ? t("next", { date: row.next })
+                      : row.paused
                         ? t("pausedNote")
                         : t("noFurther")}
-                    {template.generatedCount > 0 &&
+                    {row.generatedCount > 0 &&
                       ` · ${t("generatedSoFar", {
-                        count: template.generatedCount,
+                        count: row.generatedCount,
                       })}`}
                   </p>
                 </div>
                 <RecurringRowActions
                   groupId={groupId}
-                  templateId={template.id}
-                  description={template.description}
-                  paused={template.pausedAt !== null}
+                  templateId={row.id}
+                  description={row.description}
+                  paused={row.paused}
                   canEdit={canAdd}
                 />
               </li>
             ))}
           </ul>
-          {addButton}
+          <RecurringTable
+            rows={rows}
+            groupId={groupId}
+            canEdit={canAdd}
+            className="hidden lg:block"
+          />
+          {addButton && <div className="lg:hidden">{addButton}</div>}
         </>
       )}
     </div>

@@ -108,12 +108,160 @@
       <dd>
         One primary button under the list, and the empty state's action when
         there is no list. It opens the entry form with Repeats already on — the
-        screen has no form of its own.
+        screen has no form of its own. From <code>lg</code> up it stands at the
+        end of the title's row instead (see the table below).
       </dd>
       <dt>back</dt>
       <dd>
         To Transactions, the way in; to group settings when the settings
         shortcut was the way in.
+      </dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>The list as a table, from lg up</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      The same rules in the same words, drawn at width — the table recipe of
+      Expense timeline, in the wide column. The rules are read and worded once
+      on the server and laid out twice: the list above below
+      <code>lg</code>, this table from <code>lg</code>, CSS showing one and
+      <code>display: none</code> keeping the other out of the accessibility
+      tree. <code>src/components/recurring/recurring-table.tsx</code>.
+    </p>
+    <div class="spec scroll-x">
+      <div class="tbl-box" style="min-width: 46rem">
+        <table class="tbl">
+          <caption class="sr-only">
+            Recurring expenses
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Description</th>
+              <th scope="col" style="width: 14rem">Repeats</th>
+              <th scope="col" class="num" style="width: 8rem">Amount</th>
+              <th scope="col" style="width: 14rem">Next</th>
+              <th scope="col" style="width: 3.5rem">
+                <span class="sr-only">Actions</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="tbl-row">
+              <td style="font-weight: 500">Rent</td>
+              <td>Every month on the 1st</td>
+              <td class="num" style="font-weight: 500">CHF 2,400.00</td>
+              <td>
+                1 Nov 2026
+                <span class="tbl-sub">10 generated so far</span>
+              </td>
+              <td class="num">
+                <button
+                  class="btn btn--icon btn--ghost"
+                  aria-label="Actions for Rent"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="12" cy="5" r="1" />
+                    <circle cx="12" cy="12" r="1" />
+                    <circle cx="12" cy="19" r="1" />
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr class="tbl-row">
+              <td>
+                <span style="font-weight: 500; color: var(--muted-foreground)"
+                  >Cleaning</span
+                >
+                <span class="badge badge--secondary">Paused</span>
+              </td>
+              <td style="color: var(--muted-foreground)">
+                Every 2 weeks on Friday
+              </td>
+              <td
+                class="num"
+                style="font-weight: 500; color: var(--muted-foreground)"
+              >
+                CHF 120.00
+              </td>
+              <td>
+                <span class="tbl-sub" style="margin-top: 0"
+                  >Paused — nothing will be generated</span
+                >
+                <span class="tbl-sub">4 generated so far</span>
+              </td>
+              <td class="num">
+                <button
+                  class="btn btn--icon btn--ghost"
+                  aria-label="Actions for Cleaning"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="12" cy="5" r="1" />
+                    <circle cx="12" cy="12" r="1" />
+                    <circle cx="12" cy="19" r="1" />
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="tbl-foot">
+          <span>1 running · 1 paused</span>
+          <span
+            >Editing a rule changes the expenses it adds from now on. The ones
+            it has already added stay as they are.</span
+          >
+        </div>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 0.75rem">
+      <dt>columns</dt>
+      <dd>
+        Description · Repeats · Amount · Next · the row's menu. Decided by the
+        table's own box, not the window: under 56rem of table — a 1024px window
+        beside the expanded sidebar — Repeats and Next fold into the
+        description's second line in the phone's words, "Every month on the 1st
+        · Next: 1 Nov 2026 · 10 generated so far".
+      </dd>
+      <dt>next</dt>
+      <dd>
+        Headed Next, so a date stands bare in it. A paused rule says "Paused —
+        nothing will be generated" there, and a series with no dates left "No
+        further occurrences" — never a date that will not come.
+      </dd>
+      <dt>amount</dt>
+      <dd>
+        A cost on a schedule, not anybody's balance: plain ink, no sign, no
+        tone, right-aligned and tabular.
+      </dd>
+      <dt>row</dt>
+      <dd>
+        Not a link: a rule has no screen of its own, it is changed in the entry
+        form. The menu — the phone's, offering the same items — is the one
+        control in it. Hover <code>--wash-1</code>; while its menu is open,
+        <code>--wash-2</code>, as an open row of People — not the accent, since
+        the row holds an amount. A paused rule is muted as well as badged.
+      </dd>
+      <dt>foot</dt>
+      <dd>
+        How many are running and paused, and what an edit does to the entries
+        already added — the same promise the edit's toast makes.
+      </dd>
+      <dt>add</dt>
+      <dd>
+        At the end of the title's row, and none under the table: the table can
+        run longer than the window. The empty state keeps the readable column
+        and its own action.
       </dd>
     </dl>
   </section>

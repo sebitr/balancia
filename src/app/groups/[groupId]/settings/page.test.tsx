@@ -57,17 +57,22 @@ vi.mock("@/modules/groups/service", () => ({
   countUnclaimedParticipants: async () => 0,
 }));
 
+// Each stand-in marks where its card would be, so the layout can be read.
 vi.mock("@/components/groups/group-settings-form", () => ({
-  GroupSettingsForm: () => null,
+  GroupSettingsForm: () => <div data-card="details" />,
 }));
 vi.mock("@/components/groups/currency-mode-note", () => ({
   CurrencyModeNote: () => null,
 }));
 vi.mock("@/components/groups/invite-link-card", () => ({
-  InviteLinkCard: () => null,
+  InviteLinkCard: () => <div data-card="link" />,
 }));
-vi.mock("@/components/groups/export-card", () => ({ ExportCard: () => null }));
-vi.mock("@/components/groups/danger-zone", () => ({ DangerZone: () => null }));
+vi.mock("@/components/groups/export-card", () => ({
+  ExportCard: () => <div data-card="export" />,
+}));
+vi.mock("@/components/groups/danger-zone", () => ({
+  DangerZone: () => <div data-card="danger" />,
+}));
 
 const { default: GroupSettingsPage } = await import("./page");
 
@@ -153,5 +158,50 @@ describe("the settings shortcut to a group's history", () => {
         .getAllByRole("link")
         .map((link) => link.textContent),
     ).toEqual(["Recurring expenses", "Activity", "Import data"]);
+  });
+});
+
+/**
+ * From `lg` up the cards stand in two columns. The order is the page's own —
+ * Details, the link, the export, the shortcuts, the danger zone — and the
+ * columns split it rather than shuffle it, so a screen reader and a keyboard
+ * meet the same screen at every width.
+ */
+describe("the settings at a desk's width", () => {
+  it("asks for the wide column and splits the cards into two stacks in order", async () => {
+    requireGroupAccess.mockResolvedValue(access("owner", EVERYTHING));
+
+    const { container } = await renderSettings();
+
+    const page = container.querySelector<HTMLElement>('[data-layout="wide"]');
+    expect(page).not.toBeNull();
+
+    const columns = [
+      ...page!.querySelectorAll<HTMLElement>('[data-slot="settings-column"]'),
+    ];
+    expect(columns).toHaveLength(2);
+
+    const cardsIn = (column: HTMLElement) =>
+      [...column.querySelectorAll("[data-card]")].map((card) =>
+        card.getAttribute("data-card"),
+      );
+    expect(cardsIn(columns[0])).toEqual(["details", "link"]);
+    expect(cardsIn(columns[1])).toEqual(["export", "danger"]);
+    expect(
+      within(columns[1]).getByRole("link", { name: "Activity" }),
+    ).toBeInTheDocument();
+  });
+
+  it("lays nothing out side by side below lg", async () => {
+    requireGroupAccess.mockResolvedValue(access("owner", EVERYTHING));
+
+    const { container } = await renderSettings();
+
+    const page = container.querySelector<HTMLElement>('[data-layout="wide"]')!;
+    // One column on a phone; every grid class waits for `lg` or `xl`.
+    expect(page.className).toMatch(/(^|\s)flex-col(\s|$)/);
+    for (const name of page.className.split(/\s+/)) {
+      if (name.includes("grid")) expect(name).toMatch(/^(lg|xl):/);
+    }
   });
 });

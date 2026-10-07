@@ -1079,6 +1079,21 @@ a.list-row:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* A line under the rows that is about all of them — a count, what an edit
+   does — on a fainter wash than the header. The recurring table's foot,
+   src/components/recurring/recurring-table.tsx. */
+.tbl-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 1.5rem;
+  padding: 0.625rem 1rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklch, var(--muted) 30%, var(--card));
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
 .tbl-sort {
   display: inline-flex;
   align-items: center;
@@ -2434,11 +2449,12 @@ a[aria-current="page"] .nav-icon--primary {
       <dd>
         The screen widens to <code>--app-content-max</code> (75rem, gutters
         included) for a layout marked <code>data-layout="wide"</code> — the
-        overview's two columns, the transactions table and Home's two columns
-        from <code>xl</code> — and only for one, which is exactly what the
-        expanded sidebar leaves at 1440px. 24px between the overview's columns;
-        the blocks inside each keep the overview's own gap. Home's columns are
-        drawn on its own page.
+        overview's two columns, the transactions and people tables, a person's
+        page, a group's statistics, recurring expenses and settings, and Home's
+        two columns from <code>xl</code> — and only for one, which is exactly
+        what the expanded sidebar leaves at 1440px. 24px between the overview's
+        columns; the blocks inside each keep the overview's own gap. Home's
+        columns are drawn on its own page.
       </dd>
       <dt>columns</dt>
       <dd>
@@ -2472,15 +2488,62 @@ a[aria-current="page"] .nav-icon--primary {
   <section>
     <h2>Every other screen</h2>
     <p class="note">
-      Notifications, People, Settings, an entry, a person: one column,
+      Notifications, Settings, an entry: one column,
       <code>max-w-3xl</code>, centred in the space beside the sidebar, never
       stretched across it. Transactions is a table at this width instead, with
-      its filters on one row — see Expense timeline. Home keeps that column up
-      to <code>xl</code> and then sets "Recent in your groups" beside the groups
-      — see Your groups. Gutters open to 24px at <code>lg</code> and 40px at
+      its filters on one row — see Expense timeline; People is a table and a
+      person's page two columns — see Member page; and a group's statistics,
+      recurring expenses and settings are below. Home keeps that column up to
+      <code>xl</code> and then sets "Recent in your groups" beside the groups —
+      see Your groups. Gutters open to 24px at <code>lg</code> and 40px at
       <code>xl</code>. An entry's Edit and Remove, docked above the bar on a
       phone, sit in the screen's header at this width (board 08).
     </p>
+  </section>
+
+  <section>
+    <h2>Statistics, recurring expenses and a group's settings</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      Three screens a group's settings and its overview lead to, each in the
+      wide column from <code>lg</code> up, each with its cards in the phone's
+      order in the document — so a screen reader and a keyboard meet the same
+      screen at every width — and none of them moving below <code>lg</code>.
+    </p>
+    <dl class="dl">
+      <dt>statistics</dt>
+      <dd>
+        The four figures as tiles across the top, the figure
+        <code>text-xl</code>, <code>text-2xl</code> from <code>xl</code>. Then
+        the cards two to a row on a 20px grid — money in and out beside the
+        spend over time, who carries the group beside what it went on — and the
+        weekdays across the width under them; a row is as tall as its taller
+        card. The bars grow taller, the records stand two facts to a row. Row by
+        row rather than as two columns of their own, so the document keeps the
+        phone's order (board 11 drew two columns).
+      </dd>
+      <dt>category colours</dt>
+      <dd>
+        On both statistics screens, by rank through <code>--chart-1</code>,
+        <code>-3</code>, <code>-4</code>, <code>-5</code>, then grey — never
+        <code>--chart-2</code>, the accent and the "you" series, and never a
+        money colour.
+      </dd>
+      <dt>recurring</dt>
+      <dd>
+        A table — Description, Repeats, Amount, Next and the row's menu — with
+        Add at the end of the title's row. See Recurring expenses.
+      </dd>
+      <dt>group settings</dt>
+      <dd>
+        Two stacks, each its own column so a tall card never opens a gap across:
+        Details and the group link on the left; the export, the shortcuts and
+        the danger zone on the right, the danger zone 16px further apart at the
+        foot. Halves at <code>lg</code>, seven to five from <code>xl</code>,
+        24px between. Board 13 put the link at the top of the right; Details is
+        one card here where the board drew three, and the right would have run
+        twice the length of the left.
+      </dd>
+    </dl>
   </section>
 
   <section>
