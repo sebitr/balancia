@@ -34,6 +34,16 @@ import { isGroupIcon, isGroupIconColor } from "@/modules/groups/icons";
  * Every card writes as it is used; none of them has a Save. The currency mode
  * used to be a card here; it cannot be changed, so it is a line at the foot of
  * Details instead.
+ *
+ * From `lg` up the same cards in the same order stand in two columns: what
+ * the group is and who else can be in it on the left — Details, then the
+ * link — and what this screen is the way out to on the right — the export,
+ * the shortcuts, and the two ways to end the group last of all, apart at the
+ * foot. Read down the left and then the right, that is exactly the order
+ * above, which is the order a phone and a screen reader keep at every width.
+ * The board drew the link at the top of the right-hand column; it moved
+ * across because Details is one card here where the board drew three, and
+ * the right would otherwise have run twice the length of the left.
  */
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -63,102 +73,124 @@ export default async function GroupSettingsPage({
   const now = new Date().toISOString();
 
   return (
-    <div className="space-y-5">
-      <h1 className="font-heading text-2xl font-semibold tracking-tight">
+    // `data-layout="wide"` asks the screen for the room two columns need from
+    // `lg` up; below it the screen does not read it. The columns are halves at
+    // `lg`, where a 1024px window beside the sidebar leaves each about 360px,
+    // and seven to five from `xl`, as the overview's are. Each column is a
+    // stack of its own, so a tall card on one side never opens a gap on the
+    // other; on a phone the two stacks are simply one after the other, at the
+    // same 20px.
+    <div
+      data-layout="wide"
+      className="flex flex-col gap-5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]"
+    >
+      <h1 className="font-heading text-2xl font-semibold tracking-tight lg:col-span-2">
         {t("title")}
       </h1>
 
-      {profile ? (
-        <GroupSettingsForm
-          groupId={access.groupId}
-          name={profile.name}
-          description={profile.description}
-          icon={isGroupIcon(profile.icon) ? profile.icon : null}
-          color={isGroupIconColor(profile.iconColor) ? profile.iconColor : null}
-          timezone={access.group.timezone}
-          currencyMode={access.group.currencyMode}
-          baseCurrency={access.group.baseCurrency}
-        />
-      ) : (
+      <div data-slot="settings-column" className="flex min-w-0 flex-col gap-5">
+        {profile ? (
+          <GroupSettingsForm
+            groupId={access.groupId}
+            name={profile.name}
+            description={profile.description}
+            icon={isGroupIcon(profile.icon) ? profile.icon : null}
+            color={
+              isGroupIconColor(profile.iconColor) ? profile.iconColor : null
+            }
+            timezone={access.group.timezone}
+            currencyMode={access.group.currencyMode}
+            baseCurrency={access.group.baseCurrency}
+          />
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>{tGroup("details")}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">{t("ownerOnly")}</p>
+              <div className="border-t pt-4">
+                <CurrencyModeNote
+                  currencyMode={access.group.currencyMode}
+                  baseCurrency={access.group.baseCurrency}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {invites && (
+          <InviteLinkCard
+            groupId={access.groupId}
+            groupName={access.group.name}
+            link={
+              joinLink
+                ? {
+                    status: joinLink.status,
+                    url: joinLink.url,
+                    expiresAt: joinLink.expiresAt?.toISOString() ?? null,
+                  }
+                : null
+            }
+            unclaimedCount={unclaimedCount}
+            now={now}
+          />
+        )}
+      </div>
+
+      <div data-slot="settings-column" className="flex min-w-0 flex-col gap-5">
+        {access.permissions.exportData && (
+          <ExportCard
+            groupId={access.groupId}
+            canImport={access.permissions.importData}
+          />
+        )}
+
         <Card>
           <CardHeader>
-            <CardTitle>{tGroup("details")}</CardTitle>
+            <CardTitle>{t("shortcuts")}</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">{t("ownerOnly")}</p>
-            <div className="border-t pt-4">
-              <CurrencyModeNote
-                currencyMode={access.group.currencyMode}
-                baseCurrency={access.group.baseCurrency}
+          <CardContent>
+            <ul className="divide-y divide-border overflow-hidden rounded-lg border">
+              {/* Says where it came from, so the screen's back arrow returns
+                  here: the transactions list is the other way in. */}
+              <ShortcutRow
+                href={`/groups/${groupId}/recurring?from=settings`}
+                icon={Repeat2}
+                label={t("recurring")}
               />
-            </div>
+              {/* For everyone who can open this screen, as the overview's row
+                  is: Activity asks for no more access than settings does. */}
+              <ShortcutRow
+                href={`/groups/${groupId}/activity`}
+                icon={History}
+                label={t("activity")}
+              />
+              {access.permissions.importData && (
+                <ShortcutRow
+                  href={`/groups/${groupId}/import`}
+                  icon={Upload}
+                  label={t("import")}
+                />
+              )}
+            </ul>
           </CardContent>
         </Card>
-      )}
 
-      {invites && (
-        <InviteLinkCard
-          groupId={access.groupId}
-          groupName={access.group.name}
-          link={
-            joinLink
-              ? {
-                  status: joinLink.status,
-                  url: joinLink.url,
-                  expiresAt: joinLink.expiresAt?.toISOString() ?? null,
-                }
-              : null
-          }
-          unclaimedCount={unclaimedCount}
-          now={now}
-        />
-      )}
-
-      {access.permissions.exportData && (
-        <ExportCard
-          groupId={access.groupId}
-          canImport={access.permissions.importData}
-        />
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("shortcuts")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="divide-y divide-border overflow-hidden rounded-lg border">
-            {/* Says where it came from, so the screen's back arrow returns
-                here: the transactions list is the other way in. */}
-            <ShortcutRow
-              href={`/groups/${groupId}/recurring?from=settings`}
-              icon={Repeat2}
-              label={t("recurring")}
+        {/* A step more room above it from `lg` up, where it sits at the foot
+            of a short column rather than a phone's long scroll: the two
+            ways to end the group stand apart, as the board draws them, and
+            do not read as one more card of shortcuts. */}
+        {manage && (
+          <div className="lg:pt-4">
+            <DangerZone
+              groupId={access.groupId}
+              groupName={access.group.name}
+              archived={access.group.archivedAt !== null}
             />
-            {/* For everyone who can open this screen, as the overview's row
-                is: Activity asks for no more access than settings does. */}
-            <ShortcutRow
-              href={`/groups/${groupId}/activity`}
-              icon={History}
-              label={t("activity")}
-            />
-            {access.permissions.importData && (
-              <ShortcutRow
-                href={`/groups/${groupId}/import`}
-                icon={Upload}
-                label={t("import")}
-              />
-            )}
-          </ul>
-        </CardContent>
-      </Card>
-
-      {manage && (
-        <DangerZone
-          groupId={access.groupId}
-          groupName={access.group.name}
-          archived={access.group.archivedAt !== null}
-        />
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
