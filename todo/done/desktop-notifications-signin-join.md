@@ -1,6 +1,6 @@
 # Notifications, signing in and opening a group's link use the width of a desktop window
 
-Branch: `feat/desktop-notifications-signin-join`
+Merged: 2026-10-06 in #445
 
 Design: https://claude.ai/artifact/Nwc4hfpwGTdcHj4e7suBHQ (boards 03 · Notifications,
 19 · Sign in and 22 · Signed out on the group link)

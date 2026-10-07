@@ -1,6 +1,6 @@
 # On a desktop, ⌘K to search or jump to a group, a transaction or a person, and N, S and ⌘\ for the rest
 
-Branch: `feat/command-palette`
+Merged: 2026-10-07 in #454
 
 Design: https://claude.ai/artifact/Nwc4hfpwGTdcHj4e7suBHQ (boards 02 · Command palette, 18 · Settings, 25 · Rules)
 

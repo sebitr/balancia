@@ -1,6 +1,6 @@
 # On a desktop, the group overview gives the money the wider column and says what the spending went on
 
-Branch: `feat/desktop-overview`
+Merged: 2026-10-06 in #449
 
 Design: https://claude.ai/artifact/Nwc4hfpwGTdcHj4e7suBHQ (board 06 · Group overview, 21 · An empty group, 24 · Group overview, dark, and the 25 · Rules board)
 

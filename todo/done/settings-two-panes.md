@@ -1,6 +1,6 @@
 # Keep the settings list open beside the setting you are changing, on a desktop
 
-Branch: `feat/settings-two-panes`
+Merged: 2026-10-06 in #444
 
 Design: https://claude.ai/artifact/Nwc4hfpwGTdcHj4e7suBHQ (board "18 · Settings")
 

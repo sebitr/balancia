@@ -1,6 +1,6 @@
 # Small truths on the home screen, the transactions strip, the reminder sheet and the activity line
 
-Branch: `fix/audit-polish-rows`
+Merged: 2026-10-06 in #436
 
 From the UX audit of 2026-10-05: a group with no expenses no longer reads
 "Settled", the home rows say when a figure is rounded, the owing section is

@@ -1,6 +1,6 @@
 # On a desktop, settle each currency side by side, and read an expense with its split as a table and Edit and Delete at the top
 
-Branch: `feat/desktop-settle-and-detail`
+Merged: 2026-10-07 in #447
 
 Design: https://claude.ai/artifact/Nwc4hfpwGTdcHj4e7suBHQ (boards 08 · Expense
 detail and 17 · Settle up)

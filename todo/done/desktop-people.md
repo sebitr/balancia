@@ -1,6 +1,6 @@
 # See a group's people as a table on a desktop, with what each paid and where they stand, and a person's page in two columns
 
-Branch: `feat/desktop-people`
+Merged: 2026-10-06 in #450
 
 Design: https://claude.ai/artifact/Nwc4hfpwGTdcHj4e7suBHQ (board 09 · People, board 10 · A person's page, and the table recipe on 25 · Rules)
 
