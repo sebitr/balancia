@@ -2665,7 +2665,16 @@
     "next": "Next: {date}",
     "pausedNote": "Paused — nothing will be generated",
     "noFurther": "No further occurrences",
-    "generatedSoFar": "{count, plural, one {# generated so far} other {# generated so far}}"
+    "generatedSoFar": "{count, plural, one {# generated so far} other {# generated so far}}",
+    "table": {
+      "description": "Description",
+      "repeats": "Repeats",
+      "amount": "Amount",
+      "next": "Next",
+      "actions": "Actions",
+      "footer": "{running, plural, one {# running} other {# running}}{paused, plural, =0 {} one { · # paused} other { · # paused}}",
+      "footerNote": "Editing a rule changes the expenses it adds from now on. The ones it has already added stay as they are."
+    }
   },
   "settingsPage": {
     "title": "Group settings",
