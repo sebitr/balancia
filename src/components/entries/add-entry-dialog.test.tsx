@@ -44,7 +44,12 @@ vi.mock("@/components/expenses/upload-receipt", () => ({
   uploadReceipt: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back, refresh: vi.fn() }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back,
+    refresh: vi.fn(),
+  }),
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 // The classifier reaches for a web worker and WebAssembly, neither of which
@@ -135,9 +140,10 @@ describe("the entry dialog on a desk", () => {
     const title = screen.getByRole("heading", { name: "Add expense" });
     const row = title.parentElement as HTMLElement;
     expect(within(row).getByRole("tablist")).toBeInTheDocument();
-    expect(
-      within(row).getByRole("tab", { name: "Expense" }),
-    ).toHaveAttribute("aria-selected", "true");
+    expect(within(row).getByRole("tab", { name: "Expense" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 
   it("lays the split out on the form, with no row to open first", async () => {

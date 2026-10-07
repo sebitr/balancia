@@ -2325,7 +2325,9 @@ describe("recurrence", () => {
     await user.type(screen.getByLabelText("Description"), "Internet");
 
     await user.click(screen.getByRole("switch", { name: "Repeats" }));
-    await user.click(screen.getByRole("button", { name: /Every month on the/ }));
+    await user.click(
+      screen.getByRole("button", { name: /Every month on the/ }),
+    );
     const repeat = sheet("Repeat");
     await user.click(repeat.getByRole("button", { name: /^Ends/ }));
     await user.click(repeat.getByRole("button", { name: "On a date" }));
