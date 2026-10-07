@@ -1061,7 +1061,6 @@
     "betweenOthers": "Between others",
     "settledUp": "Settled up",
     "paysSentence": "{from} pays {to}",
-    "paidSentence": "{from} paid {to} back",
     "recordFor": "Record {from}'s repayment to {to}",
     "remindPerson": "Remind {name}",
     "remindedWhen": "Reminded {when}",

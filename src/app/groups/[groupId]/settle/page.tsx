@@ -64,6 +64,7 @@ export default async function SettleUpPage({
         id: repayment.id,
         fromName: repayment.fromName,
         toName: repayment.toName,
+        side: repayment.side,
         currency: repayment.currency,
         minorUnits: repayment.amount.toString(),
         settledOn: repayment.settledOn,

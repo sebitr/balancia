@@ -1061,7 +1061,6 @@
     "betweenOthers": "Entre les autres",
     "settledUp": "Soldé",
     "paysSentence": "{from} paie {to}",
-    "paidSentence": "{from} a remboursé {to}",
     "recordFor": "Enregistrer le remboursement de {from} à {to}",
     "remindPerson": "Relancer {name}",
     "remindedWhen": "Relance envoyée {when}",

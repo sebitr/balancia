@@ -27,8 +27,8 @@ export function repaymentSide(
 
 /**
  * The title a repayment goes by in the transactions list, on its own screen,
- * and in the search that finds it — one sentence per side, keyed in
- * `expensesList`.
+ * in the search that finds it, and among the last repayments a settled group
+ * shows on Settle up — one sentence per side, keyed in `expensesList`.
  */
 export const REPAYMENT_TITLE = {
   paid: "settlementTitleYouPaid",
