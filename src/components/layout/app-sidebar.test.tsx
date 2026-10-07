@@ -49,7 +49,16 @@ vi.mock("@/components/theme/theme-toggle", () => ({
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
 
+// What the palette asks the server, when one is mounted beside the sidebar.
+vi.mock("@/modules/search/actions", () => ({
+  searchPaletteAction: async () => ({
+    ok: true,
+    data: { groups: [], people: [], entries: null },
+  }),
+}));
+
 const { AppSidebar } = await import("./app-sidebar");
+const { CommandPalette } = await import("./command-palette");
 const { SidebarGroupAdd } = await import("./sidebar-group-add");
 const { SidebarFrame } = await import("./sidebar-context");
 const { SidebarGroups } = await import("./sidebar-groups");
@@ -132,8 +141,8 @@ describe("AppSidebar", () => {
     expect(
       within(side).getByRole("link", { name: "Balancia home" }),
     ).toHaveAttribute("href", "/dashboard");
-    // The palette is a later piece of work: the button is there, named, and
-    // not yet pressable.
+    // No palette is mounted beside this sidebar, as the shell mounts one:
+    // the button is there and named, and not pressable for nothing.
     const search = within(side).getByRole("button", {
       name: /Search or jump to/,
     });
@@ -160,6 +169,28 @@ describe("AppSidebar", () => {
     expect(
       within(side).getByRole("link", { name: "Sébastien B., Settings" }),
     ).toHaveAttribute("href", "/settings");
+  });
+
+  it("opens the command palette the shell mounts beside it", async () => {
+    cleanup();
+    nav.pathname = "/dashboard";
+    renderWithIntl(
+      <SidebarFrame initialCollapsed={false}>
+        <AppSidebar
+          actor={{ label: "Sébastien B.", isGuest: false }}
+          group={null}
+        />
+        <CommandPalette group={null} isGuest={false} />
+      </SidebarFrame>,
+    );
+
+    const search = screen.getByRole("button", { name: /Search or jump to/ });
+    expect(search).toBeEnabled();
+    expect(search).toHaveAttribute("aria-haspopup", "dialog");
+    await userEvent.click(search);
+    expect(
+      await screen.findByRole("dialog", { name: "Search or jump to" }),
+    ).toBeInTheDocument();
   });
 
   it("asks which group to add to, outside a group", async () => {
