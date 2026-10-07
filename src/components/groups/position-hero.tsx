@@ -31,6 +31,14 @@ import { TONE } from "@/components/money/balance-tone";
 export type { PositionView as PositionHeroView } from "./position-breakdown";
 
 /**
+ * The card's two actions: halves of the card on a phone, where the thumb
+ * wants the width, and their own width from `lg` up, where two buttons
+ * stretched across 640px of card read as two banners rather than two choices.
+ */
+const ACTION =
+  "h-[46px] flex-1 rounded-[13px] text-sm font-semibold lg:flex-none lg:px-4";
+
+/**
  * The first answer on the screen: a large position, its human meaning and the
  * next useful action. The existing reminder and settlement flows stay intact;
  * this card only gives them the hierarchy the mobile overview calls for.
@@ -99,7 +107,7 @@ export function PositionHero({
       asChild
       variant={primary ? "default" : "outline"}
       size="lg"
-      className="h-[46px] flex-1 rounded-[13px] text-sm font-semibold"
+      className={ACTION}
     >
       <Link href={`/groups/${groupId}/settle`} transitionTypes={PUSH}>
         <HandCoins aria-hidden="true" className="size-4" />
@@ -123,8 +131,9 @@ export function PositionHero({
       {!settled && (
         <div data-slot="position-strip" aria-hidden="true">
           {/* The overview's own column at every width: the phone's, and from
-              `lg` up the wide one its two columns sit in — see `<Screen>`. */}
-          <div className="mx-auto flex w-full max-w-3xl items-baseline gap-2.5 px-4 py-2 lg:max-w-5xl lg:px-6 xl:px-8">
+              `lg` up the wide one its two columns sit in, gutters and all —
+              see `<Screen>` — so the figure lines up with the card it copies. */}
+          <div className="mx-auto flex w-full max-w-3xl items-baseline gap-2.5 px-4 py-2 lg:max-w-(--app-content-max) lg:px-6 xl:px-10">
             <span className="flex shrink-0 items-baseline gap-2.5">
               {open.map((position) => (
                 <Amount
@@ -210,84 +219,87 @@ export function PositionHero({
           </div>
         )}
 
-        {/* Wraps, for the same reason the settle-up screen's row does: these
-            are two `flex-1` buttons whose labels do not wrap, and
-            `min-width: auto` holds each one at its label's min-content width,
-            so neither ever gives width back and the second runs off the side
-            of the phone. Below the width where both labels fit, the second
-            takes its own line and `flex-1` gives it the full width. Nothing is
-            measured or truncated, so the next language lands the same way. */}
-        <div className="flex flex-wrap items-center gap-2">
-          {settled ? (
-            <>
-              <Button
-                asChild
-                size="lg"
-                className="h-[46px] flex-1 rounded-[13px] text-sm font-semibold"
-              >
-                <Link href={`/groups/${groupId}/expenses/new`}>
-                  <Plus aria-hidden="true" className="size-4" />
-                  {t("addExpense")}
-                </Link>
-              </Button>
-              {canArchive && (
-                <Button
-                  asChild
-                  variant="outline"
-                  size="lg"
-                  className="h-[46px] flex-1 rounded-[13px] text-sm font-semibold"
-                >
-                  <Link
-                    href={`/groups/${groupId}/settings`}
-                    transitionTypes={PUSH}
-                  >
-                    <Archive aria-hidden="true" className="size-4" />
-                    {t("archiveGroup")}
+        {/* The actions and the way into the sheet, as one row from `lg` up:
+            the buttons at their own width on the left, "How this is
+            calculated" at the far end. On a phone this box is `contents` —
+            it is not drawn, and the two below stay what they have always
+            been, children of the card's own column. */}
+        <div className="contents lg:flex lg:flex-wrap lg:items-center lg:gap-x-4 lg:gap-y-2">
+          {/* Wraps, for the same reason the settle-up screen's row does: these
+              are two `flex-1` buttons whose labels do not wrap, and
+              `min-width: auto` holds each one at its label's min-content width,
+              so neither ever gives width back and the second runs off the side
+              of the phone. Below the width where both labels fit, the second
+              takes its own line and `flex-1` gives it the full width. Nothing is
+              measured or truncated, so the next language lands the same way. */}
+          <div className="flex flex-wrap items-center gap-2">
+            {settled ? (
+              <>
+                <Button asChild size="lg" className={ACTION}>
+                  <Link href={`/groups/${groupId}/expenses/new`}>
+                    <Plus aria-hidden="true" className="size-4" />
+                    {t("addExpense")}
                   </Link>
                 </Button>
-              )}
-            </>
-          ) : positive && recipients.length > 0 ? (
-            <>
-              <RemindButton
-                groupId={groupId}
-                groupName={groupName}
-                senderName={senderName}
-                recipients={recipients}
-                label={remindLabel}
-                variant="default"
-                className="h-[46px] flex-1 rounded-[13px] text-sm font-semibold"
-              />
-              {settlement(false)}
-            </>
-          ) : (
-            <>
-              {settlement(true)}
-              {(mixed || recipients.length > 0) && (
+                {canArchive && (
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="lg"
+                    className={ACTION}
+                  >
+                    <Link
+                      href={`/groups/${groupId}/settings`}
+                      transitionTypes={PUSH}
+                    >
+                      <Archive aria-hidden="true" className="size-4" />
+                      {t("archiveGroup")}
+                    </Link>
+                  </Button>
+                )}
+              </>
+            ) : positive && recipients.length > 0 ? (
+              <>
                 <RemindButton
                   groupId={groupId}
                   groupName={groupName}
                   senderName={senderName}
                   recipients={recipients}
                   label={remindLabel}
-                  variant="outline"
-                  className="h-[46px] flex-1 rounded-[13px] text-sm font-semibold"
+                  variant="default"
+                  className={ACTION}
                 />
-              )}
-            </>
+                {settlement(false)}
+              </>
+            ) : (
+              <>
+                {settlement(true)}
+                {(mixed || recipients.length > 0) && (
+                  <RemindButton
+                    groupId={groupId}
+                    groupName={groupName}
+                    senderName={senderName}
+                    recipients={recipients}
+                    label={remindLabel}
+                    variant="outline"
+                    className={ACTION}
+                  />
+                )}
+              </>
+            )}
+          </div>
+
+          {!settled && (
+            <button
+              type="button"
+              onClick={() => setPositionOpen(true)}
+              className="-m-2 flex min-h-11 items-center self-start rounded-lg p-2 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none lg:ml-auto lg:self-center"
+            >
+              {t("howCalculated")}
+              <ChevronRight aria-hidden="true" className="ml-0.5 size-3.5" />
+            </button>
           )}
         </div>
-
-        {!settled && (
-          <button
-            type="button"
-            onClick={() => setPositionOpen(true)}
-            className="-m-2 flex min-h-11 items-center self-start rounded-lg p-2 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-          >
-            {t("howCalculated")}
-            <ChevronRight aria-hidden="true" className="ml-0.5 size-3.5" />
-          </button>
-        )}
       </section>
 
       <Sheet open={positionOpen} onOpenChange={setPositionOpen}>

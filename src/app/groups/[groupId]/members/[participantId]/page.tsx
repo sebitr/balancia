@@ -38,6 +38,13 @@ import {
  * a screen. The payments under it are the settle screen's own, picked out for
  * this pair by `groupTransfers` from the same pass, so "You owe Marta
  * CHF 960.84" here and "Pay Marta back · CHF 960.84" there cannot disagree.
+ *
+ * From `lg` up the screen is two columns: what is between you, what to do
+ * about it and the entries behind it on the left, the statistics on the
+ * right. The left comes first in the document, as it does on a phone, so the
+ * order a screen reader and a keyboard follow does not change with the width.
+ * Below `lg` the two columns are `display: contents` — not boxes at all — and
+ * the screen is the one column it always was.
  */
 
 export async function generateMetadata({
@@ -204,7 +211,7 @@ export default async function MemberStatsPage({
       : access.actor.name;
 
   return (
-    <div className="flex flex-col gap-3.5">
+    <div data-layout="wide" className="flex flex-col gap-3.5">
       {/* The screen is the person, so the person is its title — named beside
           the arrow like every other pushed screen, and named rather than
           addressed: the reader's own screen used to be headed "You" while the
@@ -236,121 +243,133 @@ export default async function MemberStatsPage({
         </p>
       </div>
 
-      {positions.map(({ view, pair }) => (
-        <MemberPosition
-          key={view.currency}
-          position={view}
-          name={name}
-          // Three readers, three headlines: your own row is your net, somebody
-          // else's is the one figure between the two of you, and a reader
-          // with no participant row of their own has no "between" to show.
-          mode={viewingSelf ? "self" : self ? "between" : "member"}
-          actions={
-            pair.length > 0
-              ? pair.map((transfer) => (
-                  <SettleActions
-                    key={`${transfer.fromParticipantId}-${transfer.toParticipantId}`}
-                    transfer={toView(transfer)}
-                    groupId={groupId}
-                    groupName={access.group.name}
-                    senderName={senderName}
-                    recipients={recipients}
-                    payoutHints={payoutHints}
-                  />
-                ))
-              : null
-          }
-        />
-      ))}
+      <div className="contents lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
+        <div
+          data-slot="member-primary"
+          className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-3.5"
+        >
+          {positions.map(({ view, pair }) => (
+            <MemberPosition
+              key={view.currency}
+              position={view}
+              name={name}
+              // Three readers, three headlines: your own row is your net, somebody
+              // else's is the one figure between the two of you, and a reader
+              // with no participant row of their own has no "between" to show.
+              mode={viewingSelf ? "self" : self ? "between" : "member"}
+              actions={
+                pair.length > 0
+                  ? pair.map((transfer) => (
+                      <SettleActions
+                        key={`${transfer.fromParticipantId}-${transfer.toParticipantId}`}
+                        transfer={toView(transfer)}
+                        groupId={groupId}
+                        groupName={access.group.name}
+                        senderName={senderName}
+                        recipients={recipients}
+                        payoutHints={payoutHints}
+                      />
+                    ))
+                  : null
+              }
+            />
+          ))}
 
-      {/* The entries behind the number, for whoever wants to know why it is
+          {/* The entries behind the number, for whoever wants to know why it is
           what it is. */}
-      <EntriesWithRow
-        groupId={groupId}
-        participantId={participantId}
-        name={name}
-        viewingSelf={viewingSelf}
-      />
+          <EntriesWithRow
+            groupId={groupId}
+            participantId={participantId}
+            name={name}
+            viewingSelf={viewingSelf}
+          />
+        </div>
 
-      <MemberStatistics
-        name={name}
-        viewingSelf={viewingSelf}
-        stats={{
-          currencies: [...stats.currencies],
-          firstEntry: stats.firstEntry,
-          ranges: stats.ranges.map((range) => ({
-            key: range.key,
-            granularity: range.granularity,
-            months: range.months,
-            currencies: range.currencies.map((entry) => ({
-              currency: entry.currency,
-              paid: entry.paid.toString(),
-              share: entry.share.toString(),
-              entryCount: entry.entryCount,
-              groupSpent: entry.groupSpent.toString(),
-              payerIndex: entry.payerIndex,
-              sharePercent: entry.sharePercent,
-              rank: entry.rank,
-              evenPercent: entry.evenPercent,
-              members: entry.members.map((member) => ({
-                participantId: member.participantId,
-                name: member.name,
-                percent: member.percent,
-                isSubject: member.isSubject,
+        <div
+          data-slot="member-secondary"
+          className="contents lg:block lg:min-w-0"
+        >
+          <MemberStatistics
+            name={name}
+            viewingSelf={viewingSelf}
+            stats={{
+              currencies: [...stats.currencies],
+              firstEntry: stats.firstEntry,
+              ranges: stats.ranges.map((range) => ({
+                key: range.key,
+                granularity: range.granularity,
+                months: range.months,
+                currencies: range.currencies.map((entry) => ({
+                  currency: entry.currency,
+                  paid: entry.paid.toString(),
+                  share: entry.share.toString(),
+                  entryCount: entry.entryCount,
+                  groupSpent: entry.groupSpent.toString(),
+                  payerIndex: entry.payerIndex,
+                  sharePercent: entry.sharePercent,
+                  rank: entry.rank,
+                  evenPercent: entry.evenPercent,
+                  members: entry.members.map((member) => ({
+                    participantId: member.participantId,
+                    name: member.name,
+                    percent: member.percent,
+                    isSubject: member.isSubject,
+                  })),
+                  buckets: entry.buckets.map((bucket) => ({
+                    start: bucket.start,
+                    paid: bucket.paid.toString(),
+                    share: bucket.share.toString(),
+                  })),
+                  categories: entry.categories.map((slice) => ({
+                    category: slice.category,
+                    amount: slice.amount.toString(),
+                    percent: slice.percent,
+                  })),
+                  partners: entry.partners.map((partner) => ({
+                    participantId: partner.participantId,
+                    name: partner.name,
+                    entryCount: partner.entryCount,
+                    amount: partner.amount.toString(),
+                  })),
+                  topPartnerPercent: entry.topPartnerPercent,
+                })),
               })),
-              buckets: entry.buckets.map((bucket) => ({
-                start: bucket.start,
-                paid: bucket.paid.toString(),
-                share: bucket.share.toString(),
+              activity: {
+                longestRun: stats.activity.longestRun,
+                currentRun: stats.activity.currentRun,
+                days: stats.activity.days.map((day) => ({
+                  date: day.date,
+                  count: day.count,
+                  amounts: day.amounts.map((entry) => ({
+                    currency: entry.currency,
+                    amount: entry.amount.toString(),
+                  })),
+                })),
+              },
+              records: stats.records.map((record) => ({
+                currency: record.currency,
+                biggestBill: record.biggestBill
+                  ? {
+                      description: record.biggestBill.description,
+                      category: record.biggestBill.category,
+                      date: record.biggestBill.date,
+                      amount: record.biggestBill.amount.toString(),
+                    }
+                  : null,
+                longestDebt: record.longestDebt,
+                fastestSettle: record.fastestSettle,
+                quietestMonth: record.quietestMonth
+                  ? {
+                      month: record.quietestMonth.month,
+                      entryCount: record.quietestMonth.entryCount,
+                      amount: record.quietestMonth.amount.toString(),
+                    }
+                  : null,
               })),
-              categories: entry.categories.map((slice) => ({
-                category: slice.category,
-                amount: slice.amount.toString(),
-                percent: slice.percent,
-              })),
-              partners: entry.partners.map((partner) => ({
-                participantId: partner.participantId,
-                name: partner.name,
-                entryCount: partner.entryCount,
-                amount: partner.amount.toString(),
-              })),
-              topPartnerPercent: entry.topPartnerPercent,
-            })),
-          })),
-          activity: {
-            longestRun: stats.activity.longestRun,
-            currentRun: stats.activity.currentRun,
-            days: stats.activity.days.map((day) => ({
-              date: day.date,
-              count: day.count,
-              amounts: day.amounts.map((entry) => ({
-                currency: entry.currency,
-                amount: entry.amount.toString(),
-              })),
-            })),
-          },
-          records: stats.records.map((record) => ({
-            currency: record.currency,
-            biggestBill: record.biggestBill
-              ? {
-                  description: record.biggestBill.description,
-                  category: record.biggestBill.category,
-                  date: record.biggestBill.date,
-                  amount: record.biggestBill.amount.toString(),
-                }
-              : null,
-            longestDebt: record.longestDebt,
-            fastestSettle: record.fastestSettle,
-            quietestMonth: record.quietestMonth
-              ? {
-                  month: record.quietestMonth.month,
-                  entryCount: record.quietestMonth.entryCount,
-                  amount: record.quietestMonth.amount.toString(),
-                }
-              : null,
-          })),
-        }}
-      />
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }

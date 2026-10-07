@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { BarChart3, ChevronDown, ChevronRight } from "lucide-react";
+import { hasGlyph } from "@/components/expenses/category-icon";
 import { Amount } from "@/components/money/amount";
 import {
   DropdownMenu,
@@ -16,6 +17,12 @@ import { PUSH } from "@/components/motion/transitions";
 import { cn } from "@/lib/utils";
 import type { SpendingPeriodKey } from "@/modules/groups/overview";
 
+export interface CategorySpendView {
+  /** A category code, an imported label, or null for spending nobody filed. */
+  readonly category: string | null;
+  readonly amount: string;
+}
+
 export interface SpendingPeriodView {
   readonly key: SpendingPeriodKey;
   readonly stats: readonly {
@@ -23,8 +30,35 @@ export interface SpendingPeriodView {
     readonly groupSpent: string;
     readonly youPaid: string;
     readonly yourShare: string;
+    /** The total taken apart, largest first — see `categorySpendOf`. */
+    readonly categories: readonly CategorySpendView[];
   }[];
 }
+
+/** Rows the category bars show before folding the rest into one. */
+const CATEGORY_ROWS = 5;
+
+/**
+ * The bars' colours, by rank, as the statistics screens assign them: what the
+ * reader needs is to tell the rows apart, not to learn that groceries are
+ * always one colour.
+ *
+ * Categorical colours only. Never a money colour, since a bar here is spending
+ * and not a balance, and never `--chart-2`, which is the accent: the accent is
+ * the "you" series and the share bar above, and a category drawn in it would
+ * read as the reader's own. The fifth is the first again, faded, rather than
+ * a sixth hue nobody could tell from its neighbours.
+ */
+const CATEGORY_COLOURS = [
+  "var(--chart-1)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+  "color-mix(in oklch, var(--chart-1) 45%, var(--card))",
+] as const;
+
+/** The row the tail folds into: grey, because it is no one category. */
+const FOLDED_COLOUR = "color-mix(in oklch, var(--foreground) 25%, transparent)";
 
 /**
  * The narrowest window that still has something to say.
@@ -69,6 +103,9 @@ function widestSpokenPeriod(
  * Which shape is the caller's call, and it is the group's currency count
  * rather than the period's: a period switch that flipped the card's whole
  * layout would be a redesign performed by a dropdown.
+ *
+ * From `lg` up both shapes also say what the period's spending went on — see
+ * `CategoryBars`. Below it nothing about the card changes.
  */
 export function SpendingCard({
   groupId,
@@ -143,6 +180,17 @@ export function SpendingCard({
             <p className="text-2xs text-pretty text-muted-foreground">
               {t("shareBarCaption")}
             </p>
+
+            {/* One block per currency, each named, after the lines that give
+                each its total — the way the lines themselves are kept apart. */}
+            {period.stats.map((stat) => (
+              <CategoryBars
+                key={stat.currency}
+                stat={stat}
+                named
+                className="border-t pt-3"
+              />
+            ))}
           </div>
         ) : (
           <div className="flex flex-col divide-y">
@@ -300,6 +348,114 @@ function CurrencySpendingBlock({
           </dd>
         </div>
       </dl>
+
+      <CategoryBars
+        stat={stat}
+        named={false}
+        className="mt-3.5 border-t pt-3.5"
+      />
+    </div>
+  );
+}
+
+/**
+ * What the period's spending went on, from `lg` up.
+ *
+ * A phone keeps the card as it was — the total, the reader's part of it, and
+ * the Statistics row, behind which the categories have a screen of their own.
+ * Beside the sidebar the right-hand column has the room to answer "on what"
+ * without the push, so it does: five rows at most, largest first, the rest
+ * folded into one, and the whole split one row further down.
+ *
+ * The amounts are spending, not anybody's balance, so they are plain ink with
+ * no sign and no money colour; the bars take the categorical colours above.
+ * Each bar is scaled to the largest row in its own currency. A group with
+ * several currencies gets one block per currency, each headed by its code —
+ * never one axis, or one list, across two of them.
+ */
+function CategoryBars({
+  stat,
+  named,
+  className,
+}: {
+  stat: SpendingPeriodView["stats"][number];
+  /** Head the block with its currency, for a card that holds several. */
+  named: boolean;
+  className?: string;
+}) {
+  const t = useTranslations("groupStats");
+  const tMember = useTranslations("memberStats");
+  const tCategories = useTranslations("expenses.categories");
+
+  const rows: readonly (CategorySpendView & { folded?: true })[] =
+    stat.categories.length <= CATEGORY_ROWS
+      ? stat.categories
+      : [
+          ...stat.categories.slice(0, CATEGORY_ROWS - 1),
+          {
+            folded: true,
+            category: null,
+            amount: stat.categories
+              .slice(CATEGORY_ROWS - 1)
+              .reduce((total, slice) => total + BigInt(slice.amount), 0n)
+              .toString(),
+          },
+        ];
+
+  // A period with nothing spent in this currency has nothing to take apart.
+  if (rows.length === 0) return null;
+
+  const largest = rows.reduce(
+    (top, row) => (BigInt(row.amount) > top ? BigInt(row.amount) : top),
+    0n,
+  );
+
+  return (
+    <div className={cn("hidden flex-col gap-2.5 lg:flex", className)}>
+      <h3 className="flex items-baseline justify-between gap-3 text-xs font-medium tracking-[0.05em] text-muted-foreground uppercase">
+        {t("categoriesTitle")}
+        {named && <span className="font-semibold">{stat.currency}</span>}
+      </h3>
+
+      {/* The three columns belong to the list and every row subgrids onto
+          them, as the balance list's do, so the bars start and end at the
+          same place down the card whatever length each figure is. */}
+      <ul className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)_auto] gap-x-3 gap-y-2.5">
+        {rows.map((row, position) => {
+          const colour = row.folded
+            ? FOLDED_COLOUR
+            : CATEGORY_COLOURS[Math.min(position, CATEGORY_COLOURS.length - 1)];
+          const label = row.folded
+            ? tMember("otherCategories")
+            : row.category === null
+              ? t("uncategorized")
+              : hasGlyph(row.category)
+                ? tCategories(row.category)
+                : row.category;
+          const width =
+            largest === 0n ? 0 : Number((BigInt(row.amount) * 100n) / largest);
+
+          return (
+            <li
+              key={`${row.category ?? "none"}-${position}`}
+              className="col-span-3 grid grid-cols-subgrid items-center text-sm"
+            >
+              <span className="truncate">{label}</span>
+              <span aria-hidden="true" className="block">
+                <span
+                  className="block h-2 rounded-full"
+                  style={{ width: `${width}%`, background: colour }}
+                />
+              </span>
+              <Amount
+                minorUnits={row.amount}
+                currency={stat.currency}
+                className="text-right font-medium"
+              />
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

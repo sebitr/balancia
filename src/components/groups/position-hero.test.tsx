@@ -265,3 +265,47 @@ describe("more than one currency", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+/**
+ * The hero beside the sidebar.
+ *
+ * jsdom has no viewport, so these hold the classes that decide it: below `lg`
+ * the row is `display: contents` and the card's column is what it always was;
+ * from `lg` up it is one row, the buttons at their own width and the way into
+ * the sheet at the far end.
+ */
+describe("the hero at width", () => {
+  function renderHero() {
+    return renderWithIntl(
+      <PositionHero
+        positions={[CHALET]}
+        groupId="g1"
+        groupName="Chalet"
+        senderName="Seb"
+        recipients={[]}
+        canArchive={false}
+      />,
+    );
+  }
+
+  it("puts its action and the way into the sheet on one row from lg up", () => {
+    renderHero();
+
+    const settle = screen.getByRole("link", { name: "Settle up" });
+    const how = screen.getByRole("button", { name: /How this is calculated/ });
+    const row = how.parentElement!;
+
+    expect(row).toContainElement(settle);
+    expect(row).toHaveClass("contents", "lg:flex");
+    expect(settle).toHaveClass("flex-1", "lg:flex-none");
+    expect(how).toHaveClass("self-start", "lg:ml-auto");
+  });
+
+  it("lines its strip up with the wide column the overview sits in", () => {
+    const { container } = renderHero();
+
+    expect(
+      container.querySelector('[data-slot="position-strip"] > div'),
+    ).toHaveClass("lg:max-w-(--app-content-max)", "lg:px-6", "xl:px-10");
+  });
+});

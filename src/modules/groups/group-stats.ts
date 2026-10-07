@@ -314,8 +314,12 @@ function selectFacts(
  *
  * The migration rewrites these rows; this is what covers the minutes during
  * an upgrade when a replica on the previous release is still writing them.
+ *
+ * The overview's spending card files its category bars through this too, so
+ * a category is called the same thing on the card and on the screen its
+ * Statistics row opens.
  */
-function categoryKeyOf(
+export function categoryKeyOf(
   value: string | null,
   subcategory: string | null = null,
 ): { key: string | null; child: string | null; known: boolean } {

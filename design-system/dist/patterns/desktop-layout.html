@@ -1952,6 +1952,69 @@ a[aria-current="page"] .nav-icon--primary {
   gap: 1.625rem;
   min-width: 0;
 }
+/* From xl (1280px) up the money gets the larger share: seven to five. Halves
+   at lg, where each column needs its 360px. */
+.overview-cols--wide {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+}
+/* A position card's actions beside the sidebar: the buttons at their own
+   width, "How this is calculated" at the far end of the same row. */
+.position-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+.position-actions .btn {
+  height: 2.875rem;
+  padding: 0 1rem;
+  font-weight: 600;
+}
+.position-actions .position-how {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+/* The spending card's category bars, from lg up: label, bar, figure, on
+   columns every row shares, so the bars start and end level down the card.
+   Chart colours by rank — never --chart-2, the accent, and never a money
+   colour. `src/components/groups/spending-card.tsx`. */
+.cat-bars-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.cat-bars {
+  display: grid;
+  grid-template-columns: minmax(0, 7rem) minmax(0, 1fr) auto;
+  gap: 0.625rem 0.75rem;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+}
+.cat-bars li {
+  display: contents;
+}
+.cat-bars i {
+  display: block;
+  height: 0.5rem;
+  border-radius: 9999px;
+}
+.cat-bars .cat-figure {
+  text-align: right;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums lining-nums;
+}
 
 /* Settings from lg up: still a surface, with no rail — the hub as a 20rem pane
    beside the screen it led to, and the ✕ once along the top of both.
@@ -2263,9 +2326,18 @@ a[aria-current="page"] .nav-icon--primary {
         The screen widens to <code>--app-content-max</code> (75rem, gutters
         included) for a layout marked <code>data-layout="wide"</code> — the
         overview's two columns and the transactions table — and only for one,
-        which is exactly what the expanded sidebar leaves at 1440px. At 1024 the
-        two columns are about 360px each. 24px between them; the blocks inside
-        each keep the overview's own gap.
+        which is exactly what the expanded sidebar leaves at 1440px. 24px
+        between the columns; the blocks inside each keep the overview's own gap.
+      </dd>
+      <dt>columns</dt>
+      <dd>
+        Halves at <code>lg</code>: at 1024 the sidebar leaves about 740px, and
+        360px each is what the balance rows' three columns and the spending
+        card's category rows need. Seven to five from <code>xl</code> (<code
+          >minmax(0, 7fr) minmax(0, 5fr)</code
+        >): at 1440 the money gets about 640px and the context about 460px. The
+        left column is the money at every width — first in the document, so the
+        phone's reading order survives — and is never the narrower one.
       </dd>
       <dt>group header</dt>
       <dd>
@@ -2435,7 +2507,7 @@ a[aria-current="page"] .nav-icon--primary {
       <dt>1</dt>
       <dd>
         Second columns wrap under the first. The overview's two stay side by
-        side, about 360px each.
+        side, as halves of about 360px each rather than seven to five.
       </dd>
       <dt>2</dt>
       <dd>
