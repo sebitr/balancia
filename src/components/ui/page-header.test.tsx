@@ -97,6 +97,26 @@ describe("a page header", () => {
     expect(heading.nextElementSibling).toHaveTextContent("You");
   });
 
+  it("states a line of facts under the title on a desk, and not on a phone", () => {
+    // The phone's header is one row; the screen under it says each of these
+    // facts in its own place. A desk header carries them where the eye lands.
+    render(
+      <PageHeader
+        title="Dinner"
+        back={{ href: "/groups/g1/expenses", label: "Back to transactions" }}
+        meta={<span>12 August 2026</span>}
+      />,
+    );
+
+    const line = screen.getByText("12 August 2026").parentElement;
+    expect(line).toHaveClass("hidden", "lg:flex");
+    // Under the title, inside the block the title heads.
+    expect(
+      screen.getByRole("heading", { level: 1 }).closest("div")
+        ?.nextElementSibling,
+    ).toBe(line);
+  });
+
   it("puts a trailing control at the far end of the same row", () => {
     render(
       <PageHeader

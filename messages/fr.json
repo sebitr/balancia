@@ -1163,7 +1163,9 @@
     "youPayBack": "Tu rembourses {name}",
     "paysBack": "{from} rembourse {to}",
     "remindShort": "Relancer",
-    "seeTransactions": "Voir les transactions"
+    "seeTransactions": "Voir les transactions",
+    "howRepaymentsWork": "Un remboursement déplace les soldes entre deux personnes. Il n’est pas comptabilisé comme une dépense du groupe, et Balancia ne déplace jamais l’argent lui-même.",
+    "eachCurrencyApart": "Chaque devise se règle à part"
   },
   "marketing": {
     "meta": {
@@ -2814,6 +2816,18 @@
       "title": "Cette transaction n’est plus là",
       "body": "Elle a été supprimée, ou enregistrée autrement — en remboursement plutôt qu’en dépense, ou l’inverse. Tu trouveras ce qui l’a remplacée dans la liste des transactions.",
       "action": "Transactions"
+    },
+    "table": {
+      "person": "Personne",
+      "paid": "Payé",
+      "received": "Reçu",
+      "effect": "Ce que ça a fait"
+    },
+    "meta": {
+      "paid": "{count, plural, one {{name} a payé} other {# personnes ont payé}}",
+      "paidYou": "Tu as payé",
+      "received": "{count, plural, one {{name} l’a reçu} other {# personnes l’ont reçu}}",
+      "receivedYou": "Tu l’as reçu"
     }
   },
   "emails": {

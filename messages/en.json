@@ -1163,7 +1163,9 @@
     "youPayBack": "You pay {name} back",
     "paysBack": "{from} pays {to} back",
     "remindShort": "Remind",
-    "seeTransactions": "See the transactions"
+    "seeTransactions": "See the transactions",
+    "howRepaymentsWork": "A repayment moves balances between two people. It is not counted as group spending, and Balancia never moves the money itself.",
+    "eachCurrencyApart": "Each currency is settled on its own"
   },
   "marketing": {
     "meta": {
@@ -2814,6 +2816,18 @@
       "title": "That entry is no longer here",
       "body": "It was removed, or recorded as something else — a repayment rather than an expense, or the other way round. The transactions list has whatever took its place.",
       "action": "Transactions"
+    },
+    "table": {
+      "person": "Person",
+      "paid": "Paid",
+      "received": "Received",
+      "effect": "What this did"
+    },
+    "meta": {
+      "paid": "{count, plural, one {{name} paid} other {# people paid}}",
+      "paidYou": "You paid",
+      "received": "{count, plural, one {{name} received it} other {# people received it}}",
+      "receivedYou": "You received it"
     }
   },
   "emails": {

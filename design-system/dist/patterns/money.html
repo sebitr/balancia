@@ -2636,10 +2636,123 @@ a[aria-current="page"] .nav-icon--primary {
     </dl>
     <p class="note" style="margin-top: 0.75rem">
       A three-column table of person, share and signed balance needs 370px; a
-      phone card has 328–358. It clipped the balances it existed to show, so the
-      split is a list. Source: <code>BigAmount</code>, <code>SplitRow</code> in
+      phone card has 328–358. It clipped the balances it existed to show, so on
+      a phone the split is a list. Source: <code>BigAmount</code>,
+      <code>SplitRow</code> in
       <code>components/entries/detail-blocks.tsx</code>.
     </p>
+  </section>
+
+  <section>
+    <h2>One entry, at width</h2>
+    <div class="spec">
+      <div class="scroll-x">
+        <table class="tbl" aria-label="Split between">
+          <thead>
+            <tr>
+              <th scope="col">Person</th>
+              <th scope="col" class="num">Share</th>
+              <th scope="col" class="num">Paid</th>
+              <th scope="col" class="num">What this did</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th
+                scope="row"
+                style="
+                  text-transform: none;
+                  font-size: 0.875rem;
+                  color: inherit;
+                  font-weight: 600;
+                "
+              >
+                <span style="display: flex; align-items: center; gap: 0.5rem"
+                  ><span class="avatar">B</span> Bob</span
+                >
+              </th>
+              <td class="num">€30.00</td>
+              <td class="num" style="color: var(--muted-foreground)">—</td>
+              <td
+                class="num"
+                style="font-weight: 500; color: var(--negative-ink)"
+              >
+                You owe €30.00
+              </td>
+            </tr>
+            <tr>
+              <th
+                scope="row"
+                style="
+                  text-transform: none;
+                  font-size: 0.875rem;
+                  color: inherit;
+                  font-weight: 600;
+                "
+              >
+                <span style="display: flex; align-items: center; gap: 0.5rem"
+                  ><span class="avatar">A</span> Ada</span
+                >
+              </th>
+              <td class="num">€30.00</td>
+              <td class="num">€90.00</td>
+              <td
+                class="num"
+                style="font-weight: 500; color: var(--positive-ink)"
+              >
+                Gets back €60.00
+              </td>
+            </tr>
+            <tr>
+              <th
+                scope="row"
+                style="
+                  text-transform: none;
+                  font-size: 0.875rem;
+                  color: inherit;
+                  font-weight: 600;
+                "
+              >
+                <span style="display: flex; align-items: center; gap: 0.5rem"
+                  ><span class="avatar">C</span> Chloé</span
+                >
+              </th>
+              <td class="num">€30.00</td>
+              <td class="num" style="color: var(--muted-foreground)">—</td>
+              <td
+                class="num"
+                style="font-weight: 500; color: var(--negative-ink)"
+              >
+                Owes €30.00
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>from lg</dt>
+      <dd>
+        A desk column has twice the room the table needed, so the split comes
+        back as one: person, share, what they paid, and what the entry did to
+        them. A person who paid without a share gets a row too — on a phone they
+        are under "Paid by", and the table is both lists at once.
+      </dd>
+      <dt>the last column</dt>
+      <dd>
+        The list's own words in the tone's ink — "You owe €30.00", "Gets back
+        €60.00" — and no sign. The desktop board drew "+ €60.00" there; a figure
+        beside the word for its direction goes unsigned, in a table as in a
+        list. An entry that moved nobody drops the column.
+      </dd>
+      <dt>figures</dt>
+      <dd>
+        Right-aligned, tabular, never cut: only the name truncates, and a table
+        too wide for its card scrolls inside it. Source:
+        <code>SplitTableShell</code>, <code>SplitTableRow</code> in
+        <code>components/entries/detail-blocks.tsx</code>.
+      </dd>
+    </dl>
   </section>
 
   <section>

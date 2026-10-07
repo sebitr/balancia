@@ -5,10 +5,12 @@ import {
   DetailCard,
   SplitList,
   SplitRow,
+  SplitTableRow,
+  SplitTableShell,
   StakeLine,
   StakeTone,
 } from "./detail-blocks";
-import { impactOf, stakeOf, type EntryParties } from "./stake";
+import { impactOf, stakeOf, sumFor, type EntryParties } from "./stake";
 
 /**
  * The two places the entry detail says what an expense or an income did to
@@ -125,7 +127,6 @@ export async function SplitCard({
 }: StakeProps) {
   const t = await getTranslations("transactionDetail");
   const revenue = entry.direction === "in";
-  const kind = revenue ? "revenue" : "expense";
   const figureLabel = t(revenue ? "credited" : "share");
 
   const shares = [...entry.shares].sort((left, right) => {
@@ -141,20 +142,7 @@ export async function SplitCard({
     (share) => impactOf(entry, share.participantId) !== 0n,
   );
 
-  const outcomeOf = (impact: bigint, you: boolean): string => {
-    const amount = formatAmount(impact, currency, locale);
-    if (impact > 0n) {
-      return you
-        ? t("outcome.youGetBack", { amount })
-        : t("outcome.getsBack", { amount });
-    }
-    if (impact < 0n) {
-      return you
-        ? t("outcome.youOwe", { amount })
-        : t("outcome.owes", { amount });
-    }
-    return you ? t("outcome.youEven", { kind }) : t("outcome.even", { kind });
-  };
+  const outcomeOf = outcomeWords(t, entry, currency, locale);
 
   return (
     <DetailCard>
@@ -181,4 +169,116 @@ export async function SplitCard({
       </SplitList>
     </DetailCard>
   );
+}
+
+/**
+ * The same split as a table, for a desk window — see `SplitTableShell` for
+ * why it is a table there and a list on a phone.
+ *
+ * One row per person the entry touched: everybody with a share, then anybody
+ * who paid (or, on income, received the money) without having one, who on a
+ * phone is only under "Paid by". The reader first, as in the list, and spoken
+ * to the same way: "You owe €21.40" on their row, "Owes €21.40" on the others.
+ */
+export async function SplitTable({
+  entry,
+  participantId,
+  currency,
+  locale,
+  label,
+}: StakeProps & {
+  /** What the section calls the people: "Split between", "Credited to". */
+  label: string;
+}) {
+  const t = await getTranslations("transactionDetail");
+  const revenue = entry.direction === "in";
+
+  // A payer down for nothing is a leftover of a multi-payer edit, not
+  // somebody who paid — the same reading `stakeOf` takes.
+  const payers = entry.payers.filter((payer) => payer.amount > 0n);
+
+  const names = new Map<string, string>();
+  for (const party of [...entry.shares, ...payers]) {
+    if (!names.has(party.participantId)) {
+      names.set(party.participantId, party.displayName);
+    }
+  }
+  const people = [...names.keys()].sort((left, right) => {
+    if (left === right) return 0;
+    if (left === participantId) return -1;
+    if (right === participantId) return 1;
+    return 0;
+  });
+
+  const moved = people.some((id) => impactOf(entry, id) !== 0n);
+  const outcomeOf = outcomeWords(t, entry, currency, locale);
+
+  return (
+    <SplitTableShell
+      label={label}
+      personLabel={t("table.person")}
+      figureLabel={t(revenue ? "credited" : "share")}
+      paidLabel={t(revenue ? "table.received" : "table.paid")}
+      outcomeLabel={moved ? t("table.effect") : null}
+    >
+      {people.map((id) => {
+        const you = id === participantId;
+        const inSplit = entry.shares.some(
+          (share) => share.participantId === id,
+        );
+        const paid = sumFor(payers, id);
+        const impact = impactOf(entry, id);
+        return (
+          <SplitTableRow
+            key={id}
+            name={names.get(id) ?? ""}
+            // You, whoever put the money in, or anybody else — the list's
+            // faces, with the payer's amber the phone shows under "Paid by",
+            // since the table is both.
+            tone={you ? "self" : paid > 0n ? "payer" : "other"}
+            share={inSplit ? sumFor(entry.shares, id).toString() : null}
+            paid={paid > 0n ? paid.toString() : null}
+            currency={currency}
+            outcome={
+              moved
+                ? { text: outcomeOf(impact, you), tone: toneFor(impact) }
+                : null
+            }
+          />
+        );
+      })}
+    </SplitTableShell>
+  );
+}
+
+type DetailTranslator = Awaited<
+  ReturnType<typeof getTranslations<"transactionDetail">>
+>;
+
+/**
+ * What an entry did to one person, in words: "You get back €60.00",
+ * "Owes €30.00", "Paid their share". The list and the table say it the same
+ * way, so it is worded once.
+ */
+function outcomeWords(
+  t: DetailTranslator,
+  entry: EntryParties,
+  currency: string,
+  locale: string,
+): (impact: bigint, you: boolean) => string {
+  const kind = entry.direction === "in" ? "revenue" : "expense";
+  return (impact, you) => {
+    const amount = formatAmount(impact, currency, locale);
+    if (impact > 0n) {
+      return you
+        ? t("outcome.youGetBack", { amount })
+        : t("outcome.getsBack", { amount });
+    }
+    if (impact < 0n) {
+      return you
+        ? t("outcome.youOwe", { amount })
+        : t("outcome.owes", { amount });
+    }
+    return you ? t("outcome.youEven", { kind }) : t("outcome.even", { kind });
+  };
 }
