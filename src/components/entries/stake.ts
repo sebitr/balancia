@@ -30,7 +30,14 @@ export interface EntryParties {
   readonly shares: readonly EntryParty[];
 }
 
-function sumFor(parties: readonly EntryParty[], participantId: string): bigint {
+/**
+ * What one person put in — or had as their share — across an entry's lines.
+ * A person can appear on more than one, so it is a sum rather than a lookup.
+ */
+export function sumFor(
+  parties: readonly EntryParty[],
+  participantId: string,
+): bigint {
   return parties
     .filter((party) => party.participantId === participantId)
     .reduce((sum, party) => sum + party.amount, 0n);

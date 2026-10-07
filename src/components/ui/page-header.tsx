@@ -36,6 +36,7 @@ export function PageHeader({
   back,
   badge,
   trailing,
+  meta,
   className,
 }: {
   /**
@@ -62,12 +63,56 @@ export function PageHeader({
   badge?: ReactNode;
   /** A control at the far end of the row. `<PageHeaderClose>`, or nothing. */
   trailing?: ReactNode;
+  /**
+   * A line of facts under the title — a date, who paid, a category — drawn
+   * from `lg` up only.
+   *
+   * A phone's header is the one row this component is built around, and the
+   * screen under it already says each of those facts in its own place. A
+   * desk window has the width to state them where the reader's eye lands
+   * first, beside the actions the header carries there too, so the line is
+   * the desktop's addition and nothing below `lg` changes.
+   */
+  meta?: ReactNode;
   className?: string;
 }) {
   const leadsFromLg = back?.until === "lg";
 
+  // The title and its badge, as one row whatever else the header holds.
+  const heading =
+    title === undefined ? null : (
+      // The title takes only the width its words need, so a badge sits
+      // against them; the row it shares carries the `flex-1`, which is what
+      // still pushes a trailing control to the far end.
+      <div
+        className={cn(
+          "flex min-w-0 items-center gap-2",
+          meta ? "lg:min-h-8.5" : "flex-1",
+        )}
+      >
+        <h1
+          className={cn(
+            "min-w-0 truncate font-heading font-semibold",
+            back ? "text-base" : "text-2xl tracking-tight",
+            leadsFromLg && "lg:text-2xl lg:tracking-tight",
+          )}
+        >
+          {title}
+        </h1>
+        {badge}
+      </div>
+    );
+
   return (
-    <header className={cn("flex items-center gap-2", className)}>
+    <header
+      className={cn(
+        "flex items-center gap-2",
+        // Two lines beside the arrow: the arrow and the actions stay on the
+        // title's line rather than floating between the two.
+        meta && "lg:items-start",
+        className,
+      )}
+    >
       {back && (
         <Link
           href={back.href}
@@ -84,24 +129,17 @@ export function PageHeader({
 
       {/* Untitled, the row still has to hold its height and push the trailing
           control to the far end, so the space stays even when nothing fills it. */}
-      {title === undefined ? (
+      {heading === null ? (
         <span aria-hidden="true" className="min-h-8.5 flex-1" />
-      ) : (
-        // The title takes only the width its words need, so a badge sits
-        // against them; the row it shares carries the `flex-1`, which is what
-        // still pushes a trailing control to the far end.
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <h1
-            className={cn(
-              "min-w-0 truncate font-heading font-semibold",
-              back ? "text-base" : "text-2xl tracking-tight",
-              leadsFromLg && "lg:text-2xl lg:tracking-tight",
-            )}
-          >
-            {title}
-          </h1>
-          {badge}
+      ) : meta ? (
+        <div className="flex min-w-0 flex-1 flex-col">
+          {heading}
+          <div className="hidden min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground lg:flex">
+            {meta}
+          </div>
         </div>
+      ) : (
+        heading
       )}
 
       {trailing}
