@@ -240,7 +240,7 @@ export function PasswordSignup({
       </div>
 
       {error && (
-        <p id={ERROR_ID} className="text-sm text-destructive">
+        <p id={ERROR_ID} role="alert" className="text-sm text-destructive">
           {error}
         </p>
       )}

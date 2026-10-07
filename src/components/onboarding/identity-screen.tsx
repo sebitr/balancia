@@ -123,9 +123,10 @@ export function IdentityScreen({
   /*
    * Where a refused address or code sends the caret back to. Both fields are
    * disabled while the request is out, which lets go of focus, so without
-   * this a refusal left the keyboard on nothing — and the message, which is
-   * not an alert here, unread. Described by the message once focused, it is
-   * read out with the field.
+   * this a refusal left the keyboard on nothing. Described by the message
+   * once focused, it is read out with the field — and the message is an
+   * alert as well, as on the sign-in form, because a passkey that fails has
+   * no field to send the caret to and was otherwise never read out at all.
    */
   const emailField = useRef<HTMLInputElement>(null);
   const codeField = useRef<HTMLInputElement>(null);
@@ -360,7 +361,7 @@ export function IdentityScreen({
       </div>
 
       {error && (
-        <p id={ERROR_ID} className="text-sm text-destructive">
+        <p id={ERROR_ID} role="alert" className="text-sm text-destructive">
           {error}
         </p>
       )}
