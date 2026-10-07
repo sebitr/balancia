@@ -184,10 +184,17 @@ const CARD =
  * vocabulary is eighteen codes long and an imported label can be anything at
  * all. What the reader needs is to tell the rows apart, not to learn that
  * groceries are permanently plum.
+ *
+ * The four categorical chart colours and then grey, and never `--chart-2`.
+ * That one is the accent — the "you" series, as the comment above the chart
+ * tokens in `globals.css` says — and a category drawn in it reads as the
+ * reader's own; the other four are the ones `src/app/token-contrast.test.ts`
+ * holds clear of every accent and every money colour. Past the fourth the
+ * rows share the grey: each has its name beside its bar, and a fifth hue
+ * would be one the test does not keep apart from anything.
  */
 const SLICE_COLOURS = [
   "var(--chart-1)",
-  "var(--chart-2)",
   "var(--chart-3)",
   "var(--chart-4)",
   "var(--chart-5)",

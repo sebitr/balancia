@@ -349,6 +349,64 @@ describe("the group statistics island", () => {
     expect(screen.getByText("Supermarket")).toBeInTheDocument();
   });
 
+  /*
+   * `--chart-2` is the accent — the "you" series — and the comment above the
+   * chart tokens in `globals.css` keeps it off anything categorical. Both
+   * statistics screens used to colour their second category with it, so a
+   * reader whose accent is mint saw Groceries drawn in the colour that means
+   * "gets back".
+   */
+  it("colours the categories from the categorical chart colours only", () => {
+    const slice = (category: string, amount: string) => ({
+      category,
+      known: true,
+      amount,
+      percent: 10,
+      children: [],
+      remainder: amount,
+    });
+    const entry = currency({
+      categories: [
+        slice("home", "600"),
+        slice("groceries", "500"),
+        slice("transport", "400"),
+        slice("restaurants", "300"),
+        slice("health", "200"),
+        slice("other", "100"),
+      ],
+    });
+    renderWithIntl(
+      <GroupStatistics
+        stats={stats({
+          ranges: [
+            {
+              key: "1y",
+              granularity: "month",
+              months: 12,
+              currencies: [entry],
+            },
+          ],
+        })}
+      />,
+    );
+
+    const card = screen.getByText("Categories").closest("div")!.parentElement!;
+    const bars = [...card.querySelectorAll<HTMLElement>("li > span > span")];
+    expect(bars).toHaveLength(6);
+    const colours = bars.map((bar) => bar.style.background);
+
+    expect(colours.slice(0, 4)).toEqual([
+      "var(--chart-1)",
+      "var(--chart-3)",
+      "var(--chart-4)",
+      "var(--chart-5)",
+    ]);
+    // The tail shares the neutral grey rather than borrowing a fifth hue.
+    expect(colours[4]).toBe(colours[5]);
+    // Neither on a bar nor on the dot beside a name.
+    expect(card.innerHTML).not.toContain("chart-2");
+  });
+
   it("leaves a category with nothing under it inert", () => {
     renderWithIntl(<GroupStatistics stats={stats()} />);
     expect(screen.getByRole("button", { name: /Other/ })).toBeDisabled();

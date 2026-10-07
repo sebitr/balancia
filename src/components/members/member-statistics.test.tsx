@@ -454,4 +454,50 @@ describe("the statistics island", () => {
     );
     expect(screen.getByText("Everything else")).toBeInTheDocument();
   });
+
+  /*
+   * `--chart-2` is the accent — the "you" series, and this screen's paid
+   * series — so the comment above the chart tokens in `globals.css` keeps it
+   * off anything categorical. The second category used to be drawn in it.
+   */
+  it("colours the categories from the categorical chart colours only", () => {
+    renderWithIntl(
+      <MemberStatistics
+        name="Nora"
+        viewingSelf
+        stats={stats({
+          ranges: [
+            {
+              key: "1y",
+              granularity: "month",
+              months: 12,
+              currencies: [
+                currency({
+                  categories: Array.from({ length: 6 }, (_, index) => ({
+                    category: null,
+                    amount: `${9000 - index * 100}`,
+                    percent: 10,
+                  })),
+                }),
+              ],
+            },
+          ],
+        })}
+      />,
+    );
+
+    const card = screen.getByText("Where your share went").closest("div")!;
+    const bars = [
+      ...card.querySelectorAll<HTMLElement>("li > span > span"),
+    ].map((bar) => bar.style.background);
+
+    expect(bars.slice(0, 4)).toEqual([
+      "var(--chart-1)",
+      "var(--chart-3)",
+      "var(--chart-4)",
+      "var(--chart-5)",
+    ]);
+    expect(bars[4]).toBe(bars[5]);
+    expect(card.innerHTML).not.toContain("chart-2");
+  });
 });
