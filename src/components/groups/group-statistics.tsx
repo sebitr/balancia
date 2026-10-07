@@ -218,9 +218,13 @@ export function GroupStatistics({ stats }: { stats: GroupStatsView }) {
     stats.ranges[0];
 
   return (
+    // `data-layout="wide"` asks the screen around this for the room the
+    // cards are laid out in from `lg` up — see `CurrencyBlock`. Below `lg`
+    // the screen does not read it and nothing here moves.
     <section
+      data-layout="wide"
       aria-labelledby="group-statistics"
-      className="flex flex-col gap-3.5"
+      className="flex flex-col gap-3.5 lg:gap-5"
     >
       <div className="flex items-center justify-between gap-3">
         <h2
@@ -258,7 +262,7 @@ export function GroupStatistics({ stats }: { stats: GroupStatsView }) {
         id={rangePanel}
         role="tabpanel"
         aria-labelledby={`${rangePanel}-${range}`}
-        className="flex flex-col gap-3.5"
+        className="flex flex-col gap-3.5 lg:gap-5"
       >
         {!selected || selected.currencies.length === 0 ? (
           <EmptyState
@@ -329,9 +333,24 @@ function CurrencyBlock({
     );
   }
 
+  /*
+   * One column on a phone. From `lg` up the same cards, in the same order, two
+   * to a row: the four figures across the top, then the money in and out
+   * beside the spend over time, then who carried it beside what it went on —
+   * the per-person and the per-category answers side by side — and the
+   * weekdays across the width under them.
+   *
+   * Row by row rather than as two columns of their own, because the cards
+   * stay in the order a phone reads them: two column wrappers would put the
+   * chart before the flows in the document, and a screen reader and a
+   * keyboard would meet a different screen at each width. A row is as tall as
+   * its taller card, and both stretch to it, so the pairs line up.
+   */
   return (
-    <div className="flex flex-col gap-3.5">
-      {showCurrency && <CurrencyHeading currency={entry.currency} />}
+    <div className="flex flex-col gap-3.5 lg:grid lg:grid-cols-2 lg:gap-5">
+      {showCurrency && (
+        <CurrencyHeading currency={entry.currency} className="lg:col-span-2" />
+      )}
       <StatStrip entry={entry} net={net} />
       <Flows entry={entry} net={net} onNet={onNet} />
       <SpendChart entry={entry} range={range} />
@@ -438,7 +457,14 @@ function StatStrip({
   return (
     // Borders per cell rather than `divide-*`: on a two-column grid the divide
     // utilities draw a line above the second cell of the first row too.
-    <dl className="grid grid-cols-2 overflow-hidden rounded-xl ring-1 ring-border">
+    //
+    // From `lg` up the four stand in a row across the width, each a tile of
+    // its own with the figure a step or two larger, as the board draws them:
+    // the box and its rules give way to the gap between the tiles. The figure
+    // is `text-xl` until `xl` because a 1024px window beside the sidebar
+    // leaves each tile about 140px, and "CHF 12,345.67" at `text-2xl` would
+    // be cut short there.
+    <dl className="grid grid-cols-2 overflow-hidden rounded-xl ring-1 ring-border lg:col-span-2 lg:grid-cols-4 lg:gap-4 lg:overflow-visible lg:rounded-none lg:ring-0">
       {cells.map((cell, index) => (
         <div
           key={cell.key}
@@ -446,12 +472,13 @@ function StatStrip({
             "flex min-h-[62px] flex-col justify-between gap-1.5 p-2.5",
             index < 2 && "border-b border-border",
             index % 2 === 0 && "border-r border-border",
+            "lg:gap-2 lg:rounded-[17px] lg:border-0 lg:bg-card lg:p-3.5 lg:shadow-[0_0_0_1px_var(--border)]",
           )}
         >
           <dt className="text-2xs leading-tight font-semibold tracking-[0.04em] text-muted-foreground uppercase">
             {t(cell.key)}
           </dt>
-          <dd className="truncate text-base font-semibold tracking-[-0.015em] tabular-nums">
+          <dd className="truncate text-base font-semibold tracking-[-0.015em] tabular-nums lg:text-xl xl:text-2xl xl:tracking-[-0.02em]">
             {cell.value}
           </dd>
         </div>
@@ -641,7 +668,9 @@ function SpendChart({
           role="img"
           aria-label={t("chartLabel", { count: entry.buckets.length })}
           onPointerLeave={() => setHovered(null)}
-          className="relative mt-7 flex h-28 items-end gap-[3px] border-b border-border"
+          // Taller from `lg` up, where the card has half the width of the
+          // screen to be read across and the bars can show it.
+          className="relative mt-7 flex h-28 items-end gap-[3px] border-b border-border lg:h-40"
         >
           {/* The mean, drawn where it falls rather than written out: the
               figure itself is already in the caption above. */}
@@ -1053,7 +1082,10 @@ function Rhythm({ entry }: { entry: GroupCurrencyStatsView }) {
   const day = entry.weekdays[active];
 
   return (
-    <div className={CARD}>
+    // The whole width from `lg` up: it is the one card left over once the
+    // others have paired off, and seven days read better spread out than
+    // squeezed into half a row beside nothing.
+    <div className={cn(CARD, "lg:col-span-2")}>
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-sm font-medium">{t("rhythmTitle")}</h3>
         <span className="shrink-0 text-xs text-muted-foreground">
@@ -1081,7 +1113,7 @@ function Rhythm({ entry }: { entry: GroupCurrencyStatsView }) {
             day: long(entry.weekdays[busiest].weekday),
           })}
           onPointerLeave={() => setHovered(null)}
-          className="mt-7 flex gap-1.5"
+          className="mt-7 flex gap-1.5 lg:gap-4"
         >
           {entry.weekdays.map((weekday, position) => (
             <div
@@ -1099,7 +1131,7 @@ function Rhythm({ entry }: { entry: GroupCurrencyStatsView }) {
               </span>
               {/* A fixed-height track, not a flex sibling of the labels: a
                   percentage height needs a resolved one to be a percentage of. */}
-              <span className="flex h-13 w-full items-end">
+              <span className="flex h-13 w-full items-end lg:h-24">
                 <span
                   className="w-full rounded-[3px]"
                   style={{
@@ -1230,9 +1262,21 @@ function RecordsCard({
         </span>
       </div>
 
-      <dl className="flex flex-col divide-y divide-border">
-        {rows.map((row) => (
-          <div key={row.key} className="flex items-center gap-3 py-2">
+      {/* Two facts to a row from `lg` up, where the card runs the width of
+          the screen: one fact across it would put each figure a hand's width
+          from the words it belongs to. A rule above every row but the first,
+          drawn per row rather than with `divide-*`, because from `lg` the
+          second fact stands beside the first and needs none. */}
+      <dl className="flex flex-col lg:grid lg:grid-cols-2 lg:gap-x-8">
+        {rows.map((row, index) => (
+          <div
+            key={row.key}
+            className={cn(
+              "flex items-center gap-3 py-2",
+              index > 0 && "border-t border-border",
+              index === 1 && "lg:border-t-0",
+            )}
+          >
             <div className="min-w-0 flex-1">
               <dt className="text-sm font-medium">{row.label}</dt>
               <dd className="truncate text-xs text-muted-foreground">

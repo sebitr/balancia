@@ -466,3 +466,31 @@ describe("the group statistics island", () => {
     expect(screen.getByText("23 days")).toBeInTheDocument();
   });
 });
+
+/**
+ * From `lg` up the cards stand two to a row under the four figures. The grid
+ * is the same cards in the same order, so all a test can usefully hold is that
+ * the screen is asked for the room, and that nothing is laid out side by side
+ * below `lg` — the phone's column is the one every other test here reads.
+ */
+describe("the group statistics at a desk's width", () => {
+  it("asks for the wide column and keeps every grid for lg and up", () => {
+    const { container } = renderWithIntl(<GroupStatistics stats={stats()} />);
+
+    const section = container.querySelector<HTMLElement>(
+      'section[data-layout="wide"]',
+    );
+    expect(section).not.toBeNull();
+
+    const figures = screen.getByText("Total spent").closest("dl")!;
+    const block = figures.parentElement!;
+    // Two figures to a row on a phone, four from `lg`.
+    expect(figures.className).toMatch(/(^|\s)grid-cols-2(\s|$)/);
+    expect(figures.className).toMatch(/(^|\s)lg:grid-cols-4(\s|$)/);
+    // The block is one column on a phone; its grid waits for `lg`.
+    expect(block.className).toMatch(/(^|\s)flex-col(\s|$)/);
+    for (const name of block.className.split(/\s+/)) {
+      if (name.includes("grid")) expect(name).toMatch(/^lg:/);
+    }
+  });
+});
