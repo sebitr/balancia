@@ -682,7 +682,7 @@
     "kind_expense": "Dépenses",
     "kind_revenue": "Revenus",
     "kind_settlement": "Remboursements",
-    "filterBy": "N’afficher que {category}",
+    "filterBy": "Afficher uniquement {category}",
     "removeFilter": "Ne plus filtrer par {category}",
     "searchLabel": "Rechercher une transaction",
     "searchPlaceholder": "Rechercher une transaction",
@@ -773,7 +773,7 @@
     "yourAccount": "Ton compte",
     "close": "Fermer les paramètres",
     "backToSettings": "Retour aux paramètres",
-    "signedInTo": "Connecté à {instance} en tant que {email}",
+    "signedInTo": "Sur {instance}, avec le compte {email}",
     "groupAccount": "Compte",
     "groupPreferences": "Préférences",
     "groupData": "Données",
@@ -1003,7 +1003,7 @@
     "actionsNamed": {
       "participant": {
         "created": "a ajouté {name} au groupe",
-        "updated": "a mis à jour les informations de {name}",
+        "updated": "a mis à jour les informations concernant {name}",
         "removed": "a retiré {name} du groupe",
         "restored": "a rétabli {name} dans le groupe"
       },
@@ -1061,7 +1061,7 @@
     "betweenOthers": "Entre les autres",
     "settledUp": "Soldé",
     "paysSentence": "{from} paie {to}",
-    "recordFor": "Enregistrer le remboursement de {from} à {to}",
+    "recordFor": "Enregistrer le remboursement versé par {from} à {to}",
     "remindPerson": "Relancer {name}",
     "remindedWhen": "Relance envoyée {when}",
     "allSettledTitle": "Le groupe est soldé",
@@ -1867,7 +1867,7 @@
       "titleInviter": "{inviter} t’invite dans {group}. Lequel de ces noms est le tien ?",
       "title": "On t’invite dans {group}. Lequel de ces noms est le tien ?",
       "sub": "Tout le groupe reçoit ce même lien, il ne sait donc pas qui l’a ouvert. Choisis ton nom et son solde devient le tien.",
-      "subSignedIn": "Connecté en tant que {name}. Choisis ton nom et son solde rejoint ce compte.",
+      "subSignedIn": "Tu utilises le compte {name}. Choisis ton nom et son solde rejoint ce compte.",
       "rowOwes": "<money>doit {amount}</money> · {count, plural, =0 {aucune dépense} one {# dépense} other {# dépenses}}",
       "rowGetsBack": "<money>récupère {amount}</money> · {count, plural, =0 {aucune dépense} one {# dépense} other {# dépenses}}",
       "rowSettled": "{count, plural, =0 {Aucune dépense pour l’instant} one {<money>soldé</money> · # dépense} other {<money>soldé</money> · # dépenses}}",
@@ -1879,9 +1879,9 @@
       "titleSignedIn": "{name}, tu rejoins {group} ?",
       "titleNew": "Comment t’appelle-t-on dans {group} ?",
       "sub": "Un compte garde {group}, ton solde et {count, plural, =0 {tout ce que tu ajoutes} one {la dépense à ton nom} other {les # dépenses à ton nom}} sur n’importe quel appareil, pas seulement dans ce navigateur.",
-      "subSignedIn": "Connecté en tant que {account}. Ton solde et {count, plural, =0 {tout ce que tu ajoutes} one {la dépense à ton nom} other {les # dépenses à ton nom}} rejoignent ce compte.",
+      "subSignedIn": "Tu utilises le compte {account}. Ton solde et {count, plural, =0 {tout ce que tu ajoutes} one {la dépense à ton nom} other {les # dépenses à ton nom}} rejoignent ce compte.",
       "subNew": "Tu commences sans rien devoir ni récupérer. Un compte garde {group} sur n’importe quel appareil, pas seulement dans ce navigateur.",
-      "subNewSignedIn": "Connecté en tant que {account}. Tu commences sans rien devoir ni récupérer.",
+      "subNewSignedIn": "Tu utilises le compte {account}. Tu commences sans rien devoir ni récupérer.",
       "nameLabel": "Ton nom",
       "namePlaceholder": "Ton nom",
       "createAccount": "Créer un compte",
@@ -2099,7 +2099,7 @@
   "registerDone": {
     "metaTitle": "Compte créé",
     "title": "C’est fait, {name}",
-    "body": "Ton activité d’invité appartient désormais à ton compte, et le groupe te voit comme membre de {group}.",
+    "body": "Ton activité d’invité appartient désormais à ton compte, et {group} te compte parmi ses membres.",
     "memberSince": "Membre depuis aujourd’hui",
     "expenseYouAdded": "La dépense que tu as ajoutée",
     "kept": "Conservée",
@@ -2155,7 +2155,7 @@
     "balanceCurrencyLabel": "Ce solde est en",
     "balanceCurrency": "Devise du solde",
     "modeFixedShort": "Figé dès que le groupe existe.",
-    "timezoneFootnote": "L’heure de {city}, d’après cet appareil, détermine ce qui compte comme aujourd’hui pour les nouvelles transactions, quand les dépenses récurrentes sont ajoutées et les heures affichées dans Activité. À changer dans les paramètres du groupe.",
+    "timezoneFootnote": "L’heure à {city}, d’après cet appareil, détermine ce qui compte comme aujourd’hui pour les nouvelles transactions, quand les dépenses récurrentes sont ajoutées et les heures affichées dans Activité. À changer dans les paramètres du groupe.",
     "iconTitle": "Icône du groupe",
     "chooseIcon": "Choisir une icône",
     "iconColorLabel": "Couleur",
@@ -2270,7 +2270,7 @@
     "revokeBody": "Tout ce qui l’utilise encore cessera de fonctionner immédiatement, et elle ne pourra pas être restaurée. Tu pourras toujours en créer une autre.",
     "revokeConfirm": "Révoquer",
     "revokeCancel": "Garder cette clé",
-    "revokedToast": "{name} révoquée",
+    "revokedToast": "Clé « {name} » révoquée",
     "revokeFailed": "Cette clé n’a pas pu être révoquée."
   },
   "importWizard": {
@@ -2366,7 +2366,7 @@
     "revoked": "Le lien personnel pour {name} a été révoqué",
     "revokeFailed": "Le lien n’a pas pu être révoqué.",
     "copyNow": "Copie ce lien maintenant",
-    "copyWarning": "Affiché une seule fois — Balancia n’en garde qu’une empreinte. Toute personne qui le détient peut agir en tant que {name} : voir le groupe, ajouter des dépenses, enregistrer des remboursements.",
+    "copyWarning": "Affiché une seule fois — Balancia n’en garde qu’une empreinte. Toute personne qui le détient devient {name} : elle peut voir le groupe, ajouter des dépenses, enregistrer des remboursements.",
     "copyLink": "Copier le lien personnel",
     "copiedIt": "Je l’ai copié",
     "linkCopied": "Lien personnel copié",
@@ -2448,7 +2448,7 @@
     "youOwePeople": "{count, plural, =0 {Tu ne dois rien} one {Tu dois à # personne} other {Tu dois à # personnes}}",
     "stillToPay": "{count, plural, =0 {Plus rien à rembourser} one {Reste à rembourser à # personne} other {Reste à rembourser à # personnes}}",
     "entriesWith": "Transactions avec {name}",
-    "entriesWithCaption": "Tout ce que {name} a payé ou partagé",
+    "entriesWithCaption": "Tout ce qu’a payé ou partagé {name}",
     "entriesYours": "Tes transactions",
     "entriesYoursCaption": "Tout ce que tu as payé ou partagé",
     "statistics": "Statistiques",
@@ -2916,9 +2916,9 @@
     "settlementUpdatedOutgoing": "{actor} a modifié ton remboursement à {counterpart}",
     "settlementDeletedIncoming": "{actor} a supprimé un remboursement en ta faveur",
     "settlementDeletedOutgoing": "{actor} a supprimé ton remboursement à {counterpart}",
-    "recurringGenerated": "{description} a été ajoutée automatiquement",
+    "recurringGenerated": "Ajout automatique : {description}",
     "importCompleted": "Import terminé : {imported} ajoutées, {skipped} ignorées, {failed} en échec",
-    "reminderTitle": "{amount} dans {group}"
+    "reminderTitle": "{amount} à régler pour {group}"
   },
   "notificationsPage": {
     "metaTitle": "Notifications",
@@ -2964,7 +2964,7 @@
     "snoozedNotice": "{group} est en pause jusqu’à demain.",
     "resume": "Reprendre",
     "resumed": "{group} est réactivé",
-    "mute": "Couper les notifications de {group}",
+    "mute": "Couper les notifications du groupe {group}",
     "muted": "{group} coupé",
     "mutedNotice": "{group} est coupé.",
     "unmute": "Réactiver",
@@ -3166,7 +3166,7 @@
       "gentle4": "Un petit détail reste à régler pour {group} : envoyer {amount} à {name}.",
       "gentle5": "{name} a avancé les frais pour {group}. Tu lui dois encore {amount}.",
       "gentle6": "Un petit paiement à {name}, et tu n’auras plus à y penser : {amount}.",
-      "gentle7": "Les comptes de {group} sont presque réglés. De ton côté, il suffit d’envoyer {amount} à {name}.",
+      "gentle7": "Pour {group}, les comptes sont presque réglés. De ton côté, il suffit d’envoyer {amount} à {name}.",
       "gentle8": "Rien ne presse : tu as encore {amount} à envoyer à {name}.",
       "gentle9": "Un remboursement reste en attente pour {group} : {amount} à envoyer à {name}.",
       "gentle10": "Quand tu auras une minute, pense à {name} : tu lui dois encore {amount}.",
@@ -3176,7 +3176,7 @@
       "gentle14": "Un petit solde attend encore son tour : {amount} pour {name}.",
       "gentle15": "Quand tu auras un moment, tu dois encore {amount} à {name} pour {group}.",
       "gentle16": "Petit rappel pour {group} : tu dois encore {amount} à {name}.",
-      "gentle17": "Quand ça t’arrange, tu peux envoyer {amount} à {name} et boucler les comptes de {group}.",
+      "gentle17": "Quand ça t’arrange, tu peux envoyer {amount} à {name} et boucler les comptes pour {group}.",
       "gentle18": "Petit rappel au passage : tu as encore {amount} à rembourser à {name}.",
       "gentle19": "Il ne te reste plus qu’une chose à régler pour {group} : envoyer {amount} à {name}.",
       "gentle20": "Rien ne presse : tu peux envoyer {amount} à {name} quand ça t’arrange.",
@@ -3194,7 +3194,7 @@
       "dry8": "{group}, c’est fini. Les comptes, pas encore : {amount} à envoyer à {name}.",
       "dry9": "Dossier {group} toujours ouvert : {amount} à envoyer à {name}.",
       "dry10": "Une ligne comptable à ton nom : {amount} à envoyer à {name}.",
-      "dry11": "Un dernier poste de {group} prend la poussière : {amount} à envoyer à {name}.",
+      "dry11": "Dans {group}, un dernier poste prend la poussière : {amount} à envoyer à {name}.",
       "dry12": "Deux options : envoyer {amount} à {name}, ou continuer à lire les relances.",
       "dry13": "Classé dans les affaires à régler : {amount}, à verser à {name}.",
       "dry14": "{name} a gardé le reçu. Montant dû : {amount}.",
@@ -3210,11 +3210,11 @@
       "dry24": "Situation inchangée : tu dois toujours {amount} à {name} pour {group}.",
       "cheeky1": "Ta dette envers {name} fait preuve d’une patience remarquable : {amount}.",
       "cheeky2": "{group}, c’était sympa. Le dernier chapitre, moins passionnant : {amount} à envoyer à {name}.",
-      "cheeky3": "Cette relance s’autodétruira dès que {name} aura reçu {amount}.",
-      "cheeky4": "Personne ne veut être la dernière ligne ouverte de {group}. Envoie {amount} à {name}, et c’est réglé.",
+      "cheeky3": "Cette relance s’autodétruira dès réception de {amount} par {name}.",
+      "cheeky4": "Dans {group}, personne ne veut être la dernière ligne ouverte. Envoie {amount} à {name}, et c’est réglé.",
       "cheeky5": "Deux choses survivent à un voyage : les photos et les dettes. La tienne : {amount} à envoyer à {name}.",
       "cheeky6": "Recouvrement de créances, version Balancia : {amount} à envoyer à {name}, sans casser de rotules.",
-      "cheeky7": "{amount} à envoyer à {name}, le seul souvenir de {group} dont personne ne veut.",
+      "cheeky7": "{amount} à envoyer à {name} : dans {group}, le seul souvenir dont personne ne veut.",
       "cheeky8": "Coup de théâtre : {group}, ce n’est pas fini. Tu dois encore {amount} à {name}.",
       "cheeky9": "Fait scientifique : envoyer {amount} à {name} prend moins de temps que de lire ce message.",
       "cheeky10": "Succès débloqué : devoir encore {amount} à {name} depuis {group}.",
@@ -3227,7 +3227,7 @@
       "cheeky17": "Une stratégie audacieuse : envoyer {amount} à {name} et voir ce qui se passe.",
       "cheeky18": "À toi de jouer. {name} attend toujours {amount}.",
       "cheeky19": "Quelque part, {name} mène tranquillement sa vie tout en attendant encore {amount}.",
-      "cheeky20": "Tu arrives au moment de {group} où il faut vraiment payer : {amount} à {name}.",
+      "cheeky20": "Dans {group}, tu arrives au moment où il faut vraiment payer : {amount} à {name}.",
       "cheeky21": "Ça pourrait être la dernière relance. Il suffit d’envoyer {amount} à {name}.",
       "cheeky22": "Petite quête du jour : envoyer {amount} à {name}. Récompense : une dette en moins."
     },
@@ -3314,10 +3314,10 @@
         "percentage": "Les pourcentages doivent totaliser 100."
       },
       "inputLabels": {
-        "equal": "{you, select, yes {Ta part} other {Part de {name}}}",
-        "shares": "{you, select, yes {Tes parts} other {Parts de {name}}}",
-        "exact": "{you, select, yes {Ton montant exact} other {Montant exact de {name}}}",
-        "percentage": "{you, select, yes {Ton pourcentage} other {Pourcentage de {name}}}"
+        "equal": "{you, select, yes {Ta part} other {Part pour {name}}}",
+        "shares": "{you, select, yes {Tes parts} other {Parts pour {name}}}",
+        "exact": "{you, select, yes {Ton montant exact} other {Montant exact pour {name}}}",
+        "percentage": "{you, select, yes {Ton pourcentage} other {Pourcentage pour {name}}}"
       },
       "summary": {
         "equalEach": "Partagé à parts égales entre {count} · {amount} chacun",
@@ -3410,7 +3410,7 @@
       "noOccurrences": "Cette règle ne se produit jamais.",
       "endsBeforeFirst": "La date de fin tombe avant la première date.",
       "presetCustom": "Personnalisé…",
-      "timezoneNote": "Créé à l’heure de {timezone}."
+      "timezoneNote": "Les dates suivent le fuseau horaire {timezone}."
     },
     "scan": {
       "camera": "Appareil photo",
@@ -3652,7 +3652,7 @@
     "qrSwiss": "QR-facture suisse — ouvre ton app bancaire et scanne",
     "qrEpc": "Girocode — ouvre ton app bancaire et scanne",
     "qrNoneAddress": "{name} a un compte suisse mais n’a pas ajouté l’adresse exigée par la norme QR-facture.",
-    "qrNoneQrIban": "La banque de {name} émet des références de facture que Balancia ne peut pas générer, il n’y a donc aucun code à scanner.",
+    "qrNoneQrIban": "{name} a une banque qui émet des références de facture que Balancia ne peut pas générer : il n’y a donc aucun code à scanner.",
     "qrNoneCurrency": "Un code de paiement ne peut pas porter des {currency}.",
     "methodFields": {
       "wise": {

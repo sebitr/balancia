@@ -6,6 +6,7 @@ import type {
   ReminderPayload,
 } from "./types";
 import en from "../../../messages/en.json";
+import fr from "../../../messages/fr.json";
 
 /**
  * What a notification says when it arrives.
@@ -17,10 +18,13 @@ import en from "../../../messages/en.json";
  * the one being asserted.
  */
 
-const translate = (key: string, values?: Record<string, string | number>) => {
-  const template = (en.notifications as Record<string, string>)[key];
-  return template.replace(/\{(\w+)\}/g, (_, name) => String(values?.[name]));
-};
+const translateIn =
+  (catalogue: typeof en | typeof fr) =>
+  (key: string, values?: Record<string, string | number>) => {
+    const template = (catalogue.notifications as Record<string, string>)[key];
+    return template.replace(/\{(\w+)\}/g, (_, name) => String(values?.[name]));
+  };
+const translate = translateIn(en);
 
 function entry(payload: ReminderPayload): NotificationEntry {
   return {
@@ -74,6 +78,25 @@ describe("a reminder arriving", () => {
       "en",
     );
 
+    expect(rendered.title.length).toBeLessThan(48);
+  });
+
+  /**
+   * French said "24,00 € dans Portugal, March": a figure and a place, and not
+   * what either has to do with the reader. It says what is theirs to settle,
+   * and for which group.
+   */
+  it("says in French what is left to settle, and for which group", () => {
+    const rendered = renderNotification(
+      entry(reminder([{ amount: "2400", currency: "EUR" }])),
+      translateIn(fr),
+      "fr",
+    );
+
+    // Intl spaces the euro sign with a narrow non-breaking space.
+    expect(rendered.title.replace(/[  ]/g, " ")).toBe(
+      "24,00 € à régler pour Portugal, March",
+    );
     expect(rendered.title.length).toBeLessThan(48);
   });
 
@@ -502,5 +525,40 @@ describe("a payment being changed or deleted", () => {
     );
 
     expect(rendered.sentence).toBe("Adrien changed your repayment to Chloé");
+  });
+});
+
+/**
+ * French wrote "{description} a été ajoutée automatiquement", agreeing with a
+ * "dépense" the sentence never named — and "Loyer a été ajoutée" is wrong for
+ * the commonest recurring expense there is. A noun phrase agrees with nothing.
+ */
+describe("a recurring expense added on its own", () => {
+  const rent: NotificationEntry = {
+    id: "n5",
+    groupId: "g1",
+    type: "recurring.generated",
+    category: "recurring",
+    entityType: "expense",
+    entityId: "e9",
+    actorLabel: null,
+    payload: {
+      kind: "recurring",
+      groupName: "Coloc",
+      description: "Loyer",
+      amount: "120000",
+      currency: "EUR",
+    },
+    createdAt: new Date("2026-08-14T09:00:00Z"),
+    readAt: null,
+  };
+
+  it("says so in either language without agreeing with the rule's name", () => {
+    expect(renderNotification(rent, translate, "en").sentence).toBe(
+      "Loyer was added automatically",
+    );
+    expect(
+      renderNotification(rent, translateIn(fr), "fr").sentence,
+    ).toBe("Ajout automatique : Loyer");
   });
 });
