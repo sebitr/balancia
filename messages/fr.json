@@ -1069,7 +1069,7 @@
     "lastSettled": "Derniers remboursements",
     "backToGroup": "Retour au groupe",
     "iPaid": "J’ai remboursé {name}",
-    "iWasPaid": "J’ai reçu le remboursement",
+    "iWasPaid": "Remboursement reçu",
     "recordForThem": "Enregistrer à sa place",
     "heroOwing": "Tu dois",
     "heroReceiving": "Tu récupères",
@@ -3383,10 +3383,10 @@
     "repeat": {
       "title": "Répéter",
       "frequency": {
-        "weekly": "Chaque semaine",
-        "monthly": "Chaque mois",
-        "yearly": "Chaque année",
-        "daily": "Chaque jour"
+        "weekly": "Semaine",
+        "monthly": "Mois",
+        "yearly": "Année",
+        "daily": "Jour"
       },
       "ends": "Fin",
       "never": "Jamais",
