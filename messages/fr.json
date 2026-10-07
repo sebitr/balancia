@@ -564,6 +564,8 @@
     "pickerCount": "{shown} sur {total, plural, one {# groupe} other {# groupes}}",
     "pickerSearchLabel": "Rechercher dans tes groupes",
     "pickerSearchPlaceholder": "Rechercher un groupe",
+    "pickerMove": "Naviguer",
+    "pickerChoose": "Choisir",
     "peopleCount": "{count, plural, one {# personne} other {# personnes}}",
     "settledWord": "Soldé",
     "noExpensesWord": "Pas encore de dépense",
@@ -1108,6 +1110,7 @@
   },
   "settleUp": {
     "title": "Régler les comptes",
+    "recordRepayment": "Enregistrer un remboursement",
     "clearsGroup": "{count, plural, one {# remboursement solde le groupe} other {# remboursements soldent le groupe}}",
     "clearsCurrency": "{count, plural, one {# remboursement solde cette devise} other {# remboursements soldent cette devise}}",
     "betweenOthers": "Entre les autres",
@@ -3286,6 +3289,7 @@
   "addEntry": {
     "back": "Retour",
     "reload": "Recharger",
+    "saveKeys": "<keys></keys> pour enregistrer",
     "titles": {
       "expense": "Ajouter une dépense",
       "income": "Ajouter un revenu",
@@ -3519,6 +3523,8 @@
       "outcomeUnder": "Remboursement partiel — {from} devra encore {amount} à {to}.",
       "outcomeOver": "Plus que dû — {from} devra {amount} à {to}.",
       "outcomeExact": "{from} et {to} seront à jour.",
+      "outcomeExactIn": "{from} et {to} seront à jour en {currency}.",
+      "onlyRecords": "Balancia ne fait qu’enregistrer le remboursement. Il ne déplace jamais l’argent lui-même.",
       "outcomeOtherCurrency": "Payé en {currency} — {from} doit toujours {amount} à {to}.",
       "someoneElse": "Quelqu’un d’autre",
       "changeWhoPays": "Changer qui paie",

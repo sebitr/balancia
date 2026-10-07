@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactElement, ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown } from "lucide-react";
 import { ExchangeRateField } from "@/components/money/exchange-rate-field";
@@ -50,6 +51,7 @@ export function AmountCard({
   editable = true,
   onAmountChange,
   onOpenCurrency,
+  currencyChip = (chip) => chip,
   locale,
 }: {
   label: string;
@@ -68,6 +70,12 @@ export function AmountCard({
   /** Raw field text; the caller runs it through `sanitiseAmount`. */
   onAmountChange: (next: string) => void;
   onOpenCurrency: () => void;
+  /**
+   * How the currency chip is put on the card: as it is, opening the currency
+   * sheet, unless the form wraps it. The entry dialog on a desk makes it the
+   * trigger of a popover that holds the list, anchored to the chip.
+   */
+  currencyChip?: (chip: ReactElement) => ReactNode;
   locale: string;
 }) {
   const t = useTranslations("addEntry.amount");
@@ -168,30 +176,32 @@ export function AmountCard({
             "usually" was being enforced as "only": money handed back in cash
             on the trip, in the currency that was to hand, had no way to be
             recorded as what it was. */}
-        <button
-          type="button"
-          onClick={onOpenCurrency}
-          ref={chipRef}
-          // The code is read together with the figure beside it, so it is
-          // sized to be read from the same distance — the top of the scale
-          // rather than the bottom of it, and the chip grown to hold it. When
-          // the figure has to shrink the chip goes with it, and `tap-target`
-          // keeps the finger its 44px however small the pill is drawn.
-          style={{ fontSize: chipSize }}
-          // Every length in the pill is in `em`, so the one size carries the
-          // whole of it: 2em is the 48px it stands at beside a full-size
-          // figure, 0.583em the 14px of padding, 0.333em the 8px between flag,
-          // code and chevron.
-          className="tap-target inline-flex h-[2em] shrink-0 items-center gap-[0.333em] rounded-full border border-border bg-wash-2 px-[0.583em] leading-none font-semibold tracking-[-0.02em] whitespace-nowrap transition-colors active:bg-wash-4"
-        >
-          {flag && (
-            <span aria-hidden="true" className="text-[0.833em] leading-none">
-              {flag}
-            </span>
-          )}
-          {currency}
-          <ChevronDown aria-hidden="true" className="size-[0.75em]" />
-        </button>
+        {currencyChip(
+          <button
+            type="button"
+            onClick={onOpenCurrency}
+            ref={chipRef}
+            // The code is read together with the figure beside it, so it is
+            // sized to be read from the same distance — the top of the scale
+            // rather than the bottom of it, and the chip grown to hold it. When
+            // the figure has to shrink the chip goes with it, and `tap-target`
+            // keeps the finger its 44px however small the pill is drawn.
+            style={{ fontSize: chipSize }}
+            // Every length in the pill is in `em`, so the one size carries the
+            // whole of it: 2em is the 48px it stands at beside a full-size
+            // figure, 0.583em the 14px of padding, 0.333em the 8px between flag,
+            // code and chevron.
+            className="tap-target inline-flex h-[2em] shrink-0 items-center gap-[0.333em] rounded-full border border-border bg-wash-2 px-[0.583em] leading-none font-semibold tracking-[-0.02em] whitespace-nowrap transition-colors active:bg-wash-4"
+          >
+            {flag && (
+              <span aria-hidden="true" className="text-[0.833em] leading-none">
+                {flag}
+              </span>
+            )}
+            {currency}
+            <ChevronDown aria-hidden="true" className="size-[0.75em]" />
+          </button>,
+        )}
       </div>
 
       {needsRate && baseCurrency && (
