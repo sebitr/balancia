@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -19,6 +19,7 @@ import {
 } from "@/components/dashboard/add-expense-sheet";
 import { POP } from "@/components/motion/transitions";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { Kbd, useModifierKey } from "@/components/ui/kbd";
 import { cn } from "@/lib/utils";
 import {
   openCommandPalette,
@@ -381,6 +382,7 @@ function ChooseGroupAdd() {
       icon: entry.icon,
       iconColor: entry.iconColor,
       lastActivityAt: entry.lastActivityAt,
+      participantCount: entry.participantCount,
     }))
     .sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt));
 
@@ -439,20 +441,7 @@ function Rule() {
 }
 
 /** The platform's spelling of ⌘K: a Mac's command key, everyone else's Ctrl. */
-const subscribeToNothing = () => () => {};
-
 function ShortcutHint() {
-  const mac = useSyncExternalStore(
-    subscribeToNothing,
-    () => /Mac|iPhone|iPad/.test(navigator.platform),
-    () => true,
-  );
-  return (
-    <kbd
-      aria-hidden="true"
-      className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-md bg-card px-1 font-mono text-2xs font-medium text-muted-foreground shadow-[inset_0_0_0_1px_var(--border),0_1px_0_var(--border)]"
-    >
-      {mac ? "⌘K" : "Ctrl K"}
-    </kbd>
-  );
+  const modifier = useModifierKey();
+  return <Kbd aria-hidden="true">{modifier === "⌘" ? "⌘K" : "Ctrl K"}</Kbd>;
 }

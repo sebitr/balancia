@@ -6,8 +6,8 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { listQuery, withQuery } from "@/components/expenses/list-query";
 import { AddEntryForm, type AddEntryFormProps } from "./add-entry-form";
 import { draftFields, type EntryDraftFields } from "./draft-fields";
-import { RESUME_PARAM, repeatsOf, sheetOf } from "./drawer-fragment";
-import { ENTRY_SHEET_CLASS, openOnAmount } from "./entry-sheet";
+import { RESUME_PARAM, repeatsOf, sheetOf, typeOf } from "./drawer-fragment";
+import { ENTRY_DESK, ENTRY_SHEET_CLASS, openOnAmount } from "./entry-sheet";
 import { settleIntentOf, settlePrefill } from "./settle-intent";
 import { useFragmentParams } from "./use-fragment-params";
 import { loadDraft } from "@/lib/offline/drafts";
@@ -60,7 +60,7 @@ export function AddEntryDrawer({
   ...form
 }: Omit<
   AddEntryFormProps,
-  "draft" | "prefill" | "openSheet" | "startRepeating"
+  "draft" | "prefill" | "openSheet" | "startRepeating" | "startType"
 > & {
   /**
    * Where leaving leads — saved or dismissed, it is the same way out.
@@ -205,6 +205,9 @@ export function AddEntryDrawer({
   const openSheet = params === null ? undefined : sheetOf(params);
   // The Recurring screen's way in: the same form, facing the other way.
   const startRepeating = params !== null && repeatsOf(params);
+  // Settle up's: the Repayment tab, nobody picked. A stated debt says more
+  // and wins, which the form sees to.
+  const startType = params === null ? undefined : typeOf(params);
   const filters = params === null ? "" : listQuery(params);
 
   return (
@@ -215,8 +218,24 @@ export function AddEntryDrawer({
       <SheetContent
         side="bottom"
         showCloseButton={false}
+        // A dialog from `lg`: see `ENTRY_SHEET_CLASS`. Esc closes it as it
+        // closes the sheet, through the same dismissal — and what was typed
+        // is the draft either way, written as the fields settle rather than
+        // on the way out (see `draftable` on the form).
+        desk={ENTRY_DESK}
         className={ENTRY_SHEET_CLASS}
         onOpenAutoFocus={openOnAmount}
+        // A field that closes itself on Esc takes the key, and the dialog
+        // stays: the split's new-person name, which is on the dialog itself
+        // on a desk rather than in a sheet above it.
+        onEscapeKeyDown={(event) => {
+          if (
+            event.target instanceof Element &&
+            event.target.closest("[data-own-escape]")
+          ) {
+            event.preventDefault();
+          }
+        }}
       >
         {draft !== undefined && (
           <AddEntryForm
@@ -225,6 +244,7 @@ export function AddEntryDrawer({
             draft={draft}
             prefill={prefill}
             startRepeating={startRepeating}
+            startType={startType}
             // What the link asked for belongs to the first look. A reload is
             // for reading the entry as it now stands, not for replaying it.
             openSheet={reloads === 0 ? openSheet : undefined}

@@ -1,8 +1,10 @@
 import { getTranslations } from "next-intl/server";
 import {
+  ENTRY_DESK,
   ENTRY_SHEET_CLASS,
   EntryFormSkeleton,
 } from "@/components/entries/entry-sheet";
+import { deskDialogClass } from "@/components/ui/dialog-size";
 import { cn } from "@/lib/utils";
 
 /**
@@ -28,6 +30,10 @@ import { cn } from "@/lib/utils";
  * next, and it carries no scrim: the group behind it is now free to render, and
  * dimming it for the moment before the real drawer does so itself would be a
  * flicker rather than a transition.
+ *
+ * On a desk that is the dialog, from the same classes, and held to a height
+ * there: the dialog takes its form's height, and three bars of skeleton that
+ * became a form twice as tall would be the dialog growing under the reader.
  */
 export default async function EntryLoading() {
   const t = await getTranslations("common");
@@ -39,6 +45,8 @@ export default async function EntryLoading() {
       className={cn(
         ENTRY_SHEET_CLASS,
         "fixed inset-x-0 bottom-0 z-50 flex flex-col gap-5 border-t px-4 pt-6",
+        deskDialogClass(ENTRY_DESK),
+        "lg:min-h-[min(36rem,calc(100dvh-5rem))] lg:px-5",
       )}
     >
       <EntryFormSkeleton />

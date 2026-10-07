@@ -22,6 +22,10 @@ import type { EntryType } from "./entry-logic";
  * Its corners are derived rather than eyeballed: a rounded box inset by `p`
  * inside another only looks concentric when the inner radius is the outer one
  * minus `p`. A literal value here drifts the moment `--radius` is retuned.
+ *
+ * On a desk the three sit in the dialog's title row, beside the title, each as
+ * wide as its word: the drawer's full-width row under the title was the
+ * phone's answer to a screen too narrow to hold both on one line.
  */
 
 export const ALL_ENTRY_TYPES: readonly EntryType[] = [
@@ -50,6 +54,7 @@ export function EntryTypeTabs({
   onChange,
   types = ALL_ENTRY_TYPES,
   panelId,
+  compact = false,
 }: {
   value: EntryType;
   onChange: (next: EntryType) => void;
@@ -65,6 +70,8 @@ export function EntryTypeTabs({
   types?: readonly EntryType[];
   /** The id of the form these tabs switch between. */
   panelId: string;
+  /** Each tab as wide as its word, for the dialog's title row on a desk. */
+  compact?: boolean;
 }) {
   const t = useTranslations("addEntry.types");
   const keys = rovingChoice({
@@ -81,7 +88,11 @@ export function EntryTypeTabs({
     <div
       role="tablist"
       aria-label={t("label")}
-      className="flex gap-1 rounded-2xl bg-muted p-1"
+      className={
+        compact
+          ? "inline-flex shrink-0 gap-0.5 rounded-xl bg-muted p-1"
+          : "flex gap-1 rounded-2xl bg-muted p-1"
+      }
     >
       {types.map((type) => {
         const active = type === value;
@@ -96,7 +107,9 @@ export function EntryTypeTabs({
             {...keys(type)}
             onClick={() => onChange(type)}
             className={cn(
-              "tap-target h-10 flex-1 rounded-[calc(var(--radius-2xl)_-_--spacing(1))] text-sm transition-colors",
+              compact
+                ? "tap-target h-8 rounded-[calc(var(--radius-xl)_-_--spacing(1))] px-3 text-sm transition-colors"
+                : "tap-target h-10 flex-1 rounded-[calc(var(--radius-2xl)_-_--spacing(1))] text-sm transition-colors",
               active
                 ? "bg-accent font-semibold text-foreground"
                 : "font-medium text-muted-foreground",

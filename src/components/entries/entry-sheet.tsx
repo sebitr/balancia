@@ -1,4 +1,5 @@
 import type { ComponentProps } from "react";
+import type { DialogSize } from "@/components/ui/dialog-size";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -55,9 +56,20 @@ import { cn } from "@/lib/utils";
  * loading boundary is not a `SheetContent` — it borrows this class and pins
  * itself — and a skeleton the width of the window that became a 28rem drawer
  * when the form arrived would be the drawer changing shape under the reader.
+ *
+ * From `lg` up it is not a drawer at all but a dialog over the screen, 720px
+ * wide and 880px from `xl`: every shell passes `desk={ENTRY_DESK}` to its
+ * `SheetContent`, and the loading boundary adds `deskDialogClass` to this. The
+ * screen behind it stays where it was, as it does under the drawer. Its
+ * height there is what the form holds rather than most of the window — a
+ * repayment is half the height of an expense with its split laid out — up to
+ * the cap the dialog geometry sets, past which the form's body scrolls.
  */
 export const ENTRY_SHEET_CLASS =
-  "h-[min(800px,calc(100dvh-28px-env(safe-area-inset-top)))] max-h-[calc(100%-28px-env(safe-area-inset-top))] gap-0 overflow-hidden rounded-t-[24px] bg-background p-0 text-foreground md:mx-auto md:max-w-md";
+  "h-[min(800px,calc(100dvh-28px-env(safe-area-inset-top)))] max-h-[calc(100%-28px-env(safe-area-inset-top))] gap-0 overflow-hidden rounded-t-[24px] bg-background p-0 text-foreground md:mx-auto md:max-w-md lg:h-auto";
+
+/** The entry dialog's width on a desk: see `dialog-size.ts`. */
+export const ENTRY_DESK = "lg" satisfies DialogSize;
 
 /**
  * Open on the amount, because that is the field every entry starts with.

@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  recordRepaymentPath,
   settleIntentOf,
   settleIntentPath,
   settlePrefill,
 } from "./settle-intent";
-import { fragmentParams } from "./drawer-fragment";
+import { fragmentParams, typeOf } from "./drawer-fragment";
 
 /**
  * The link the settle screens write and the drawer that reads it are two
@@ -218,5 +219,16 @@ describe("pricing the debt", () => {
       settlePrefill({ ...intent, toParticipantId: "ravi" }, outstanding)
         .amountMinor,
     ).toBeNull();
+  });
+});
+
+describe("the link with nobody named", () => {
+  it("opens the drawer on the Repayment tab, and names no debt", () => {
+    const path = recordRepaymentPath("g1");
+    const params = fragmentParams(path.split("#")[1] ?? "");
+
+    expect(path).toBe("/groups/g1/expenses/new#type=settle");
+    expect(typeOf(params)).toBe("settle");
+    expect(settleIntentOf(params)).toBeNull();
   });
 });

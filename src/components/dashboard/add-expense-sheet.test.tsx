@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
@@ -108,5 +108,101 @@ describe("opening", () => {
     await userEvent.type(search, "berlin");
     expect(search).toHaveFocus();
     expect(screen.getByRole("link", { name: /Berlin trip/ })).toBeVisible();
+  });
+});
+
+/**
+ * On a desk the chooser is a small dialog worked from the keys as well as the
+ * pointer: 1 to 9 pick the group beside that number, the arrows walk the rows,
+ * and each row says how many people are in the group as well as when it last
+ * moved.
+ */
+describe("on a desk", () => {
+  let matchMedia: typeof window.matchMedia;
+
+  beforeEach(() => {
+    matchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: query === "(min-width: 64rem)",
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    })) as unknown as typeof window.matchMedia;
+  });
+
+  afterEach(() => {
+    window.matchMedia = matchMedia;
+  });
+
+  const COUNTED = GROUPS.map((group, index) => ({
+    ...group,
+    participantCount: index + 2,
+  }));
+
+  function renderDesk(onOpenChange = vi.fn()) {
+    renderWithIntl(
+      <AddExpenseSheet
+        open
+        onOpenChange={onOpenChange}
+        groups={COUNTED}
+        now={NOW}
+      />,
+    );
+    return onOpenChange;
+  }
+
+  it("says how many people each group has, and numbers the rows", () => {
+    renderDesk();
+
+    const lisbon = screen.getByRole("link", { name: /Lisbon, March/ });
+    expect(lisbon).toHaveTextContent("2 people · 1 hour ago");
+    expect(lisbon).toHaveAttribute("aria-keyshortcuts", "1");
+    expect(screen.getByRole("link", { name: /Chalet/ })).toHaveAttribute(
+      "aria-keyshortcuts",
+      "2",
+    );
+    expect(screen.getByText("5 of 7 groups")).toBeInTheDocument();
+  });
+
+  it("picks the group beside the number pressed", async () => {
+    const user = userEvent.setup();
+    const onOpenChange = renderDesk();
+    let followed = "";
+    const chalet = screen.getByRole("link", { name: /Chalet/ });
+    chalet.addEventListener("click", (event) => {
+      followed = (event.currentTarget as HTMLAnchorElement).pathname;
+      event.preventDefault();
+    });
+
+    await user.keyboard("2");
+
+    expect(followed).toBe("/groups/g1/expenses/new");
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("walks the rows with the arrows, round from the end", async () => {
+    const user = userEvent.setup();
+    renderDesk();
+
+    await user.keyboard("{ArrowDown}");
+    expect(screen.getByRole("link", { name: /Lisbon, March/ })).toHaveFocus();
+    await user.keyboard("{ArrowDown}");
+    expect(screen.getByRole("link", { name: /Chalet/ })).toHaveFocus();
+    await user.keyboard("{ArrowUp}{ArrowUp}");
+    expect(screen.getByRole("link", { name: /Berlin trip/ })).toHaveFocus();
+  });
+
+  it("leaves a digit typed into the search where it was typed", async () => {
+    const user = userEvent.setup();
+    const onOpenChange = renderDesk();
+
+    await user.type(screen.getByRole("searchbox"), "4");
+
+    expect(screen.getByRole("searchbox")).toHaveValue("4");
+    expect(onOpenChange).not.toHaveBeenCalled();
   });
 });

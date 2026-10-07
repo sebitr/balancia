@@ -1,6 +1,6 @@
 import { isKnownPayoutMethod } from "@/modules/payouts/fields";
 import type { AddEntryFormProps } from "./add-entry-form";
-import { withFragment } from "./drawer-fragment";
+import { TYPE_PARAM, withFragment } from "./drawer-fragment";
 
 /**
  * A repayment the screen that opened the drawer already knows the shape of.
@@ -88,6 +88,16 @@ export function settleIntentPath(
   // name should produce the same link it produced before there was one.
   if (intent.method) query.set(SETTLE_METHOD_PARAM, intent.method);
   return withFragment(`/groups/${groupId}/expenses/new`, query);
+}
+
+/**
+ * The path that opens the add-entry drawer on the Repayment tab with nobody
+ * chosen yet: a repayment the screen that links here has no row for.
+ */
+export function recordRepaymentPath(groupId: string): string {
+  return withFragment(`/groups/${groupId}/expenses/new`, {
+    [TYPE_PARAM]: "settle",
+  });
 }
 
 /**
