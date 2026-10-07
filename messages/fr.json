@@ -48,6 +48,27 @@
     "sidebarKeepGroup": "Garde {group}",
     "sidebarGuestNote": "Ton accès n’existe que dans ce navigateur."
   },
+  "palette": {
+    "label": "Rechercher des groupes, des personnes et des transactions",
+    "results": "Résultats",
+    "transactionsIn": "Transactions dans {group}",
+    "actions": "Actions",
+    "addExpense": "Ajouter une dépense",
+    "addExpenseTo": "Ajouter une dépense à {group}",
+    "settleUpIn": "Régler les comptes dans {group}",
+    "openSettings": "Ouvrir les paramètres",
+    "paidLine": "{who, select, you {Tu as payé} withYou {{names} avez payé} other {{count, plural, one {{names} a payé} other {{names} ont payé}}}}",
+    "you": "Toi",
+    "repayment": "Remboursement",
+    "income": "Revenu",
+    "nothing": "Aucun groupe, aucune personne ni aucune transaction ne correspond à « {query} ».",
+    "resultCount": "{count, plural, one {# résultat} other {# résultats}}",
+    "failed": "Impossible de chercher pour l’instant. Réessaie.",
+    "move": "Naviguer",
+    "open": "Ouvrir",
+    "openNewTab": "Ouvrir dans un nouvel onglet",
+    "close": "Fermer"
+  },
   "theme": {
     "menu": "Thème"
   },
@@ -565,6 +586,8 @@
     "pickerCount": "{shown} sur {total, plural, one {# groupe} other {# groupes}}",
     "pickerSearchLabel": "Rechercher dans tes groupes",
     "pickerSearchPlaceholder": "Rechercher un groupe",
+    "pickerMove": "Naviguer",
+    "pickerChoose": "Choisir",
     "peopleCount": "{count, plural, one {# personne} other {# personnes}}",
     "settledWord": "Soldé",
     "noExpensesWord": "Pas encore de dépense",
@@ -918,6 +941,8 @@
     "accentFailed": "Cette couleur n’a pas pu être enregistrée.",
     "language": "Langue",
     "languageNote": "La langue change les mots. L’écriture des dates et des montants se règle dans Devise et formats, pour lire en anglais et écrire quand même 13/08/2026.",
+    "singleKeys": "Raccourcis à une touche",
+    "singleKeysHelp": "N ajoute une dépense et S règle les comptes quand aucun champ n’a le curseur. Reste sur cet appareil.",
     "currencyTitle": "Afficher mes totaux en",
     "currencyHelp": "Chaque groupe est converti dans cette devise sur ton écran d’accueil. Chaque groupe garde la sienne.",
     "currencySaved": "Devise préférée enregistrée",
@@ -1111,6 +1136,7 @@
   },
   "settleUp": {
     "title": "Régler les comptes",
+    "recordRepayment": "Enregistrer un remboursement",
     "clearsGroup": "{count, plural, one {# remboursement solde le groupe} other {# remboursements soldent le groupe}}",
     "clearsCurrency": "{count, plural, one {# remboursement solde cette devise} other {# remboursements soldent cette devise}}",
     "betweenOthers": "Entre les autres",
@@ -3307,6 +3333,7 @@
   "addEntry": {
     "back": "Retour",
     "reload": "Recharger",
+    "saveKeys": "<keys></keys> pour enregistrer",
     "titles": {
       "expense": "Ajouter une dépense",
       "income": "Ajouter un revenu",
@@ -3540,6 +3567,8 @@
       "outcomeUnder": "Remboursement partiel — {from} devra encore {amount} à {to}.",
       "outcomeOver": "Plus que dû — {from} devra {amount} à {to}.",
       "outcomeExact": "{from} et {to} seront à jour.",
+      "outcomeExactIn": "{from} et {to} seront à jour en {currency}.",
+      "onlyRecords": "Balancia ne fait qu’enregistrer le remboursement. Il ne déplace jamais l’argent lui-même.",
       "outcomeOtherCurrency": "Payé en {currency} — {from} doit toujours {amount} à {to}.",
       "someoneElse": "Quelqu’un d’autre",
       "changeWhoPays": "Changer qui paie",

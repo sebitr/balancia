@@ -109,6 +109,41 @@ describe("a dialog with the keyboard open", () => {
 });
 
 /**
+ * How wide a dialog grows, named for what goes in it rather than in pixels at
+ * each call site: a question, a short list, a form laid out side by side.
+ */
+describe("a dialog's size", () => {
+  function widthsOf(size?: "sm" | "md" | "lg") {
+    renderWithIntl(
+      <Dialog open>
+        <DialogContent size={size}>
+          <DialogTitle>Settle up</DialogTitle>
+        </DialogContent>
+      </Dialog>,
+    );
+    return [...screen.getByRole("dialog").classList].filter((name) =>
+      name.includes("max-w-"),
+    );
+  }
+
+  it("is a question's width unless it says otherwise", () => {
+    expect(widthsOf()).toEqual(["max-w-[calc(100%-2rem)]", "sm:max-w-sm"]);
+  });
+
+  it("is a short list's at md", () => {
+    expect(widthsOf("md")).toContain("sm:max-w-[30rem]");
+  });
+
+  it("is 720px and 880px from xl for a form", () => {
+    expect(widthsOf("lg")).toEqual([
+      "max-w-[calc(100%-2rem)]",
+      "sm:max-w-[45rem]",
+      "xl:max-w-[55rem]",
+    ]);
+  });
+});
+
+/**
  * The close controls are named in the reader's language.
  *
  * Both were a literal English "Close" — the ✕ in the corner as screen-reader

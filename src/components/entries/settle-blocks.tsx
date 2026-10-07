@@ -293,6 +293,11 @@ function PairSide({
  * beside it. "Who is settling" is the question this card asks, and paying
  * somebody outside the list is one of the answers — it just belongs at the
  * bottom, where the rare answer goes.
+ *
+ * In the entry dialog on a desk a row is one line — the mark that says it is
+ * chosen, the face, the sentence, and the figure at the far end, where the
+ * figures line up as a column — because there the sentence has the width the
+ * phone's stacking was making room for.
  */
 export function OutstandingList({
   pairs,
@@ -333,7 +338,7 @@ export function OutstandingList({
       <button
         type="button"
         onClick={onPickSomeoneElse}
-        className="flex w-full items-center gap-3 border-b border-border p-3 text-left text-muted-foreground transition-colors last:border-b-0 hover:bg-wash-1"
+        className="flex w-full items-center gap-3 border-b border-border p-3 text-left text-muted-foreground transition-colors last:border-b-0 hover:bg-wash-1 lg:min-h-13 lg:px-4"
       >
         {/* Dashed, because there is no member to show yet. */}
         <span
@@ -385,8 +390,8 @@ export function OutstandingList({
                 onClick={() => onSelect(index)}
                 aria-pressed={active}
                 className={cn(
-                  "flex w-full items-center gap-3 border-b border-border p-3 text-left transition-colors last:border-b-0",
-                  active && "bg-wash-2",
+                  "flex w-full items-center gap-3 border-b border-border p-3 text-left transition-colors last:border-b-0 lg:min-h-13 lg:px-4 lg:hover:bg-wash-1",
+                  active && "bg-wash-2 lg:hover:bg-wash-2",
                 )}
               >
                 <MemberAvatar name={pair.fromName} selected={active} />
@@ -405,19 +410,19 @@ export function OutstandingList({
                  * ragged three there. The figures line up down the card as a
                  * column of their own, which is how the list is scanned.
                  */}
-                <span className="min-w-0 flex-1">
+                <span className="min-w-0 flex-1 lg:flex lg:items-baseline lg:justify-between lg:gap-4">
                   {/*
                    * `wrap-anywhere` is the safety net under a pair long
                    * enough to still overrun: it takes the min-content width
                    * with it, so a single unbroken name wraps instead of
                    * pushing the tick off the card.
                    */}
-                  <span className="block text-sm wrap-anywhere">
+                  <span className="block text-sm wrap-anywhere lg:font-medium">
                     {sentenceFor(pair)}
                   </span>
                   <span
                     className={cn(
-                      "block text-sm tabular-nums",
+                      "block text-sm tabular-nums lg:shrink-0",
                       active
                         ? "font-semibold text-positive-ink"
                         : "text-muted-foreground",
@@ -435,7 +440,7 @@ export function OutstandingList({
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "flex size-4 shrink-0 items-center justify-center rounded-full border",
+                    "flex size-4 shrink-0 items-center justify-center rounded-full border lg:order-first lg:size-5",
                     active
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-input",
@@ -514,6 +519,10 @@ export function PaymentMethodRow({
    *
    * Three fit across a phone beside `Other`; a fourth would squeeze every
    * label to the point of truncating "Bancontact Pay".
+   *
+   * In the entry dialog on a desk the same tiles are chips, each as wide as
+   * its name, in a row that wraps: the dialog's column is wider than a phone
+   * and the tiles' 64px of height was a thumb's answer to a small screen.
    */
   const offRow =
     value !== null && !methods.slice(0, ROW_METHOD_COUNT).includes(value);
@@ -565,7 +574,7 @@ export function PaymentMethodRow({
         )}
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 lg:flex-wrap">
         {shown.map((tile) => {
           const method =
             tile.kind === "method"
@@ -587,7 +596,7 @@ export function PaymentMethodRow({
               }
               aria-pressed={active}
               className={cn(
-                "flex h-16 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl border transition-colors",
+                "tap-target flex h-16 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl border transition-colors lg:h-10 lg:flex-none lg:flex-row lg:gap-2 lg:rounded-full lg:pr-3.5 lg:pl-1.5",
                 active
                   ? "border-primary bg-primary/10"
                   : "border-border bg-wash-1",
@@ -596,7 +605,7 @@ export function PaymentMethodRow({
               <MethodMark method={method} label={label} />
               <span
                 className={cn(
-                  "truncate text-xs",
+                  "truncate text-xs lg:text-sm",
                   active
                     ? "font-semibold text-foreground"
                     : "text-muted-foreground",
@@ -614,10 +623,10 @@ export function PaymentMethodRow({
         <button
           type="button"
           onClick={onOpenAll}
-          className="flex h-16 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-input text-muted-foreground transition-colors"
+          className="tap-target flex h-16 flex-1 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-input text-muted-foreground transition-colors lg:h-10 lg:flex-none lg:flex-row lg:gap-2 lg:rounded-full lg:px-3.5"
         >
           <Search aria-hidden="true" className="size-[18px]" />
-          <span className="truncate text-xs">{t("other")}</span>
+          <span className="truncate text-xs lg:text-sm">{t("other")}</span>
         </button>
       </div>
     </section>

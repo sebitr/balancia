@@ -15,7 +15,10 @@ import type {
   PaymentQrRefusal,
   PaymentQrStandard,
 } from "@/modules/payouts/qr/payment-qr";
-import { settleIntentPath } from "@/components/entries/settle-intent";
+import {
+  recordRepaymentPath,
+  settleIntentPath,
+} from "@/components/entries/settle-intent";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { remindRecipientsFor, SettleActions } from "./settle-actions";
 import { Button } from "@/components/ui/button";
@@ -147,6 +150,31 @@ export function SettleUpScreen({
     <div className="flex flex-col">
       <PageHeader
         title={t("title")}
+        /*
+         * A repayment the plan has no row for — cash handed to somebody who
+         * was owed nothing — opens the entry dialog on its Repayment tab with
+         * nobody chosen, to be named there. A desk's: on a phone the row has
+         * no room beside the title, and the group's own Add reaches the same
+         * tab.
+         *
+         * Not on a settled group, whose screen is a state with nothing to
+         * press but the way onwards ("nothing to settle" in the tests); the
+         * group's own Add still reaches the tab there.
+         */
+        trailing={
+          transferCount > 0 && (
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="hidden lg:inline-flex"
+            >
+              <Link href={recordRepaymentPath(shared.groupId)}>
+                {t("recordRepayment")}
+              </Link>
+            </Button>
+          )
+        }
         back={{
           href: `/groups/${shared.groupId}`,
           label: t("backToGroup"),

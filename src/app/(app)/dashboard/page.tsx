@@ -107,6 +107,7 @@ function toPickable(position: GroupPosition): PickableGroup {
     id: position.group.id,
     name: position.group.name,
     lastActivityAt: position.group.lastActivityAt.toISOString(),
+    participantCount: position.group.participantCount,
   };
 }
 

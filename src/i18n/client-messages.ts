@@ -63,6 +63,9 @@ export const ROOT_NAMESPACES: readonly string[] = [
   "nav",
   "notificationSettings",
   "notificationsPage",
+  // The command palette, which ⌘K opens over every signed-in screen, as the
+  // sidebar's Search does.
+  "palette",
   "passkeys",
   "paymentMethods",
   "payouts",

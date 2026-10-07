@@ -69,15 +69,18 @@ export function equivalentPath(
     : destination;
 }
 
-interface PositionLine {
+export interface PositionLine {
   readonly key: string;
   readonly text: string;
   /** The tone's ink — text, never the fill, never `--primary`. */
   readonly ink: string;
 }
 
-/** Where the reader stands in a group, as the lines a row prints. */
-function usePositionLines(group: NavigationGroup): PositionLine[] {
+/**
+ * Where the reader stands in a group, as the lines a row prints — here, and in
+ * the command palette's Groups, which say it in the same words.
+ */
+export function usePositionLines(group: NavigationGroup): PositionLine[] {
   const t = useTranslations("nav");
   const locale = useNumberLocale();
 

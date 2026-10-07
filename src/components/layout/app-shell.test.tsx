@@ -248,6 +248,9 @@ describe("AppShell sidebar, from lg", () => {
       "Skip to content",
       "Balancia home",
       "Collapse the sidebar",
+      // Pressable now the shell mounts the palette it opens; its key hint
+      // is part of its text and hidden from a screen reader.
+      expect.stringContaining("Search or jump to"),
       "Add expense",
       "Home",
       "Notifications",

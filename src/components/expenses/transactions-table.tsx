@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useSyncExternalStore } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { ArrowDown, ArrowUp, Paperclip } from "lucide-react";
@@ -187,7 +187,10 @@ export function TransactionsTable({
             <th
               scope="col"
               aria-sort={sort === "largest" ? "descending" : undefined}
-              className={cn(HEAD, "w-44 pr-4 text-right @min-[68rem]:w-28 @min-[68rem]:pr-3")}
+              className={cn(
+                HEAD,
+                "w-44 pr-4 text-right @min-[68rem]:w-28 @min-[68rem]:pr-3",
+              )}
             >
               {/* Only where the amounts are in one currency: across two,
                   "largest" is a coincidence of denominations, and the sheet
@@ -520,25 +523,8 @@ function splitWays(
  * as well as off the screen. From the next render on, only the one the window
  * can see is mounted, so a phone does not carry a hidden table of every row it
  * holds, nor a desk a hidden list of them.
+ *
+ * The hook itself is shared with the entry dialog, which lays its split out in
+ * place from the same width.
  */
-const DESK = "(min-width: 64rem)";
-
-function subscribe(onChange: () => void): () => void {
-  const media = window.matchMedia(DESK);
-  media.addEventListener?.("change", onChange);
-  return () => media.removeEventListener?.("change", onChange);
-}
-
-function getSnapshot(): boolean {
-  return window.matchMedia(DESK).matches;
-}
-
-/** Unknown on the server, which is what renders both. */
-function getServerSnapshot(): null {
-  return null;
-}
-
-/** True from `lg` up, false below it, null until the width is known. */
-export function useDeskWidth(): boolean | null {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-}
+export { useDeskWidth } from "@/components/ui/use-desk-width";

@@ -10,6 +10,7 @@ import { NotificationRefresh } from "@/components/notifications/notification-ref
 import { Screen } from "@/components/motion/screen";
 import { DemoBanner } from "@/components/demo/demo-banner";
 import { AppSidebar } from "./app-sidebar";
+import { CommandPalette } from "./command-palette";
 import { RefreshOnReturn } from "./refresh-on-return";
 import { SidebarFrame } from "./sidebar-context";
 import { SidebarGroupsFallback } from "./sidebar-groups";
@@ -53,6 +54,15 @@ import { cn } from "@/lib/utils";
  * 240px sidebar would leave the screen a column no wider than a phone's,
  * which buys nothing, while at 1024px the sidebar and two phone-width columns
  * fit side by side. Below `lg` none of the classes added here apply.
+ *
+ * ## The keyboard
+ *
+ * The shell is also where the app's keys are answered, once, for every screen
+ * it draws: ⌘K opens the command palette, N adds an expense, S settles up,
+ * ⌘\ folds the sidebar — from `lg` up, where the sidebar holds a control for
+ * each. `CommandPalette`, mounted once beside the screen, is the palette and
+ * the one listener (`use-shortcuts.ts`); the sidebar's Search opens it too.
+ * Settings, a surface outside this shell, answers none of them.
  */
 export function AppShell({
   children,
@@ -233,6 +243,11 @@ export function AppShell({
       {/* Mounted once here so the account menu can open it from any page; it
           renders nothing until something asks for installation instructions. */}
       <InstallInstructions />
+
+      {/* "Search or jump to", and the keys of every screen in the shell: ⌘K,
+          N, S and ⌘\. Mounted once here, for the same reason as the sheet
+          above — the sidebar's Search opens it from deep inside the shell. */}
+      <CommandPalette group={group} isGuest={actor.isGuest} />
 
       {/* Re-reads the unread count when a push lands on an open tab. */}
       {!actor.isGuest && <NotificationRefresh />}

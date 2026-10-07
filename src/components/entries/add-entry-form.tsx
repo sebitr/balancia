@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type KeyboardEvent,
   type MouseEvent,
   type ReactNode,
 } from "react";
@@ -41,8 +42,16 @@ import {
   Sheet,
   SheetContent,
   SheetTitle,
+  SheetTitleAsHeading,
   openOnContent,
 } from "@/components/ui/sheet";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Kbd, useModifierKey } from "@/components/ui/kbd";
+import { useDeskWidth } from "@/components/ui/use-desk-width";
 import { Switch } from "@/components/ui/switch";
 import { toastUndoable } from "@/components/ui/sonner";
 import { ScanReceiptEntry } from "@/components/receipts/scan-receipt-entry";
@@ -616,6 +625,13 @@ export interface AddEntryFormProps {
    * `REPEAT_PARAM`.
    */
   startRepeating?: boolean;
+  /**
+   * The tab a new entry opens on, when the link that opened it named one —
+   * Settle up's "Record a repayment" opens on Repayment, with nobody picked.
+   * See `TYPE_PARAM`. Outranked by anything that already says what the entry
+   * is: one being edited, a draft, a stated debt.
+   */
+  startType?: EntryType;
 }
 
 export function AddEntryForm({
@@ -649,6 +665,7 @@ export function AddEntryForm({
   canAddGuests = false,
   rule,
   startRepeating = false,
+  startType = "expense",
 }: AddEntryFormProps) {
   // A rule being changed seeds the fields the way a restored draft does.
   const draft = rule ? rule.fields : restored;
@@ -689,7 +706,7 @@ export function AddEntryForm({
    * itself a frame later reads as the screen changing its mind.
    */
   const [type, setType] = useState<EntryType>(
-    editing?.type ?? draft?.type ?? (prefill ? "settle" : "expense"),
+    editing?.type ?? draft?.type ?? (prefill ? "settle" : startType),
   );
   const [amountText, setAmountText] = useState(
     editing?.amountText ??
@@ -2348,8 +2365,784 @@ export function AddEntryForm({
       ? t("date.today")
       : dates.plain(date);
 
+  /*
+   * A desk lays the same parts out side by side. The form is a dialog there
+   * (see `ENTRY_SHEET_CLASS`) with the width to put the type tabs in the title
+   * row, the amount beside the description and the date, the split in place
+   * under them, and the category and currency pickers in popovers on the
+   * rows that open them. Below `lg`, and until the width is known, it is the
+   * drawer exactly as it was.
+   *
+   * Read in script rather than left to CSS, because two of those moves change
+   * the reading order — the date comes above the split, and the split leaves
+   * its sheet for the form — and CSS can only do that by drawing a control
+   * twice and hiding one. `useDeskWidth` says the rest.
+   */
+  const desk = useDeskWidth() === true;
+  // The split is on the form itself there, so a link that asked for its
+  // sheet — the saved toast's "Paid by" — has asked for nothing to open.
+  if (desk && sheet === "split") setSheet(null);
+
+  /*
+   * ⌘↵ — Ctrl ↵ off a Mac — saves from any field, on a desk, where the hands
+   * are on a keyboard and the button is a trip to the mouse.
+   *
+   * The form's own key, held by the form, rather than one of the window's
+   * shortcuts: it means something only while the form is open, and it goes
+   * when the form does. A field that answered the key itself has done what it
+   * was pressed for; a picker open over the form is what the keys are for
+   * while it is open. And it is the button, pressed: nothing the button would
+   * refuse to do.
+   */
+  const saveFromKeyboard = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Enter" || !(event.metaKey || event.ctrlKey)) return;
+    if (event.defaultPrevented || sheet !== null) return;
+    event.preventDefault();
+    if (canSave && !pending) void onSubmit();
+  };
+
+  /** The split laid out in place, brought into view: the desk's split row. */
+  const showInlineSplit = () =>
+    document.querySelector<HTMLElement>("[data-split-row]")?.focus();
+
+  const title = rule
+    ? t(`editRecurringTitles.${type === "income" ? "income" : "expense"}`)
+    : editing
+      ? t(`editTitles.${type}`)
+      : t(`titles.${type}`);
+
+  const typeTabs = (
+    <EntryTypeTabs
+      value={type}
+      onChange={changeType}
+      types={entryTypes}
+      panelId={typePanelId}
+      compact={desk}
+    />
+  );
+
+  const splitSheetProps = {
+    members,
+    selfId,
+    title: isIncome ? t("split.titleIncome") : t("split.title"),
+    totalFormatted: amountFormatted,
+    currency,
+    payerId,
+    onPayerChange: setPayerId,
+    includedIds: effectiveIncluded,
+    onIncludedChange: (ids: readonly string[]) => {
+      setIncludedIds(ids);
+      setByItem(false);
+    },
+    method,
+    onMethodChange: changeMethod,
+    values,
+    onValueChange: (id: string, value: string) =>
+      setValues((current) => ({ ...current, [id]: value })),
+    onGiveRemaining: totalMinor.ok
+      ? (id: string) =>
+          setValues((current) =>
+            giveRemaining({
+              values: current,
+              participantId: id,
+              participantIds: effectiveIncluded,
+              currency,
+              totalMinor: totalMinor.value,
+            }),
+          )
+      : undefined,
+    preview,
+    note: splitNote,
+    received: isIncome,
+    alwaysSplit: worthSaving({
+      method,
+      includedIds: effectiveIncluded,
+      memberCount: members.length,
+    })
+      ? alwaysSplit
+      : null,
+    onAlwaysSplitChange: setAlwaysSplit,
+    onAddGuest: canAddGuests ? addGuest : undefined,
+    // An income has a receiver and a repayment has a pair; neither
+    // has anything to divide the paying between.
+    several,
+    onSeveralChange: isIncome
+      ? undefined
+      : (next: boolean) => {
+          setSeveral(next);
+          // Turning it on seeds the one payer the form already
+          // has, so the panel opens on a state that balances
+          // rather than on a shortfall nobody caused.
+          if (next && Object.keys(payerAmounts).length === 0) {
+            setPayerAmounts({ [payerId]: amountText });
+          }
+        },
+    payerAmounts,
+    onPayerAmountChange: (id: string, value: string) =>
+      setPayerAmounts((current) => ({
+        ...current,
+        [id]: sanitiseAmount(value, currency),
+      })),
+    payerNote,
+    onJustOnePaid: () => {
+      setSeveral(false);
+      setPayerAmounts({});
+    },
+    onSplitPaymentEqually: () =>
+      setPayerAmounts(
+        splitPaymentEqually({
+          payerIds: effectiveIncluded,
+          currency,
+          totalMinor: totalMinor.ok ? totalMinor.value : 0n,
+          format: (minor, code) => formatMinorUnits(minor.toString(), code),
+        }),
+      ),
+    onGiveRest: (id: string) =>
+      setPayerAmounts((current) =>
+        giveRestTo({
+          amounts: current,
+          participantId: id,
+          memberIds: members.map((member) => member.id),
+          currency,
+          totalMinor: totalMinor.ok ? totalMinor.value : 0n,
+          format: (minor, code) => formatMinorUnits(minor.toString(), code),
+        }),
+      ),
+    onDone: () => setSheet(null),
+  };
+
+  const categoryPicker = (
+    <CategorySheet
+      value={effectiveCategory}
+      subcategory={shownSubcategory}
+      detectedValue={detectedCategory}
+      description={description}
+      suggestion={suggestion}
+      frequent={frequentCategories}
+      direction={categoryDirection}
+      // Every tap in the sheet writes a valid entry, including the one
+      // that only opens a pane — which is what lets the second level
+      // be optional rather than a step to escape from. The sheet says
+      // when it is finished; this only records what it chose.
+      onSelect={(next, leaf) => {
+        setCategoryChosen(true);
+        setCategory(next);
+        setSubcategory(leaf ?? "");
+      }}
+      onDone={() => setSheet(null)}
+      // Reverting has to clear the override rather than re-pick the
+      // detected value: a category that merely *equals* the guess is
+      // still a manual choice, and would stop following the
+      // description the moment it was edited again.
+      onRevert={() => {
+        setCategoryChosen(false);
+        setCategory("");
+        setSubcategory("");
+        setSheet(null);
+      }}
+    />
+  );
+
+  const currencyPicker = (
+    <CurrencyPicker
+      value={currency}
+      title={t("currency.title")}
+      // What is already typed has to survive the new currency's rules:
+      // 84.60 picked up again as yen is ¥84, not an amount the server
+      // will refuse.
+      onSelect={(code) => {
+        setCurrency(code);
+        setAmountText((current) => sanitiseAmount(current, code));
+        setSheet(null);
+      }}
+      onBack={() => setSheet(null)}
+    />
+  );
+
+  const errorAlert = error && (
+    <Alert key={refusal?.count} id={errorId} variant="destructive">
+      <AlertDescription>{error}</AlertDescription>
+      {/* Refused because somebody else saved first: the way on sits
+          beside the reason, over fields still holding what was typed.
+          See `onReload`. */}
+      {failure?.code === "editConflict" && onReload && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="mt-1.5 justify-self-start"
+          onClick={onReload}
+        >
+          {t("reload")}
+        </Button>
+      )}
+    </Alert>
+  );
+
+  const settlePicker =
+    isSettle &&
+    (namesFromGroup ? (
+      <PairPicker
+        members={members}
+        fromId={settleFrom}
+        toId={settleTo}
+        onChange={(next) => {
+          setSettleFrom(next.fromId);
+          setSettleTo(next.toId);
+        }}
+      />
+    ) : (
+      <OutstandingList
+        pairs={settlePairs}
+        selectedIndex={outstandingIndex >= 0 ? outstandingIndex : null}
+        onSelect={selectPair}
+        onPickSomeoneElse={() => setSheet("pair")}
+        hasCustomPair={customPair !== null}
+        selfId={selfId}
+      />
+    ));
+
+  const scanBanner = scan && bannerVisible && (
+    <ScanBanner
+      merchant={scan.description}
+      itemCount={Object.keys(scan.splitValues).length}
+      onDismiss={() => setBannerVisible(false)}
+    />
+  );
+
+  const amountCard = (
+    <AmountCard
+      label={amountLabel}
+      amountText={amountText}
+      currency={currency}
+      baseCurrency={baseCurrency}
+      needsRate={needsRate}
+      rate={rate}
+      onRateChange={setRate}
+      date={date}
+      positive={isIncome}
+      onAmountChange={(next) => setAmountText(sanitiseAmount(next, currency))}
+      onOpenCurrency={() => setSheet("currency")}
+      // On a desk the list opens from the chip itself, in a popover, rather
+      // than in a sheet over the dialog. Searched as soon as it opens: a
+      // keyboard is already under the reader's hands.
+      currencyChip={
+        desk
+          ? (chip) => (
+              <Popover
+                open={sheet === "currency"}
+                onOpenChange={(open) => setSheet(open ? "currency" : null)}
+                modal
+              >
+                <PopoverTrigger asChild>{chip}</PopoverTrigger>
+                <PopoverContent
+                  align="end"
+                  onOpenAutoFocus={(event) => {
+                    event.preventDefault();
+                    if (event.currentTarget instanceof HTMLElement) {
+                      event.currentTarget.querySelector("input")?.focus();
+                    }
+                  }}
+                  className="flex h-[min(32rem,var(--radix-popover-content-available-height))] w-[22rem] flex-col gap-0 p-0"
+                >
+                  <SheetTitleAsHeading>{currencyPicker}</SheetTitleAsHeading>
+                </PopoverContent>
+              </Popover>
+            )
+          : undefined
+      }
+      locale={locale}
+    />
+  );
+
+  /*
+   * "Did I already log this?" — answered where it is asked, instead of
+   * by scrolling the list later.
+   *
+   * Quiet on purpose: muted text, no coloured background, no icon
+   * bigger than the words. Duplicates are legal — two coffee runs
+   * happen — so this never blocks and never pre-empts saving. It is a
+   * reassurance with one tap out of it.
+   */
+  const duplicateNote = duplicate && (
+    <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 px-1 text-xs text-muted-foreground">
+      <RotateCcw aria-hidden="true" className="size-3.5 shrink-0" />
+      <span>
+        {t("duplicate.note", {
+          // Rounds to nothing for an entry made minutes ago, which the
+          // message reads as "just now" rather than rounding it up to an
+          // hour that has not passed.
+          hours: Math.round(duplicate.hoursAgo),
+          description: duplicate.description,
+          amount: duplicate.amountFormatted,
+          name: duplicate.payerName,
+        })}
+      </span>
+      <Link
+        href={`/groups/${groupId}/expenses/${duplicate.id}`}
+        className="text-primary-ink underline-offset-2 hover:underline"
+      >
+        {t("duplicate.view")}
+      </Link>
+    </p>
+  );
+
+  /*
+   * The two things somebody does with a debt: clear it, or pay some of
+   * it. `Full` names the figure rather than saying "full", so you can
+   * see what you are restoring after typing over it, and it restores the
+   * currency with it — the figure means nothing without the money it is
+   * in. Hidden for a named pair and for a debt of nothing, both of which
+   * have no full amount to offer.
+   */
+  const fullOrPart = isSettle && settleBalance !== null && (
+    <div className="flex gap-2">
+      <button
+        type="button"
+        onClick={() => {
+          setCurrency(settleBalance.currency);
+          setAmountText(
+            formatMinorUnits(
+              settleBalance.minor.toString(),
+              settleBalance.currency,
+            ),
+          );
+        }}
+        className="tap-target h-10 rounded-full border border-border bg-wash-1 px-3 text-sm text-muted-foreground"
+      >
+        {t("settle.full", {
+          amount: formatMinorUnits(
+            settleBalance.minor.toString(),
+            settleBalance.currency,
+          ),
+        })}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setAmountText("");
+          document
+            .querySelector<HTMLInputElement>("input[data-entry-amount]")
+            ?.focus();
+        }}
+        className="tap-target h-10 rounded-full border border-border bg-wash-1 px-3 text-sm text-muted-foreground"
+      >
+        {t("settle.partOfIt")}
+      </button>
+    </div>
+  );
+
+  /* The row reads as a breadcrumb — `Home › Household supplies` —
+     and shows the category alone when there is no subcategory. It
+     never shows a placeholder for the missing half: "no
+     subcategory" would make an ordinary entry look unfinished.
+
+     What the classifier filled in is marked by a bare sparkle
+     rather than a pill with the word in it. A breadcrumb and a pill
+     is too much for one 52px row, and the sparkle already means
+     "detected" everywhere else in this screen. It is the only
+     carrier of that fact now, so it is labelled. */
+  const categoryRow = (
+    <RowButton
+      icon={categoryGlyph}
+      iconFilled={effectiveCategory !== ""}
+      label={t("category.title")}
+      value={
+        vocabulary.owns(effectiveCategory) ? (
+          <>
+            {vocabulary.label(effectiveCategory)}
+            {shownSubcategory !== "" && (
+              <>
+                <span aria-hidden="true">{"  ›  "}</span>
+                {vocabulary.leafLabel(effectiveCategory, shownSubcategory)}
+              </>
+            )}
+          </>
+        ) : (
+          t("category.add")
+        )
+      }
+      muted={effectiveCategory === ""}
+      tag={
+        !categoryChosen && detectedCategory !== "" ? (
+          <Sparkles
+            aria-label={t("category.detected")}
+            className="size-3.5 shrink-0 text-payer-ink"
+          />
+        ) : null
+      }
+      onClick={() => setSheet("category")}
+    />
+  );
+
+  const descriptionCard = !isSettle && (
+    <RowCard>
+      <Row>
+        <AlignLeft
+          aria-hidden="true"
+          className="size-[18px] shrink-0 text-muted-foreground"
+        />
+        {/* Borderless on purpose: the card is already the field's
+            edge, and an input that draws its own box inside one is
+            two boxes saying the same thing. */}
+        <input
+          id="entry-description"
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          placeholder={t("labels.description")}
+          aria-label={t("labels.description")}
+          maxLength={200}
+          autoComplete="off"
+          className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
+        />
+      </Row>
+
+      {/* On a desk the categories open beside the row, in a popover
+          the size of the phone's sheet, instead of over the dialog. */}
+      {desk ? (
+        <Popover
+          open={sheet === "category"}
+          onOpenChange={(open) => setSheet(open ? "category" : null)}
+          modal
+        >
+          <PopoverTrigger asChild>{categoryRow}</PopoverTrigger>
+          <PopoverContent
+            align="start"
+            className="flex max-h-[min(32rem,var(--radix-popover-content-available-height))] w-[24rem] flex-col p-4"
+          >
+            <SheetTitleAsHeading>{categoryPicker}</SheetTitleAsHeading>
+          </PopoverContent>
+        </Popover>
+      ) : (
+        categoryRow
+      )}
+    </RowCard>
+  );
+
+  /* A repayment already says who paid whom and how much; what it was
+     for is the one thing those three facts leave out. Optional because
+     most repayments are for everything at once, and a field nobody has
+     to fill in is the difference between recording that and being
+     stopped to invent a title for it.
+
+     Its own card rather than a row on the one above: there is no
+     category on a repayment, so that card is a single row here and
+     would read as an orphan attached to the amount. */
+  const settleNoteCard = isSettle && (
+    <RowCard>
+      <Row>
+        <AlignLeft
+          aria-hidden="true"
+          className="size-[18px] shrink-0 text-muted-foreground"
+        />
+        <input
+          id="entry-note"
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
+          placeholder={t("labels.descriptionOptional")}
+          aria-label={t("labels.descriptionOptional")}
+          // The same line the description above is, so the same limit.
+          // The column holds far more for the sake of imported notes,
+          // and one longer than this still opens here intact — the
+          // attribute governs typing, not the value it is given.
+          maxLength={200}
+          autoComplete="off"
+          className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
+        />
+      </Row>
+    </RowCard>
+  );
+
+  /* The split row is always visible on an income now: it is where
+     "credited to" is answered, and it used to be hidden by the mode
+     that claimed to answer it instead.
+
+     It sits above the date because the body runs from what has to be
+     filled in to what rarely is, and these two are at opposite ends of
+     that: the date defaults to today and is right nearly every time,
+     while who paid and who is in are the most-corrected facts in the
+     entry. Under the date they were also the two rows the keyboard
+     covered. */
+  const splitRow = !isSettle && (
+    <SplitSummaryRow
+      payerName={payerName}
+      payerIsYou={payerId === selfId}
+      included={includedMembers}
+      memberCount={members.length}
+      summary={summary}
+      received={isIncome}
+      onOpen={() => setSheet("split")}
+    />
+  );
+
+  /*
+   * The split sheet's own contents, on the form, on a desk: who paid, who
+   * is in, how it divides and what each person's part comes to, with no
+   * row to open first. The date has gone up beside the amount, so this is
+   * where the body continues from what has to be filled in to what rarely
+   * is.
+   *
+   * It is where a save refused over the split puts focus, as the row is on
+   * a phone — the sentence saying what is wrong is inside it.
+   */
+  const inlineSplit = !isSettle && (
+    <div data-split-row="" tabIndex={-1} className="outline-none">
+      <SplitSheet {...splitSheetProps} inline />
+    </div>
+  );
+
+  /*
+   * What the sentence said about people, under the row it would change.
+   * Beside the field rather than inside it: the parser proposes and
+   * these are the two taps that dispose, which is the whole reason a
+   * name is allowed to be read at all.
+   */
+  const heardChips = !isSettle && namedPeople && (
+    <HeardPeopleChips
+      members={members}
+      selfId={selfId}
+      payerId={heardPayerId}
+      participantIds={heardIncluded}
+      onPayer={() => {
+        setPayerId(heardPayerId);
+        setNamedPeople((current) =>
+          current === null ? null : { ...current, payerId: "" },
+        );
+      }}
+      onSplit={() => {
+        setIncludedIds([...heardIncluded]);
+        // Per-item amounts were written against a different roster, so
+        // they are no longer an answer to this split.
+        setByItem(false);
+        setNamedPeople((current) =>
+          current === null ? null : { ...current, participantIds: [] },
+        );
+      }}
+      onDismiss={() => setNamedPeople(null)}
+    />
+  );
+
+  const dateCard = (
+    <RowCard>
+      <Row className="relative">
+        <CalendarDays
+          aria-hidden="true"
+          className="size-[18px] shrink-0 text-muted-foreground"
+        />
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+          {dateLabel}
+        </span>
+        {/* The native picker, made invisible over its own label: one
+            control, the platform's own calendar, and no second date
+            implementation. */}
+        <input
+          type="date"
+          // The field's name, not its value: "Aujourd'hui" is what the
+          // date happens to be today, and is useless as a label
+          // tomorrow.
+          aria-label={t("date.label")}
+          value={date}
+          // A rule being changed starts again no earlier than this; the
+          // row shows the first date from wherever it is set.
+          min={rule?.earliest}
+          onChange={(event) => setDate(event.target.value)}
+          // Without this the row is inert on a desktop: the picker the
+          // reader is aiming at only opens for an indicator they cannot
+          // see. See `openDatePicker`.
+          onClick={openDatePicker}
+          // `text-base` on an invisible field costs nothing to look at and
+          // is the difference between the date picker opening and the date
+          // picker opening on a sheet Safari has zoomed into: the sheet
+          // sets `text-sm`, and a control that states no size inherits it.
+          className="absolute inset-0 size-full text-base opacity-0"
+        />
+      </Row>
+
+      {/* A settlement happened once, on a day. Nothing about it can
+          recur, so the card is the date row and nothing else — and neither
+          can an entry that has already happened become the template for
+          future ones. */}
+      {canRepeat && (
+        <label
+          htmlFor={repeatsId}
+          className="flex min-h-[52px] w-full items-center gap-3 px-4 py-2"
+        >
+          <Repeat
+            aria-hidden="true"
+            className="size-[18px] shrink-0 text-muted-foreground"
+          />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold">
+              {t("repeat.label")}
+            </span>
+            <span
+              className={cn(
+                "block truncate text-xs",
+                endsTooSoon ? "text-destructive-ink" : "text-muted-foreground",
+              )}
+            >
+              {endsTooSoon
+                ? t("repeat.endsBeforeFirst")
+                : recurrence.enabled && upcomingLabel !== ""
+                  ? t("repeat.next", { dates: upcomingLabel })
+                  : t("repeat.schedule")}
+            </span>
+          </span>
+          <Switch
+            id={repeatsId}
+            // The row is the tap target, but its subline would
+            // otherwise be read out as part of the switch's name.
+            aria-label={t("repeat.label")}
+            checked={recurrence.enabled}
+            // A rule stays a rule: turning it into a one-off is not what
+            // changing it means, and Delete is in its own menu.
+            disabled={rule !== undefined}
+            onCheckedChange={(next) =>
+              setRecurrence((current) => ({
+                ...current,
+                enabled: next,
+              }))
+            }
+          />
+        </label>
+      )}
+
+      {canRepeat && recurrence.enabled && (
+        <RowButton
+          label={t("repeat.title")}
+          value={repeatLabel}
+          // Aligned with the text of the rows above rather than with
+          // their icons: a second repeat glyph would only say the same
+          // thing twice.
+          className="pl-[46px]"
+          onClick={() => setSheet("recur")}
+        />
+      )}
+    </RowCard>
+  );
+
+  const receiptItems = scan && !isSettle && (
+    <ReceiptItems
+      items={receiptRows(scan, members, currency, locale)}
+      // On a desk the split is already on the form, under the items.
+      onSplitByItem={desk ? showInlineSplit : () => setSheet("split")}
+    />
+  );
+
+  const methodRow = isSettle && (
+    <PaymentMethodRow
+      methods={countryMethods}
+      value={methodId}
+      usualMethod={usualMethod}
+      customLabel={customMethod}
+      country={country}
+      onSelect={(id) => setMethodLabel(tMethods(id))}
+      onOpenAll={() => setSheet("method")}
+    />
+  );
+
+  /*
+   * What the payment does to the ledger. On a desk it gets the board's own
+   * box, with the currency the two end up square in named — the dialog has
+   * room for it, and a group balancing in two currencies is where "will be
+   * settled" most needs saying which — and a line under it on what recording
+   * is and is not.
+   */
+  const outcomeLine =
+    isSettle &&
+    (desk ? (
+      <div className="flex flex-col gap-0.5 rounded-xl bg-muted px-4 py-3">
+        <p className="text-sm">
+          <SettleOutcomeLine
+            outcome={outcome}
+            currency={currency}
+            locale={locale}
+            settledIn={
+              outstandingIndex >= 0
+                ? settlePairs[outstandingIndex]?.currency
+                : undefined
+            }
+          />
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {t("settle.onlyRecords")}
+        </p>
+      </div>
+    ) : (
+      <p className="text-xs text-muted-foreground">
+        <SettleOutcomeLine
+          outcome={outcome}
+          currency={currency}
+          locale={locale}
+        />
+      </p>
+    ));
+
+  const attach = !isSettle && (
+    <AttachFile
+      groupId={groupId}
+      files={attachments}
+      onAttached={(file) => setAttachments((current) => [...current, file])}
+      onRemove={(id) =>
+        setAttachments((current) => current.filter((file) => file.id !== id))
+      }
+      // A recurring template has no attachment of its own to carry,
+      // so say so where the files are rather than after the entry has
+      // been saved without them.
+      unavailable={recurrence.enabled ? t("attach.notRepeating") : null}
+    />
+  );
+
+  const deleteControl = editing && (
+    <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+      <AlertDialogTrigger asChild>
+        <button
+          type="button"
+          disabled={pending}
+          className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-[17px] bg-card text-sm font-semibold text-destructive shadow-hairline transition-colors active:bg-destructive/10 disabled:opacity-50"
+        >
+          <Trash2 aria-hidden="true" className="size-[18px] shrink-0" />
+          {t("delete.trigger")}
+        </button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t("delete.title")}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t("delete.body", { entry: describeEntry() })}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={pending}>
+            {t("delete.keep")}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={(event) => {
+              event.preventDefault();
+              void onDelete();
+            }}
+            disabled={pending}
+          >
+            {t("delete.confirm")}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
+  /** The sheets that stay sheets on a desk, where the rest are on the form. */
+  const sheetShown =
+    sheet !== null &&
+    !(
+      desk &&
+      (sheet === "split" || sheet === "category" || sheet === "currency")
+    );
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div
+      className="flex min-h-0 flex-1 flex-col"
+      onKeyDown={desk ? saveFromKeyboard : undefined}
+    >
       {/*
        * The header holds *how* the entry is being filled in; the body holds the
        * entry. So the title, the kind of entry and the two ways in that skip
@@ -2363,18 +3156,25 @@ export function AddEntryForm({
        * that would have saved the typing vanished exactly as the typing began,
        * and the tabs went with it — so switching to Income meant scrolling up
        * through the form you were trying to stop filling in.
+       *
+       * On a desk the tabs join the title's row, which has the width for them.
        */}
-      <header className="flex shrink-0 flex-col gap-3 border-b border-border px-4 pt-1.5 pb-3">
+      <header
+        className={cn(
+          "flex shrink-0 flex-col gap-3 border-b border-border px-4 pt-1.5 pb-3",
+          desk && "px-5 pt-3.5",
+        )}
+      >
         <div className="flex items-center gap-3">
-          <SheetTitle className="flex-1 truncate text-xl font-semibold tracking-[-0.02em]">
-            {rule
-              ? t(
-                  `editRecurringTitles.${type === "income" ? "income" : "expense"}`,
-                )
-              : editing
-                ? t(`editTitles.${type}`)
-                : t(`titles.${type}`)}
+          <SheetTitle
+            className={cn(
+              "flex-1 truncate text-xl font-semibold tracking-[-0.02em]",
+              desk && "flex-none text-lg",
+            )}
+          >
+            {title}
           </SheetTitle>
+          {desk && <div className="mr-auto">{typeTabs}</div>}
           {/* The group's name is not repeated here: the group is on screen
               behind this, which is the whole reason it is a drawer. */}
           {onClose && (
@@ -2389,12 +3189,7 @@ export function AddEntryForm({
           )}
         </div>
 
-        <EntryTypeTabs
-          value={type}
-          onChange={changeType}
-          types={entryTypes}
-          panelId={typePanelId}
-        />
+        {!desk && typeTabs}
 
         {/*
          * Scan and voice, side by side because they are the same kind of thing
@@ -2495,490 +3290,53 @@ export function AddEntryForm({
           role: "tabpanel",
           "aria-labelledby": entryTypeTabId(typePanelId, type),
         })}
-        className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 [&>*]:shrink-0"
+        className={cn(
+          "flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 [&>*]:shrink-0",
+          desk && "gap-5 p-5",
+        )}
       >
-        {error && (
-          <Alert key={refusal?.count} id={errorId} variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-            {/* Refused because somebody else saved first: the way on sits
-                beside the reason, over fields still holding what was typed.
-                See `onReload`. */}
-            {failure?.code === "editConflict" && onReload && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-1.5 justify-self-start"
-                onClick={onReload}
-              >
-                {t("reload")}
-              </Button>
-            )}
-          </Alert>
+        {errorAlert}
+        {settlePicker}
+        {scanBanner}
+
+        {desk ? (
+          <>
+            {/* The amount beside what it was and when, from `xl`; at `lg`
+                the dialog is 720px and they stack, the amount first. */}
+            <div className="grid gap-4 xl:grid-cols-[18.75rem_minmax(0,1fr)]">
+              <div className="flex min-w-0 flex-col gap-3">
+                {amountCard}
+                {fullOrPart}
+              </div>
+              <div className="flex min-w-0 flex-col gap-3">
+                {descriptionCard}
+                {settleNoteCard}
+                {dateCard}
+                {methodRow}
+              </div>
+            </div>
+            {duplicateNote}
+            {heardChips}
+            {inlineSplit}
+          </>
+        ) : (
+          <>
+            {amountCard}
+            {duplicateNote}
+            {fullOrPart}
+            {descriptionCard}
+            {settleNoteCard}
+            {splitRow}
+            {heardChips}
+            {dateCard}
+          </>
         )}
 
-        {isSettle &&
-          (namesFromGroup ? (
-            <PairPicker
-              members={members}
-              fromId={settleFrom}
-              toId={settleTo}
-              onChange={(next) => {
-                setSettleFrom(next.fromId);
-                setSettleTo(next.toId);
-              }}
-            />
-          ) : (
-            <OutstandingList
-              pairs={settlePairs}
-              selectedIndex={outstandingIndex >= 0 ? outstandingIndex : null}
-              onSelect={selectPair}
-              onPickSomeoneElse={() => setSheet("pair")}
-              hasCustomPair={customPair !== null}
-              selfId={selfId}
-            />
-          ))}
-
-        {scan && bannerVisible && (
-          <ScanBanner
-            merchant={scan.description}
-            itemCount={Object.keys(scan.splitValues).length}
-            onDismiss={() => setBannerVisible(false)}
-          />
-        )}
-
-        <AmountCard
-          label={amountLabel}
-          amountText={amountText}
-          currency={currency}
-          baseCurrency={baseCurrency}
-          needsRate={needsRate}
-          rate={rate}
-          onRateChange={setRate}
-          date={date}
-          positive={isIncome}
-          onAmountChange={(next) =>
-            setAmountText(sanitiseAmount(next, currency))
-          }
-          onOpenCurrency={() => setSheet("currency")}
-          locale={locale}
-        />
-
-        {/*
-         * "Did I already log this?" — answered where it is asked, instead of
-         * by scrolling the list later.
-         *
-         * Quiet on purpose: muted text, no coloured background, no icon
-         * bigger than the words. Duplicates are legal — two coffee runs
-         * happen — so this never blocks and never pre-empts saving. It is a
-         * reassurance with one tap out of it.
-         */}
-        {duplicate && (
-          <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 px-1 text-xs text-muted-foreground">
-            <RotateCcw aria-hidden="true" className="size-3.5 shrink-0" />
-            <span>
-              {t("duplicate.note", {
-                // Rounds to nothing for an entry made minutes ago, which the
-                // message reads as "just now" rather than rounding it up to an
-                // hour that has not passed.
-                hours: Math.round(duplicate.hoursAgo),
-                description: duplicate.description,
-                amount: duplicate.amountFormatted,
-                name: duplicate.payerName,
-              })}
-            </span>
-            <Link
-              href={`/groups/${groupId}/expenses/${duplicate.id}`}
-              className="text-primary-ink underline-offset-2 hover:underline"
-            >
-              {t("duplicate.view")}
-            </Link>
-          </p>
-        )}
-
-        {/*
-         * The two things somebody does with a debt: clear it, or pay some of
-         * it. `Full` names the figure rather than saying "full", so you can
-         * see what you are restoring after typing over it, and it restores the
-         * currency with it — the figure means nothing without the money it is
-         * in. Hidden for a named pair and for a debt of nothing, both of which
-         * have no full amount to offer.
-         */}
-        {isSettle && settleBalance !== null && (
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setCurrency(settleBalance.currency);
-                setAmountText(
-                  formatMinorUnits(
-                    settleBalance.minor.toString(),
-                    settleBalance.currency,
-                  ),
-                );
-              }}
-              className="tap-target h-10 rounded-full border border-border bg-wash-1 px-3 text-sm text-muted-foreground"
-            >
-              {t("settle.full", {
-                amount: formatMinorUnits(
-                  settleBalance.minor.toString(),
-                  settleBalance.currency,
-                ),
-              })}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAmountText("");
-                document
-                  .querySelector<HTMLInputElement>("input[data-entry-amount]")
-                  ?.focus();
-              }}
-              className="tap-target h-10 rounded-full border border-border bg-wash-1 px-3 text-sm text-muted-foreground"
-            >
-              {t("settle.partOfIt")}
-            </button>
-          </div>
-        )}
-
-        {!isSettle && (
-          <RowCard>
-            <Row>
-              <AlignLeft
-                aria-hidden="true"
-                className="size-[18px] shrink-0 text-muted-foreground"
-              />
-              {/* Borderless on purpose: the card is already the field's
-                  edge, and an input that draws its own box inside one is
-                  two boxes saying the same thing. */}
-              <input
-                id="entry-description"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder={t("labels.description")}
-                aria-label={t("labels.description")}
-                maxLength={200}
-                autoComplete="off"
-                className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
-              />
-            </Row>
-
-            {/* The row reads as a breadcrumb — `Home › Household supplies` —
-                and shows the category alone when there is no subcategory. It
-                never shows a placeholder for the missing half: "no
-                subcategory" would make an ordinary entry look unfinished.
-
-                What the classifier filled in is marked by a bare sparkle
-                rather than a pill with the word in it. A breadcrumb and a pill
-                is too much for one 52px row, and the sparkle already means
-                "detected" everywhere else in this screen. It is the only
-                carrier of that fact now, so it is labelled. */}
-            <RowButton
-              icon={categoryGlyph}
-              iconFilled={effectiveCategory !== ""}
-              label={t("category.title")}
-              value={
-                vocabulary.owns(effectiveCategory) ? (
-                  <>
-                    {vocabulary.label(effectiveCategory)}
-                    {shownSubcategory !== "" && (
-                      <>
-                        <span aria-hidden="true">{"  \u203a  "}</span>
-                        {vocabulary.leafLabel(
-                          effectiveCategory,
-                          shownSubcategory,
-                        )}
-                      </>
-                    )}
-                  </>
-                ) : (
-                  t("category.add")
-                )
-              }
-              muted={effectiveCategory === ""}
-              tag={
-                !categoryChosen && detectedCategory !== "" ? (
-                  <Sparkles
-                    aria-label={t("category.detected")}
-                    className="size-3.5 shrink-0 text-payer-ink"
-                  />
-                ) : null
-              }
-              onClick={() => setSheet("category")}
-            />
-          </RowCard>
-        )}
-
-        {/* A repayment already says who paid whom and how much; what it was
-            for is the one thing those three facts leave out. Optional because
-            most repayments are for everything at once, and a field nobody has
-            to fill in is the difference between recording that and being
-            stopped to invent a title for it.
-
-            Its own card rather than a row on the one above: there is no
-            category on a repayment, so that card is a single row here and
-            would read as an orphan attached to the amount. */}
-        {isSettle && (
-          <RowCard>
-            <Row>
-              <AlignLeft
-                aria-hidden="true"
-                className="size-[18px] shrink-0 text-muted-foreground"
-              />
-              <input
-                id="entry-note"
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                placeholder={t("labels.descriptionOptional")}
-                aria-label={t("labels.descriptionOptional")}
-                // The same line the description above is, so the same limit.
-                // The column holds far more for the sake of imported notes,
-                // and one longer than this still opens here intact — the
-                // attribute governs typing, not the value it is given.
-                maxLength={200}
-                autoComplete="off"
-                className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
-              />
-            </Row>
-          </RowCard>
-        )}
-
-        {/* The split row is always visible on an income now: it is where
-            "credited to" is answered, and it used to be hidden by the mode
-            that claimed to answer it instead.
-
-            It sits above the date because the body runs from what has to be
-            filled in to what rarely is, and these two are at opposite ends of
-            that: the date defaults to today and is right nearly every time,
-            while who paid and who is in are the most-corrected facts in the
-            entry. Under the date they were also the two rows the keyboard
-            covered. */}
-        {!isSettle && (
-          <SplitSummaryRow
-            payerName={payerName}
-            payerIsYou={payerId === selfId}
-            included={includedMembers}
-            memberCount={members.length}
-            summary={summary}
-            received={isIncome}
-            onOpen={() => setSheet("split")}
-          />
-        )}
-
-        {/*
-         * What the sentence said about people, under the row it would change.
-         * Beside the field rather than inside it: the parser proposes and
-         * these are the two taps that dispose, which is the whole reason a
-         * name is allowed to be read at all.
-         */}
-        {!isSettle && namedPeople && (
-          <HeardPeopleChips
-            members={members}
-            selfId={selfId}
-            payerId={heardPayerId}
-            participantIds={heardIncluded}
-            onPayer={() => {
-              setPayerId(heardPayerId);
-              setNamedPeople((current) =>
-                current === null ? null : { ...current, payerId: "" },
-              );
-            }}
-            onSplit={() => {
-              setIncludedIds([...heardIncluded]);
-              // Per-item amounts were written against a different roster, so
-              // they are no longer an answer to this split.
-              setByItem(false);
-              setNamedPeople((current) =>
-                current === null ? null : { ...current, participantIds: [] },
-              );
-            }}
-            onDismiss={() => setNamedPeople(null)}
-          />
-        )}
-
-        <RowCard>
-          <Row className="relative">
-            <CalendarDays
-              aria-hidden="true"
-              className="size-[18px] shrink-0 text-muted-foreground"
-            />
-            <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-              {dateLabel}
-            </span>
-            {/* The native picker, made invisible over its own label: one
-                control, the platform's own calendar, and no second date
-                implementation. */}
-            <input
-              type="date"
-              // The field's name, not its value: "Aujourd'hui" is what the
-              // date happens to be today, and is useless as a label
-              // tomorrow.
-              aria-label={t("date.label")}
-              value={date}
-              // A rule being changed starts again no earlier than this; the
-              // row shows the first date from wherever it is set.
-              min={rule?.earliest}
-              onChange={(event) => setDate(event.target.value)}
-              // Without this the row is inert on a desktop: the picker the
-              // reader is aiming at only opens for an indicator they cannot
-              // see. See `openDatePicker`.
-              onClick={openDatePicker}
-              // `text-base` on an invisible field costs nothing to look at and
-              // is the difference between the date picker opening and the date
-              // picker opening on a sheet Safari has zoomed into: the sheet
-              // sets `text-sm`, and a control that states no size inherits it.
-              className="absolute inset-0 size-full text-base opacity-0"
-            />
-          </Row>
-
-          {/* A settlement happened once, on a day. Nothing about it can
-              recur, so the card is the date row and nothing else — and neither
-              can an entry that has already happened become the template for
-              future ones. */}
-          {canRepeat && (
-            <label
-              htmlFor={repeatsId}
-              className="flex min-h-[52px] w-full items-center gap-3 px-4 py-2"
-            >
-              <Repeat
-                aria-hidden="true"
-                className="size-[18px] shrink-0 text-muted-foreground"
-              />
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold">
-                  {t("repeat.label")}
-                </span>
-                <span
-                  className={cn(
-                    "block truncate text-xs",
-                    endsTooSoon
-                      ? "text-destructive-ink"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  {endsTooSoon
-                    ? t("repeat.endsBeforeFirst")
-                    : recurrence.enabled && upcomingLabel !== ""
-                      ? t("repeat.next", { dates: upcomingLabel })
-                      : t("repeat.schedule")}
-                </span>
-              </span>
-              <Switch
-                id={repeatsId}
-                // The row is the tap target, but its subline would
-                // otherwise be read out as part of the switch's name.
-                aria-label={t("repeat.label")}
-                checked={recurrence.enabled}
-                // A rule stays a rule: turning it into a one-off is not what
-                // changing it means, and Delete is in its own menu.
-                disabled={rule !== undefined}
-                onCheckedChange={(next) =>
-                  setRecurrence((current) => ({
-                    ...current,
-                    enabled: next,
-                  }))
-                }
-              />
-            </label>
-          )}
-
-          {canRepeat && recurrence.enabled && (
-            <RowButton
-              label={t("repeat.title")}
-              value={repeatLabel}
-              // Aligned with the text of the rows above rather than with
-              // their icons: a second repeat glyph would only say the same
-              // thing twice.
-              className="pl-[46px]"
-              onClick={() => setSheet("recur")}
-            />
-          )}
-        </RowCard>
-
-        {scan && !isSettle && (
-          <ReceiptItems
-            items={receiptRows(scan, members, currency, locale)}
-            onSplitByItem={() => setSheet("split")}
-          />
-        )}
-
-        {isSettle && (
-          <PaymentMethodRow
-            methods={countryMethods}
-            value={methodId}
-            usualMethod={usualMethod}
-            customLabel={customMethod}
-            country={country}
-            onSelect={(id) => setMethodLabel(tMethods(id))}
-            onOpenAll={() => setSheet("method")}
-          />
-        )}
-
-        {isSettle && (
-          <p className="text-xs text-muted-foreground">
-            <SettleOutcomeLine
-              outcome={outcome}
-              currency={currency}
-              locale={locale}
-            />
-          </p>
-        )}
-
-        {!isSettle && (
-          <AttachFile
-            groupId={groupId}
-            files={attachments}
-            onAttached={(file) =>
-              setAttachments((current) => [...current, file])
-            }
-            onRemove={(id) =>
-              setAttachments((current) =>
-                current.filter((file) => file.id !== id),
-              )
-            }
-            // A recurring template has no attachment of its own to carry,
-            // so say so where the files are rather than after the entry has
-            // been saved without them.
-            unavailable={recurrence.enabled ? t("attach.notRepeating") : null}
-          />
-        )}
-
-        {editing && (
-          <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-            <AlertDialogTrigger asChild>
-              <button
-                type="button"
-                disabled={pending}
-                className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-[17px] bg-card text-sm font-semibold text-destructive shadow-hairline transition-colors active:bg-destructive/10 disabled:opacity-50"
-              >
-                <Trash2 aria-hidden="true" className="size-[18px] shrink-0" />
-                {t("delete.trigger")}
-              </button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{t("delete.title")}</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {t("delete.body", { entry: describeEntry() })}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={pending}>
-                  {t("delete.keep")}
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={(event) => {
-                    event.preventDefault();
-                    void onDelete();
-                  }}
-                  disabled={pending}
-                >
-                  {t("delete.confirm")}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
+        {receiptItems}
+        {!desk && methodRow}
+        {outcomeLine}
+        {attach}
+        {deleteControl}
       </div>
 
       {/*
@@ -3006,18 +3364,29 @@ export function AddEntryForm({
        * destructive press a slip away from the one pressed every time.
        *
        * Cancel is still the scrim, the X and a downward swipe, none of which
-       * cost any room.
+       * cost any room. On a desk, where nothing is swiped and the room is
+       * there, it is a button too, beside the key that saves.
        */}
       <div
         data-slot="sheet-actions"
-        className="shrink-0 border-t border-border bg-background px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] in-data-[keyboard]:pb-3"
+        className={cn(
+          "shrink-0 border-t border-border bg-background px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] in-data-[keyboard]:pb-3",
+          desk && "flex items-center justify-end gap-2 px-5 pb-3",
+        )}
       >
+        {desk && <SaveKeyHint />}
+        {desk && onClose && (
+          <Button type="button" variant="ghost" size="lg" onClick={onClose}>
+            {tCommon("cancel")}
+          </Button>
+        )}
         <Button
           type="button"
           size="lg"
-          className="h-13 w-full"
+          className={desk ? "h-10 px-5" : "h-13 w-full"}
           disabled={!canSave || pending}
           onClick={onSubmit}
+          aria-keyshortcuts={desk ? "Meta+Enter Control+Enter" : undefined}
         >
           {pending && <Loader2 aria-hidden="true" className="animate-spin" />}
           {t(
@@ -3026,13 +3395,13 @@ export function AddEntryForm({
         </Button>
       </div>
 
-      <Sheet
-        open={sheet !== null}
-        onOpenChange={(open) => !open && setSheet(null)}
-      >
+      <Sheet open={sheetShown} onOpenChange={(open) => !open && setSheet(null)}>
         <SheetContent
           side="bottom"
           showCloseButton={false}
+          // On a desk the few that stay sheets — who pays whom, every
+          // method, the schedule — are small dialogs over the entry dialog.
+          desk="md"
           // Every one of these sheets opens on what it has to show — the
           // category chips, the currency list, who is in the split — and none
           // of them wants a keyboard over it before anybody has asked to type.
@@ -3054,157 +3423,20 @@ export function AddEntryForm({
               : "max-h-[86vh] overflow-y-auto px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] data-[keyboard]:pb-5",
           )}
         >
-          {sheet === "split" && (
-            <SplitSheet
-              members={members}
-              selfId={selfId}
-              title={isIncome ? t("split.titleIncome") : t("split.title")}
-              totalFormatted={amountFormatted}
-              currency={currency}
-              payerId={payerId}
-              onPayerChange={setPayerId}
-              includedIds={effectiveIncluded}
-              onIncludedChange={(ids) => {
-                setIncludedIds(ids);
-                setByItem(false);
-              }}
-              method={method}
-              onMethodChange={changeMethod}
-              values={values}
-              onValueChange={(id, value) =>
-                setValues((current) => ({ ...current, [id]: value }))
-              }
-              onGiveRemaining={
-                totalMinor.ok
-                  ? (id) =>
-                      setValues((current) =>
-                        giveRemaining({
-                          values: current,
-                          participantId: id,
-                          participantIds: effectiveIncluded,
-                          currency,
-                          totalMinor: totalMinor.value,
-                        }),
-                      )
-                  : undefined
-              }
-              preview={preview}
-              note={splitNote}
-              received={isIncome}
-              alwaysSplit={
-                worthSaving({
-                  method,
-                  includedIds: effectiveIncluded,
-                  memberCount: members.length,
-                })
-                  ? alwaysSplit
-                  : null
-              }
-              onAlwaysSplitChange={setAlwaysSplit}
-              onAddGuest={canAddGuests ? addGuest : undefined}
-              // An income has a receiver and a repayment has a pair; neither
-              // has anything to divide the paying between.
-              several={several}
-              onSeveralChange={
-                isIncome
-                  ? undefined
-                  : (next) => {
-                      setSeveral(next);
-                      // Turning it on seeds the one payer the form already
-                      // has, so the panel opens on a state that balances
-                      // rather than on a shortfall nobody caused.
-                      if (next && Object.keys(payerAmounts).length === 0) {
-                        setPayerAmounts({ [payerId]: amountText });
-                      }
-                    }
-              }
-              payerAmounts={payerAmounts}
-              onPayerAmountChange={(id, value) =>
-                setPayerAmounts((current) => ({
-                  ...current,
-                  [id]: sanitiseAmount(value, currency),
-                }))
-              }
-              payerNote={payerNote}
-              onJustOnePaid={() => {
-                setSeveral(false);
-                setPayerAmounts({});
-              }}
-              onSplitPaymentEqually={() =>
-                setPayerAmounts(
-                  splitPaymentEqually({
-                    payerIds: effectiveIncluded,
-                    currency,
-                    totalMinor: totalMinor.ok ? totalMinor.value : 0n,
-                    format: (minor, code) =>
-                      formatMinorUnits(minor.toString(), code),
-                  }),
-                )
-              }
-              onGiveRest={(id) =>
-                setPayerAmounts((current) =>
-                  giveRestTo({
-                    amounts: current,
-                    participantId: id,
-                    memberIds: members.map((member) => member.id),
-                    currency,
-                    totalMinor: totalMinor.ok ? totalMinor.value : 0n,
-                    format: (minor, code) =>
-                      formatMinorUnits(minor.toString(), code),
-                  }),
-                )
-              }
-              onDone={() => setSheet(null)}
-            />
-          )}
+          {/* The room above the contents on a desk, where the grabber that
+              carries it on a phone has gone. A first child rather than a
+              padding on the sheet, which the grabber tests in `ui/sheet` keep
+              to the primitive. */}
+          <span
+            aria-hidden="true"
+            className="hidden shrink-0 lg:block lg:h-4"
+          />
 
-          {sheet === "category" && (
-            <CategorySheet
-              value={effectiveCategory}
-              subcategory={shownSubcategory}
-              detectedValue={detectedCategory}
-              description={description}
-              suggestion={suggestion}
-              frequent={frequentCategories}
-              direction={categoryDirection}
-              // Every tap in the sheet writes a valid entry, including the one
-              // that only opens a pane — which is what lets the second level
-              // be optional rather than a step to escape from. The sheet says
-              // when it is finished; this only records what it chose.
-              onSelect={(next, leaf) => {
-                setCategoryChosen(true);
-                setCategory(next);
-                setSubcategory(leaf ?? "");
-              }}
-              onDone={() => setSheet(null)}
-              // Reverting has to clear the override rather than re-pick the
-              // detected value: a category that merely *equals* the guess is
-              // still a manual choice, and would stop following the
-              // description the moment it was edited again.
-              onRevert={() => {
-                setCategoryChosen(false);
-                setCategory("");
-                setSubcategory("");
-                setSheet(null);
-              }}
-            />
-          )}
+          {sheet === "split" && <SplitSheet {...splitSheetProps} />}
 
-          {sheet === "currency" && (
-            <CurrencyPicker
-              value={currency}
-              title={t("currency.title")}
-              // What is already typed has to survive the new currency's rules:
-              // 84.60 picked up again as yen is ¥84, not an amount the server
-              // will refuse.
-              onSelect={(code) => {
-                setCurrency(code);
-                setAmountText((current) => sanitiseAmount(current, code));
-                setSheet(null);
-              }}
-              onBack={() => setSheet(null)}
-            />
-          )}
+          {sheet === "category" && categoryPicker}
+
+          {sheet === "currency" && currencyPicker}
 
           {sheet === "method" && (
             <PaymentMethodSheet
@@ -3269,6 +3501,33 @@ export function AddEntryForm({
 }
 
 /**
+ * "⌘ ↵ to save", at the start of the dialog's footer on a desk.
+ *
+ * A hint, not a control: the button beside it is what saves, and says so to a
+ * screen reader with `aria-keyshortcuts`. Hidden from one here so the footer
+ * is not read out as a sentence about keys before the button it describes.
+ */
+function SaveKeyHint() {
+  const t = useTranslations("addEntry");
+  const modifier = useModifierKey();
+  return (
+    <span
+      aria-hidden="true"
+      className="mr-auto inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+    >
+      {t.rich("saveKeys", {
+        keys: () => (
+          <span className="inline-flex gap-1">
+            <Kbd>{modifier}</Kbd>
+            <Kbd>↵</Kbd>
+          </span>
+        ),
+      })}
+    </span>
+  );
+}
+
+/**
  * One amount in another currency, or nothing at all.
  *
  * Half-typed rates ("1.", "0") throw rather than return a wrong number, and a
@@ -3310,11 +3569,17 @@ function SettleOutcomeLine({
   outcome,
   currency,
   locale,
+  settledIn,
 }: {
   outcome: SettleOutcome;
   /** The payment's own currency, for the sentence that names it. */
   currency: string;
   locale: string;
+  /**
+   * The debt's currency, for a desk's "will be settled in EUR". Absent on a
+   * phone, whose line stays the shorter sentence it was.
+   */
+  settledIn?: string;
 }) {
   const t = useTranslations("addEntry.settle");
 
@@ -3323,11 +3588,14 @@ function SettleOutcomeLine({
   if (outcome.kind === "zeroAmount") return t("outcomeZero");
   if (outcome.kind === "awaitingRate") return t("outcomeAwaitingRate");
   if (outcome.kind === "exact") {
-    // The only sentence with a remainder of nothing, so it names no figure.
-    return t("outcomeExact", {
+    const names = {
       from: outcome.pairNames?.fromName ?? "",
       to: outcome.pairNames?.toName ?? "",
-    });
+    };
+    // The only sentence with a remainder of nothing, so it names no figure.
+    return settledIn
+      ? t("outcomeExactIn", { ...names, currency: settledIn })
+      : t("outcomeExact", names);
   }
 
   const remainder = outcome.remainder;

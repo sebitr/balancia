@@ -70,6 +70,9 @@ export function Row({
  * The field's name is read out before its value rather than replacing it: a
  * row announced as "Category" alone tells somebody what the control is for and
  * not what it currently says, which is the thing they were checking.
+ *
+ * Anything else a button takes is passed on to it, which is what lets a
+ * popover use the row as its trigger — the entry dialog's category, on a desk.
  */
 export function RowButton({
   icon: Icon,
@@ -80,7 +83,11 @@ export function RowButton({
   tag,
   className,
   onClick,
-}: {
+  ...props
+}: Omit<
+  React.ComponentProps<"button">,
+  "value" | "onClick" | "className" | "children"
+> & {
   icon?: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
   /** The field's name, for anyone not reading the card's shape. */
   label: string;
@@ -101,6 +108,7 @@ export function RowButton({
   return (
     <button
       type="button"
+      {...props}
       onClick={onClick}
       className={cn(
         ROW,
