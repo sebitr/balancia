@@ -4,6 +4,8 @@ import {
   RESUME_PARAM,
   SHEET_PARAM,
   sheetOf,
+  TYPE_PARAM,
+  typeOf,
   withFragment,
 } from "./drawer-fragment";
 
@@ -76,5 +78,14 @@ describe("sheetOf", () => {
     expect(sheetOf(fragmentParams("#sheet=split"))).toBe("split");
     expect(sheetOf(fragmentParams("#sheet=payer"))).toBeUndefined();
     expect(sheetOf(fragmentParams("#"))).toBeUndefined();
+  });
+});
+
+describe("typeOf", () => {
+  it("opens on the Repayment tab, and on nothing anybody else typed", () => {
+    expect(typeOf(fragmentParams(`#${TYPE_PARAM}=settle`))).toBe("settle");
+    expect(typeOf(fragmentParams(`#${TYPE_PARAM}=income`))).toBeUndefined();
+    expect(typeOf(fragmentParams(`#${TYPE_PARAM}=`))).toBeUndefined();
+    expect(typeOf(fragmentParams(""))).toBeUndefined();
   });
 });

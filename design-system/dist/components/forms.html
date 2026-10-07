@@ -1873,6 +1873,115 @@ a[aria-current="page"] .nav-icon--primary {
   line-height: 1.35;
 }
 
+/* The command palette — src/components/layout/command-palette.tsx. "Search
+   or jump to", over the screen from lg up: a field, the list under it in
+   sections, and the keys along the foot. 40rem, anchored by its top. A row is
+   44px and lit with the sidebar's wash where ↵ will go; a figure in it is a
+   total in neutral ink, a position the sidebar's phrase in the tone's. */
+.palette {
+  display: flex;
+  flex-direction: column;
+  max-width: 40rem;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: var(--shadow-raised);
+  font-size: 0.875rem;
+}
+.palette-in {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  height: 3.5rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 1rem;
+}
+.palette-in svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+.palette-query {
+  flex: 1;
+  min-width: 0;
+}
+.palette-sec {
+  padding: 0.625rem 1rem 0.25rem;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.palette-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: calc(100% - 1rem);
+  min-height: 2.75rem;
+  margin: 0 0.5rem;
+  padding: 6px 0.625rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+.palette-row[aria-selected="true"] {
+  background: var(--sidebar-accent);
+}
+.palette-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+.palette-row-sub {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+.palette-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+.palette-glyph svg {
+  width: 1rem;
+  height: 1rem;
+}
+.palette-fig {
+  flex-shrink: 0;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.palette-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1rem;
+  padding: 0.625rem 1rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklch, var(--muted) 35%, var(--popover));
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+.palette-foot > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
 /* A group's header, above the screen on its four places from lg up: the
    tile, the name with its currencies, a meta line, and the places as a
    segmented row. `src/components/layout/group-header.tsx`. */
@@ -2574,6 +2683,53 @@ a[aria-current="page"] .nav-icon--primary {
       Inputs are <code>text-base</code> below the <code>md</code> breakpoint and
       <code>text-sm</code> above it. That is deliberate: iOS Safari zooms the
       viewport on focus for anything under 16px.
+    </p>
+  </section>
+
+  <section>
+    <h2>At a desk</h2>
+    <p class="note" style="margin-bottom: 0.75rem">
+      The entry form is one form at every width. From <code>lg</code> it is a
+      dialog with the room to lay its parts side by side — drawn in full on
+      <em>Desktop layout › The entry dialog</em> — and three things change in
+      how its fields are answered:
+    </p>
+    <div class="spec">
+      <dl class="dl" style="margin: 0">
+        <dt>pickers</dt>
+        <dd>
+          A field whose answer is a list — the category, the currency — opens a
+          popover on the row or the chip that holds it, the size of the phone's
+          sheet, instead of a sheet over the dialog. Its title is a plain
+          heading there, not a second name for the dialog.
+        </dd>
+        <dt>in place</dt>
+        <dd>
+          A sheet whose answer is several controls at once — who paid and how it
+          splits — is laid out on the form, with no row to open and no Done to
+          press.
+        </dd>
+        <dt><span class="kbd">⌘</span> <span class="kbd">↵</span></dt>
+        <dd>
+          Saves from any field — Ctrl ↵ off a Mac. It is the primary button,
+          pressed: what the button would refuse, the key refuses too, and says
+          why in the same place.
+          <span
+            style="
+              display: inline-flex;
+              align-items: center;
+              gap: 0.375rem;
+              margin-left: 0.25rem;
+            "
+            class="field-desc"
+            ><span class="kbd">⌘</span><span class="kbd">↵</span> to save</span
+          >
+        </dd>
+      </dl>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Fields keep <code>text-base md:text-sm</code>; nothing about them changes
+      below <code>lg</code>.
     </p>
   </section>
 

@@ -7,6 +7,7 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useKeyboardInset } from "@/components/ui/use-keyboard-inset";
+import { DIALOG_WIDTH, type DialogSize } from "@/components/ui/dialog-size";
 import { XIcon } from "lucide-react";
 
 /** Page left showing around a dialog the keyboard has pushed up. */
@@ -57,10 +58,16 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  size = "sm",
   style,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
+  /**
+   * How wide it may grow, by what it holds — see `dialog-size.ts`. `sm`, a
+   * question and its answer, unless it says otherwise.
+   */
+  size?: DialogSize;
 }) {
   /**
    * A dialog centres itself in the room the keyboard has left.
@@ -86,7 +93,8 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto overscroll-contain rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto overscroll-contain rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          DIALOG_WIDTH[size],
           className,
         )}
         style={{

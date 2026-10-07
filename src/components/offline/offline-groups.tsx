@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AddEntryForm } from "@/components/entries/add-entry-form";
 import {
+  ENTRY_DESK,
   ENTRY_SHEET_CLASS,
   openOnAmount,
 } from "@/components/entries/entry-sheet";
@@ -81,6 +82,7 @@ export function OfflineGroups({
         <SheetContent
           side="bottom"
           showCloseButton={false}
+          desk={ENTRY_DESK}
           className={ENTRY_SHEET_CLASS}
           onOpenAutoFocus={openOnAmount}
         >

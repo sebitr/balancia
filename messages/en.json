@@ -48,6 +48,27 @@
     "sidebarKeepGroup": "Keep {group}",
     "sidebarGuestNote": "This browser is the only place your access lives."
   },
+  "palette": {
+    "label": "Search groups, people and transactions",
+    "results": "Results",
+    "transactionsIn": "Transactions in {group}",
+    "actions": "Actions",
+    "addExpense": "Add an expense",
+    "addExpenseTo": "Add an expense to {group}",
+    "settleUpIn": "Settle up in {group}",
+    "openSettings": "Open settings",
+    "paidLine": "{who, select, you {You paid} withYou {{names} paid} other {{count, plural, one {{names} paid} other {{names} paid}}}}",
+    "you": "You",
+    "repayment": "Repayment",
+    "income": "Income",
+    "nothing": "No group, person or transaction matches “{query}”.",
+    "resultCount": "{count, plural, one {# result} other {# results}}",
+    "failed": "Couldn't search just now. Try again.",
+    "move": "Move",
+    "open": "Open",
+    "openNewTab": "Open in a new tab",
+    "close": "Close"
+  },
   "theme": {
     "menu": "Theme"
   },
@@ -522,6 +543,7 @@
   "dashboard": {
     "metaTitle": "Your groups",
     "title": "Your groups",
+    "todayLine": "{date} · {count, plural, one {# active group} other {# active groups}}",
     "newGroup": "New group",
     "emptyTitle": "Create your first group",
     "emptyDescription": "A trip, a flat, a project — anywhere people share costs. Balancia works out who owes whom.",
@@ -564,10 +586,14 @@
     "pickerCount": "{shown} of {total, plural, one {# group} other {# groups}}",
     "pickerSearchLabel": "Search your groups",
     "pickerSearchPlaceholder": "Search groups",
+    "pickerMove": "Move",
+    "pickerChoose": "Choose",
     "peopleCount": "{count, plural, one {# person} other {# people}}",
     "settledWord": "Settled",
     "noExpensesWord": "No expenses yet",
-    "archivedWord": "Archived"
+    "archivedWord": "Archived",
+    "recentTitle": "Recent in your groups",
+    "recentAll": "All notifications"
   },
   "group": {
     "archived": "Archived",
@@ -915,6 +941,8 @@
     "accentFailed": "That colour could not be saved.",
     "language": "Language",
     "languageNote": "Language changes the words. How dates and amounts are written lives in Money & formats, so you can read English and still write 13/08/2026.",
+    "singleKeys": "Single-key shortcuts",
+    "singleKeysHelp": "N adds an expense and S settles up when no field has the cursor. Stays on this device.",
     "currencyTitle": "Show my totals in",
     "currencyHelp": "Every group is converted into this on your home screen. Each group keeps its own currency.",
     "currencySaved": "Preferred currency saved",
@@ -1108,6 +1136,7 @@
   },
   "settleUp": {
     "title": "Settle up",
+    "recordRepayment": "Record a repayment",
     "clearsGroup": "{count, plural, one {# repayment clears the group} other {# repayments clear the group}}",
     "clearsCurrency": "{count, plural, one {# repayment clears this currency} other {# repayments clear this currency}}",
     "betweenOthers": "Between others",
@@ -1137,7 +1166,9 @@
     "youPayBack": "You pay {name} back",
     "paysBack": "{from} pays {to} back",
     "remindShort": "Remind",
-    "seeTransactions": "See the transactions"
+    "seeTransactions": "See the transactions",
+    "howRepaymentsWork": "A repayment moves balances between two people. It is not counted as group spending, and Balancia never moves the money itself.",
+    "eachCurrencyApart": "Each currency is settled on its own"
   },
   "marketing": {
     "meta": {
@@ -2797,6 +2828,18 @@
       "title": "That entry is no longer here",
       "body": "It was removed, or recorded as something else — a repayment rather than an expense, or the other way round. The transactions list has whatever took its place.",
       "action": "Transactions"
+    },
+    "table": {
+      "person": "Person",
+      "paid": "Paid",
+      "received": "Received",
+      "effect": "What this did"
+    },
+    "meta": {
+      "paid": "{count, plural, one {{name} paid} other {# people paid}}",
+      "paidYou": "You paid",
+      "received": "{count, plural, one {{name} received it} other {# people received it}}",
+      "receivedYou": "You received it"
     }
   },
   "emails": {
@@ -3313,6 +3356,7 @@
   "addEntry": {
     "back": "Back",
     "reload": "Reload",
+    "saveKeys": "<keys></keys> to save",
     "titles": {
       "expense": "Add expense",
       "income": "Add income",
@@ -3546,6 +3590,8 @@
       "outcomeUnder": "Partial repayment — {from} will still owe {to} {amount}.",
       "outcomeOver": "More than owed — {from} will owe {to} {amount}.",
       "outcomeExact": "{from} and {to} will be settled.",
+      "outcomeExactIn": "{from} and {to} will be settled in {currency}.",
+      "onlyRecords": "Balancia only records the repayment. It never moves the money itself.",
       "outcomeOtherCurrency": "Paid in {currency} — {from} still owes {to} {amount}.",
       "someoneElse": "Someone else",
       "changeWhoPays": "Change who pays",

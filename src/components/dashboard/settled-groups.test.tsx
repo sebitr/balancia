@@ -114,6 +114,35 @@ describe("SettledGroups", () => {
     expect(within(row).queryByText(/2 people/)).not.toBeInTheDocument();
   });
 
+  /*
+   * From `lg` the same toggle is drawn as the desktop board's pill, and the
+   * settled groups above it stay rows: the board's "Settled up · N" pill is
+   * not drawn (see the component's comment). jsdom runs no media queries, so
+   * what is held is the classes each width is given.
+   */
+  it("draws the archived row as a pill from lg, and leaves the settled rows open", () => {
+    renderWithIntl(
+      <SettledGroups settled={SETTLED} archived={ARCHIVED} now={NOW} />,
+    );
+
+    const toggle = screen.getByRole("button", { name: /2 archived groups/ });
+    expect(toggle).toHaveClass(
+      "lg:inline-flex",
+      "lg:w-auto",
+      "lg:border",
+      "lg:bg-card",
+    );
+    // One button for both widths, never a second toggle for the desk.
+    expect(screen.getAllByRole("button", { name: /archived/i })).toHaveLength(
+      1,
+    );
+    // Every settled group is still a row, with nothing to open first.
+    expect(screen.getAllByRole("link")).toHaveLength(SETTLED.length);
+    expect(
+      screen.queryByRole("button", { name: /Settled up/ }),
+    ).not.toBeInTheDocument();
+  });
+
   /**
    * A group with nothing in it has no balance, and it used to be filed under
    * "Settled up" for that reason, with "Settled" beside its name.

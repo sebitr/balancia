@@ -2325,7 +2325,9 @@ describe("recurrence", () => {
     await user.type(screen.getByLabelText("Description"), "Internet");
 
     await user.click(screen.getByRole("switch", { name: "Repeats" }));
-    await user.click(screen.getByRole("button", { name: /Every month on the/ }));
+    await user.click(
+      screen.getByRole("button", { name: /Every month on the/ }),
+    );
     const repeat = sheet("Repeat");
     await user.click(repeat.getByRole("button", { name: /^Ends/ }));
     await user.click(repeat.getByRole("button", { name: "On a date" }));
@@ -3784,6 +3786,43 @@ describe("picking the people on a repayment", () => {
  * link names the pair in the URL's fragment, and the drawer prices it from the
  * balances it was handed.
  */
+/**
+ * Settle up's "Record a repayment": for a payment its list has no row for,
+ * so the drawer opens on the tab and asks, rather than on the largest debt as
+ * switching to the tab does.
+ */
+describe("a drawer opened on the Repayment tab", () => {
+  it("opens with nobody picked, and asks who is paying whom", () => {
+    renderForm({}, "/groups/g1/expenses/new#type=settle");
+
+    expect(screen.getByRole("tab", { name: "Repayment" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(
+      screen.getByRole("button", { name: /Hervé pays you back/ }),
+    ).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("textbox", { name: "Paying back" })).toHaveValue(
+      "",
+    );
+    expect(screen.getByText("Pick who is paying whom.")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Record repayment" }),
+    ).toBeDisabled();
+  });
+
+  it("gives way to a stated debt, which says more", () => {
+    renderForm(
+      {},
+      "/groups/g1/expenses/new#type=settle&settleFrom=herve&settleTo=seb&settleIn=CHF",
+    );
+
+    expect(screen.getByRole("textbox", { name: "Paying back" })).toHaveValue(
+      "128.40",
+    );
+  });
+});
+
 describe("a drawer opened on a stated debt", () => {
   const STATED =
     "/groups/g1/expenses/new#settleFrom=herve&settleTo=seb&settleIn=CHF";

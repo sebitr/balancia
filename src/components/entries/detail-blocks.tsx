@@ -433,6 +433,9 @@ export function PartyRow({
  *
  * The heading above the shares is drawn for the eye only; each figure carries
  * its own name for a screen reader, which reads the list a row at a time.
+ *
+ * Below `lg` only. A desk column has twice the room the table needed, and
+ * there the screen draws `SplitTableShell` instead — see there.
  */
 export function SplitList({
   figureLabel,
@@ -497,6 +500,148 @@ export function SplitRow({
         )}
       </span>
     </li>
+  );
+}
+
+/**
+ * Who an entry was split between, as a table — from `lg` up.
+ *
+ * `SplitList` is a list because a phone has 328–358px for this and the table
+ * needed 370. A desk column has twice that, and there the dimension the list
+ * had to fold away comes back: what each person paid, beside their share, so
+ * a row shows *why* it comes out where it does. One row per person the entry
+ * touched — the split, and anybody who paid without a share of it, who on a
+ * phone is listed under "Paid by" instead.
+ *
+ * The last column keeps the list's words and their ink, and gains no sign.
+ * The desktop board drew a signed "+ €107.00" there; #423 and `money.html`
+ * settled that a figure beside the word for its direction goes unsigned, and
+ * a table is no reason to say the direction twice. Where the entry moved
+ * nobody the column is left out, as the list leaves out its second line.
+ *
+ * Figures are right-aligned and never cut: only the name truncates, and a
+ * table too wide for its card scrolls inside it rather than the page.
+ */
+export function SplitTableShell({
+  label,
+  personLabel,
+  figureLabel,
+  paidLabel,
+  outcomeLabel,
+  children,
+}: {
+  /** The table's name for a screen reader: the section's own label. */
+  label: string;
+  personLabel: string;
+  /** The share, or what was credited. */
+  figureLabel: string;
+  /** What each person paid, or on income received. */
+  paidLabel: string;
+  /** Null when the entry moved nobody, which drops the column. */
+  outcomeLabel: string | null;
+  children: React.ReactNode;
+}) {
+  return (
+    <DetailCard>
+      <div className="overflow-x-auto">
+        <table aria-label={label} className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-border bg-wash-1">
+              <th scope="col" className={cn(HEAD, "text-left")}>
+                {personLabel}
+              </th>
+              <th scope="col" className={cn(HEAD, "text-right")}>
+                {figureLabel}
+              </th>
+              <th scope="col" className={cn(HEAD, "text-right")}>
+                {paidLabel}
+              </th>
+              {outcomeLabel !== null && (
+                <th scope="col" className={cn(HEAD, "text-right")}>
+                  {outcomeLabel}
+                </th>
+              )}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">{children}</tbody>
+        </table>
+      </div>
+    </DetailCard>
+  );
+}
+
+/** The column headings: the list's own uppercase label, at the recipe's 36px. */
+const HEAD =
+  "h-9 px-3 text-2xs font-semibold tracking-[0.08em] whitespace-nowrap text-muted-foreground uppercase first:pl-4 last:pr-4";
+
+/** A cell: 52px rows, figures that line up and never wrap. */
+const CELL =
+  "h-[52px] px-3 align-middle whitespace-nowrap tabular-nums first:pl-4 last:pr-4";
+
+/** One person's row in that table. */
+export function SplitTableRow({
+  name,
+  tone,
+  share,
+  paid,
+  currency,
+  outcome,
+}: {
+  name: string;
+  tone: PersonTone;
+  /** Minor units, or null for somebody who paid and had no share. */
+  share: string | null;
+  /** Minor units, or null for somebody who paid nothing. */
+  paid: string | null;
+  currency: string;
+  /** What the entry did to them, already worded; null drops the cell. */
+  outcome: { text: string; tone: BalanceTone } | null;
+}) {
+  return (
+    <tr>
+      {/* The name heads its row, so a screen reader moving along it hears
+          whose share and whose payment each figure is. `max-w-0` with the
+          full width is what lets this one cell give way and truncate. */}
+      <th
+        scope="row"
+        className={cn(CELL, "w-full max-w-0 text-left font-semibold")}
+      >
+        <span className="flex min-w-0 items-center gap-2.5">
+          <PersonAvatar name={name} tone={tone} />
+          <span className="min-w-0 truncate">{name}</span>
+        </span>
+      </th>
+      <td className={cn(CELL, "text-right")}>
+        <Figure minorUnits={share} currency={currency} />
+      </td>
+      <td className={cn(CELL, "text-right")}>
+        <Figure minorUnits={paid} currency={currency} />
+      </td>
+      {outcome && (
+        <td
+          className={cn(CELL, "text-right font-medium", TONE[outcome.tone].ink)}
+        >
+          {outcome.text}
+        </td>
+      )}
+    </tr>
+  );
+}
+
+/** A figure in the table, or a dash where that person has none. */
+function Figure({
+  minorUnits,
+  currency,
+}: {
+  minorUnits: string | null;
+  currency: string;
+}) {
+  return minorUnits === null ? (
+    <span aria-hidden="true" className="text-muted-foreground">
+      —
+    </span>
+  ) : (
+    <Amount minorUnits={minorUnits} currency={currency} />
   );
 }
 
@@ -647,10 +792,12 @@ function FileGlyph() {
  * inset is built from. Nothing here is translucent — the bar is what content
  * scrolls under, and a blur would show the rows sliding behind the buttons.
  *
- * From `lg` up there is no bar, only the sidebar down the left, so the
- * actions dock at the foot of the window and start where the sidebar stops,
- * at whichever of its two widths it is; the inner column takes the screen's
- * own gutters there, so the buttons line up with the entry above them.
+ * Below `lg` only. From `lg` up the same two actions sit in the screen's
+ * header, at the top right, inside `HeaderActions`: a desk window shows the
+ * whole entry without scrolling past anything, so the reason for docking them
+ * is gone, and a bar pinned to the foot of a 900px window put Edit as far from
+ * the entry's name as the screen allows. #438 had docked this bar at the foot
+ * of the window beside the rail; the desktop design moved it up (board 08).
  */
 export const ACTION =
   "inline-flex h-[46px] shrink-0 items-center justify-center gap-2 rounded-[13px] text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none";
@@ -665,10 +812,44 @@ export const ACTION_DESTRUCTIVE =
 
 export function ActionBar({ children }: { children: React.ReactNode }) {
   return (
-    <div className="fixed inset-x-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 bg-background lg:bottom-0 lg:left-(--app-sidebar-w)">
-      <div className="mx-auto flex w-full max-w-3xl gap-2 px-4 pt-2.5 pb-3.5 lg:px-6 xl:px-10">
+    <div className="fixed inset-x-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 bg-background lg:hidden">
+      <div className="mx-auto flex w-full max-w-3xl gap-2 px-4 pt-2.5 pb-3.5">
         {children}
       </div>
     </div>
+  );
+}
+
+/**
+ * Edit and Delete at the far end of the header, from `lg` up.
+ *
+ * The same two actions `ActionBar` docks on a phone, as labelled buttons: a
+ * desk has the width for the word "Delete" beside its bin, which the 46px
+ * square below `lg` does not. Exactly one of the two is ever shown, so a
+ * screen reader and the tab order meet each action once at any width.
+ */
+export function HeaderActions({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="hidden shrink-0 items-center gap-2 lg:flex">{children}</div>
+  );
+}
+
+/**
+ * The facts a desk header carries under the title, one after another.
+ *
+ * Each is already worded — a date, "Amélie paid", a category — and the dots
+ * between them are drawn for the eye only: a screen reader reads the facts
+ * as the list they are rather than "dot" between each pair.
+ */
+export function MetaLine({ items }: { items: readonly React.ReactNode[] }) {
+  return (
+    <>
+      {items.map((item, index) => (
+        <span key={index} className="flex min-w-0 items-center gap-2">
+          {index > 0 && <span aria-hidden="true">·</span>}
+          {item}
+        </span>
+      ))}
+    </>
   );
 }

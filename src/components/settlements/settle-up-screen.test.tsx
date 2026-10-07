@@ -278,8 +278,10 @@ describe("the actions on a row", () => {
   it("leaves the amount off the link, so the drawer prices it itself", () => {
     render();
 
+    // The row's own link, named for its pair — not the header's "Record a
+    // repayment", which names nobody.
     const href = screen
-      .getByRole("link", { name: /^Record/ })
+      .getByRole("link", { name: /^Record .+ repayment to/ })
       .getAttribute("href");
 
     expect(href).not.toContain("14860");
@@ -434,6 +436,81 @@ describe("the header", () => {
       "href",
       "/groups/g1",
     );
+  });
+});
+
+/**
+ * A desk window, from `lg`: one column per currency, so a debt in francs is
+ * never below the fold of a credit in euros. jsdom applies no stylesheet, so
+ * what is checked is the structure the breakpoint classes act on.
+ */
+describe("on a desk", () => {
+  const ravi = transfer({
+    fromParticipantId: "ravi",
+    fromName: "Ravi",
+    toParticipantId: "seb",
+    toName: "Seb",
+    currency: "CHF",
+    minorUnits: "6200",
+    fromIsSelf: false,
+    toIsSelf: true,
+  });
+
+  it("stands the first currency beside the rest, in the order a phone reads them", () => {
+    const { container } = render({}, [
+      { currency: "EUR", yours: [transfer()], others: [] },
+      { currency: "CHF", yours: [ravi], others: [] },
+    ]);
+
+    const columns = container.querySelector('[data-layout="wide"]');
+    expect(columns).toHaveClass("lg:grid-cols-2");
+    const [left, right] = Array.from(columns?.children ?? []);
+    expect(
+      within(left as HTMLElement).getByRole("heading", { name: "EUR" }),
+    ).toBeInTheDocument();
+    expect(
+      within(right as HTMLElement).getByRole("heading", { name: "CHF" }),
+    ).toBeInTheDocument();
+  });
+
+  it("heads each column with its currency where a phone only reads it out", () => {
+    render();
+
+    const heading = screen.getByRole("heading", { name: "EUR" });
+    expect(heading).toHaveClass("max-lg:sr-only");
+    expect(heading).not.toHaveClass("sr-only");
+  });
+
+  it("says once, above several currencies, that each is settled on its own", () => {
+    render({}, [
+      { currency: "EUR", yours: [transfer()], others: [] },
+      { currency: "CHF", yours: [ravi], others: [] },
+    ]);
+
+    // Without a total: each column still counts only its own repayments.
+    expect(
+      screen.getByText("Each currency is settled on its own"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText("1 repayment clears this currency"),
+    ).toHaveLength(1);
+    expect(screen.queryByText(/clear the group/)).toBeNull();
+  });
+
+  it("says nothing of the kind for a group with one currency", () => {
+    render();
+
+    expect(
+      screen.queryByText("Each currency is settled on its own"),
+    ).toBeNull();
+  });
+
+  it("explains what a repayment does, beside the plan and not on a phone", () => {
+    render();
+
+    const note = screen.getByText(/^A repayment moves balances/);
+    expect(note).toHaveTextContent("Balancia never moves the money itself.");
+    expect(note).toHaveClass("hidden", "lg:flex");
   });
 });
 
@@ -988,5 +1065,28 @@ describe("when there is no payment code", () => {
     render({ payoutHints: [{ ...noQr, qrMissing: "addressMissing" }] });
 
     expect(screen.getByRole("button", { name: "Copy" })).toBeInTheDocument();
+  });
+});
+
+/**
+ * A repayment the plan has no row for — cash handed to somebody owed nothing —
+ * still has to be recordable from here. On a desk the header offers it, into
+ * the entry dialog's Repayment tab with nobody picked.
+ */
+describe("recording a repayment the plan does not list", () => {
+  it("opens the entry form on the Repayment tab, with nobody named", () => {
+    render();
+
+    expect(
+      screen.getByRole("link", { name: "Record a repayment" }),
+    ).toHaveAttribute("href", "/groups/g1/expenses/new#type=settle");
+  });
+
+  it("leaves a settled group's screen with nothing to press", () => {
+    render({ transferCount: 0, lastSettled: [] }, []);
+
+    expect(
+      screen.queryByRole("link", { name: "Record a repayment" }),
+    ).toBeNull();
   });
 });

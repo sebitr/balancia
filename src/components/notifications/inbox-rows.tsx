@@ -94,8 +94,11 @@ export function groupDot(groupId: string): string {
  * `now` is pinned by the server render and passed down — computed here it
  * would be read off two different clocks and hydration would disagree with
  * itself.
+ *
+ * Exported for Home's "Recent in your groups" column, which shows the same
+ * notifications at the same width and ages them the same way.
  */
-function useAge(value: string, now: string) {
+export function useAge(value: string, now: string) {
   const t = useTranslations("notificationsPage");
   const dates = useDateFormatter();
   const date = new Date(value);
@@ -116,7 +119,7 @@ function useAge(value: string, now: string) {
   return { short, long: dates.at(date, { style: "long" }) };
 }
 
-function Age({
+export function Age({
   value,
   now,
   className,
@@ -138,7 +141,7 @@ function Age({
 }
 
 /** The sentence, the amount, and how long ago — for a screen reader, in order. */
-function spoken(parts: (string | null | false)[]): string {
+export function spoken(parts: (string | null | false)[]): string {
   return parts.filter((part): part is string => Boolean(part)).join(", ");
 }
 
@@ -172,7 +175,21 @@ export function digestSentence(
     : rows[0]!.sentence;
 }
 
-function Avatar({ row }: { row: InboxRow }) {
+/**
+ * Whoever did it, with the glyph of what they did.
+ *
+ * The badge is ringed in the colour of whatever the face sits on, so it reads
+ * as cut out of it: the page below `lg`, and from `lg` the card a day's rows
+ * sit in. Home's "Recent in your groups" draws the same faces straight on the
+ * page, and says so with `onCard={false}`.
+ */
+export function Avatar({
+  row,
+  onCard = true,
+}: {
+  row: Pick<InboxRow, "type" | "actor">;
+  onCard?: boolean;
+}) {
   const Icon = EVENT_ICONS[row.type];
   const badged = !isPlainCreation(row.type);
   const deleted = row.type.endsWith(".deleted");
@@ -187,7 +204,8 @@ function Avatar({ row }: { row: InboxRow }) {
         <span
           aria-hidden="true"
           className={cn(
-            "absolute -right-[3px] -bottom-[3px] flex size-[15px] items-center justify-center rounded-full ring-2 ring-background lg:size-4 lg:ring-card",
+            "absolute -right-[3px] -bottom-[3px] flex size-[15px] items-center justify-center rounded-full ring-2 ring-background lg:size-4",
+            onCard && "lg:ring-card",
             deleted
               ? "bg-destructive/90 text-foreground"
               : "bg-[color-mix(in_oklch,var(--accent),var(--foreground)_12%)] text-foreground",

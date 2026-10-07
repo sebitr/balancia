@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { createTranslator } from "use-intl/core";
 import en from "../../../messages/en.json";
 import fr from "../../../messages/fr.json";
@@ -7,7 +7,7 @@ import { renderWithIntl } from "../../../tests/helpers/intl";
 import type { AppLocale } from "@/i18n/locales";
 import type { EntryParties } from "./stake";
 import { BigAmount } from "./detail-blocks";
-import { SplitCard, YourStake } from "./stake-blocks";
+import { SplitCard, SplitTable, YourStake } from "./stake-blocks";
 
 /**
  * The expense detail, as each person in an expense reads it.
@@ -314,5 +314,123 @@ describe("the split", () => {
     const rows = screen.getAllByRole("listitem");
     expect(plain(rows[0]?.textContent ?? "")).toContain("Tu récupères 60,00 €");
     expect(plain(rows[1]?.textContent ?? "")).toContain("Doit 30,00 €");
+  });
+});
+
+/**
+ * The same split on a desk, where there is room for the table a phone could
+ * not hold — and where what each person paid sits beside their share, so a
+ * row says why it comes out where it does.
+ */
+describe("the split at width", () => {
+  async function table(
+    entry: EntryParties,
+    participantId: string | null,
+    options: { locale?: AppLocale } = {},
+  ) {
+    const locale = options.locale ?? "en";
+    intl.locale = locale;
+    return renderWithIntl(
+      await SplitTable({
+        entry,
+        participantId,
+        currency: "EUR",
+        locale,
+        label: "Split between",
+      }),
+      { locale },
+    );
+  }
+
+  /** The cells of one body row, as text. */
+  const cells = (row: HTMLElement) =>
+    [
+      ...within(row).getAllByRole("rowheader"),
+      ...within(row).getAllByRole("cell"),
+    ].map((cell) => plain(cell.textContent));
+
+  it("is a table named after its section, with a column for each fact", async () => {
+    await table(DINNER, "ada");
+
+    expect(
+      screen.getByRole("table", { name: "Split between" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("columnheader").map((cell) => cell.textContent),
+    ).toEqual(["Person", "Share", "Paid", "What this did"]);
+  });
+
+  it("puts the reader first, and says what the entry did in words", async () => {
+    await table(DINNER, "chloe");
+
+    const [, first, second] = screen.getAllByRole("row");
+    expect(cells(first)).toEqual(["CChloé", "€30.00", "—", "You owe €30.00"]);
+    expect(cells(second)).toEqual([
+      "AAda",
+      "€30.00",
+      "€90.00",
+      "Gets back €60.00",
+    ]);
+    expect(within(second).getByText("Gets back €60.00")).toHaveClass(
+      "text-positive-ink",
+    );
+    expect(within(first).getByText("You owe €30.00")).toHaveClass(
+      "text-negative-ink",
+    );
+  });
+
+  it("leaves out the sign the words now carry", async () => {
+    await table(DINNER, "ada");
+
+    for (const row of screen.getAllByRole("row")) {
+      expect(row.textContent).not.toMatch(/[+−]/);
+    }
+  });
+
+  it("gives a row to somebody who paid without a share of it", async () => {
+    // Dana paid for the three of them and ate elsewhere: on a phone she is
+    // only under "Paid by", and the table is both lists at once.
+    const entry: EntryParties = {
+      ...DINNER,
+      payers: [party("dana", 9000n, "Dana")],
+    };
+    await table(entry, "ada");
+
+    const rows = screen.getAllByRole("row");
+    expect(rows).toHaveLength(5);
+    expect(cells(rows[4])).toEqual([
+      "DDana",
+      "—",
+      "€90.00",
+      "Gets back €90.00",
+    ]);
+  });
+
+  it("heads an income's columns the way income is read", async () => {
+    await table(REFUND, "bob");
+
+    expect(
+      screen.getAllByRole("columnheader").map((cell) => cell.textContent),
+    ).toEqual(["Person", "Credited", "Received", "What this did"]);
+    expect(screen.getByText("Owes €60.00")).toHaveClass("text-negative-ink");
+  });
+
+  it("drops the outcome column when the entry moved nobody", async () => {
+    const evenly: EntryParties = { ...DINNER, payers: DINNER.shares };
+    await table(evenly, "ada");
+
+    expect(screen.getAllByRole("columnheader")).toHaveLength(3);
+    expect(screen.queryByText(/Owes|Gets back|You/)).toBeNull();
+  });
+
+  it("words every row in French", async () => {
+    await table(DINNER, "ada", { locale: "fr" });
+
+    expect(
+      screen.getAllByRole("columnheader").map((cell) => cell.textContent),
+    ).toEqual(["Personne", "Part", "Payé", "Ce que ça a fait"]);
+    const [, first, second] = screen.getAllByRole("row");
+    expect(cells(first).at(-1)).toBe("Tu récupères 60,00 €");
+    expect(cells(second).at(-1)).toBe("Doit 30,00 €");
   });
 });

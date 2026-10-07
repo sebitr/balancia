@@ -7,6 +7,7 @@ import {
   ArrowUpRight,
   Check,
   ChevronRight,
+  Info,
   Receipt,
 } from "lucide-react";
 import { Amount } from "@/components/money/amount";
@@ -15,7 +16,10 @@ import type {
   PaymentQrRefusal,
   PaymentQrStandard,
 } from "@/modules/payouts/qr/payment-qr";
-import { settleIntentPath } from "@/components/entries/settle-intent";
+import {
+  recordRepaymentPath,
+  settleIntentPath,
+} from "@/components/entries/settle-intent";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { remindRecipientsFor, SettleActions } from "./settle-actions";
 import { Button } from "@/components/ui/button";
@@ -143,31 +147,92 @@ export function SettleUpScreen({
 }) {
   const t = useTranslations("settleUp");
 
+  /* Which sentence counts the plan. One currency is the whole of it and says
+     so; several can only ever be counted apart, because there is no number
+     that covers two currencies without adding them together. */
+  const countsWholePlan = currencies.length === 1;
+  const section = (entry: SettleUpCurrencyView) => (
+    <CurrencySection
+      key={entry.currency}
+      entry={entry}
+      countsWholePlan={countsWholePlan}
+      {...shared}
+    />
+  );
+  const [first, ...rest] = currencies;
+
   return (
     <div className="flex flex-col">
       <PageHeader
         title={t("title")}
+        /*
+         * A repayment the plan has no row for — cash handed to somebody who
+         * was owed nothing — opens the entry dialog on its Repayment tab with
+         * nobody chosen, to be named there. A desk's: on a phone the row has
+         * no room beside the title, and the group's own Add reaches the same
+         * tab.
+         *
+         * Not on a settled group, whose screen is a state with nothing to
+         * press but the way onwards ("nothing to settle" in the tests); the
+         * group's own Add still reaches the tab there.
+         */
+        trailing={
+          transferCount > 0 && (
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="hidden lg:inline-flex"
+            >
+              <Link href={recordRepaymentPath(shared.groupId)}>
+                {t("recordRepayment")}
+              </Link>
+            </Button>
+          )
+        }
         back={{
           href: `/groups/${shared.groupId}`,
           label: t("backToGroup"),
         }}
+        /* On a desk the currencies stand side by side, so the screen says
+           once, above them, why each column speaks only for itself. It does
+           not count the whole plan there, as the desktop board drew it: see
+           `countsWholePlan` — each column counts its own. */
+        meta={
+          transferCount > 0 && !countsWholePlan
+            ? t("eachCurrencyApart")
+            : undefined
+        }
       />
 
       {transferCount === 0 ? (
         <NothingToSettle groupId={shared.groupId} lastSettled={lastSettled} />
       ) : (
-        currencies.map((entry) => (
-          <CurrencySection
-            key={entry.currency}
-            entry={entry}
-            /* Which sentence counts the plan. One currency is the whole of it
-               and says so; several can only ever be counted apart, because
-               there is no number that covers two currencies without adding
-               them together. */
-            countsWholePlan={currencies.length === 1}
-            {...shared}
-          />
-        ))
+        /*
+         * One column per currency from `lg` (board 17), so a debt in francs is
+         * never below the fold of a credit in euros. The first currency on the
+         * left; the rest, and the note on how a repayment works, on the right
+         * — which keeps the document in the order a phone reads it, where the
+         * currencies stack one under another and the note is not drawn.
+         *
+         * Each column is about a phone's width at 1024px, which is the width
+         * these rows were drawn for; nothing inside a column changes.
+         */
+        <div
+          data-layout="wide"
+          className="flex flex-col lg:mt-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6"
+        >
+          <div className="flex min-w-0 flex-col lg:gap-6">
+            {first && section(first)}
+          </div>
+          <div className="flex min-w-0 flex-col lg:gap-6">
+            {rest.map(section)}
+            <p className="hidden gap-2.5 rounded-[14px] bg-wash-1 px-4 py-3.5 text-sm text-muted-foreground lg:flex">
+              <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+              {t("howRepaymentsWork")}
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -178,7 +243,8 @@ export function SettleUpScreen({
  *
  * A group balancing in three currencies gets three of these, one under
  * another, each with its own hero — which is the only honest way to state a
- * position that cannot be totalled.
+ * position that cannot be totalled. From `lg` the first stands beside the
+ * rest rather than above them, each in a card of its own.
  */
 function CurrencySection({
   entry,
@@ -190,7 +256,7 @@ function CurrencySection({
 
   if (count === 0) {
     return (
-      <section className="mt-4 flex items-center justify-between gap-3 rounded-[18px] bg-card px-4 py-4 ring-1 ring-border">
+      <section className="mt-4 flex items-center justify-between gap-3 rounded-[18px] bg-card px-4 py-4 ring-1 ring-border lg:mt-0 lg:px-5">
         <h2 className="text-2xs font-bold tracking-[0.1em] uppercase">
           {entry.currency}
         </h2>
@@ -206,9 +272,17 @@ function CurrencySection({
   return (
     <section
       aria-labelledby={`settle-${entry.currency}`}
-      className="flex flex-col"
+      /* A card from `lg`, where two of these stand side by side and each needs
+         an edge; on a phone the screen is the one column and has no cards. */
+      className="flex flex-col lg:relative lg:rounded-[18px] lg:bg-card lg:px-5 lg:pb-2 lg:ring-1 lg:ring-border"
     >
-      <h2 id={`settle-${entry.currency}`} className="sr-only">
+      {/* Read out, never seen, on a phone: the hero's own figure names its
+          currency. Beside a second column it is that column's heading, so
+          from `lg` it is drawn in the card's corner, opposite the eyebrow. */}
+      <h2
+        id={`settle-${entry.currency}`}
+        className="max-lg:sr-only lg:absolute lg:top-5 lg:right-5 lg:rounded-full lg:px-2 lg:py-0.5 lg:text-2xs lg:font-bold lg:tracking-[0.1em] lg:text-muted-foreground lg:uppercase lg:ring-1 lg:ring-border"
+      >
         {entry.currency}
       </h2>
 
@@ -217,6 +291,9 @@ function CurrencySection({
       {entry.yours.length > 0 && (
         <>
           <Rule />
+          {/* Named on a desk, where the other people's payments are named
+              too and the card is wide enough to need a heading per part. */}
+          <Eyebrow className="hidden pt-4 pb-1 lg:block">{t("barYou")}</Eyebrow>
           {entry.yours.map((transfer, index) => (
             <PaymentBlock
               key={rowKey(transfer)}
@@ -253,7 +330,12 @@ function CurrencySection({
  * more.
  */
 function Rule({ className }: { className?: string }) {
-  return <div aria-hidden="true" className={cn("-mx-4 border-t", className)} />;
+  return (
+    <div
+      aria-hidden="true"
+      className={cn("-mx-4 border-t lg:-mx-5", className)}
+    />
+  );
 }
 
 function Eyebrow({
@@ -324,7 +406,7 @@ function Hero({
         : t("clearsCurrency", { count });
 
   return (
-    <div className="flex flex-col gap-2.5 pt-4 pb-4">
+    <div className="flex flex-col gap-2.5 pt-4 pb-4 lg:pt-5">
       <div className="flex flex-col gap-1">
         <Eyebrow>
           {tone === "positive"
@@ -341,10 +423,12 @@ function Hero({
           {tone === "positive" && (
             <ArrowDownLeft aria-hidden="true" className="size-[22px]" />
           )}
+          {/* A display numeral at a desk, the board's 36px: the one figure
+              each column is about, read from further away than a phone. */}
           <Amount
             minorUnits={magnitude.toString()}
             currency={entry.currency}
-            className="text-2xl font-semibold tracking-[-0.02em]"
+            className="text-2xl font-semibold tracking-[-0.02em] lg:text-[2.25rem] lg:leading-tight"
           />
         </p>
       </div>

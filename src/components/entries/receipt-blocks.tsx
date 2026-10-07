@@ -32,6 +32,10 @@ import type { CaptureActions } from "@/components/receipts/scan-receipt-entry";
  *
  * Once a scan has run the row is replaced by a banner, so the entry point
  * cannot be pressed again on top of values it already produced.
+ *
+ * In the entry dialog on a desk each button is as wide as its word. Stretched
+ * across 880px, a filled Upload was a second primary button the width of the
+ * dialog, above the one that saves.
  */
 
 export function ScanRow({ camera, upload }: CaptureActions) {
@@ -44,7 +48,7 @@ export function ScanRow({ camera, upload }: CaptureActions) {
       <button
         type="button"
         onClick={camera}
-        className="hidden h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground transition-opacity active:opacity-80 pointer-coarse:flex"
+        className="hidden h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground transition-opacity active:opacity-80 lg:flex-none lg:px-4 pointer-coarse:flex"
       >
         <Camera aria-hidden="true" className="size-4 shrink-0" />
         <span className="truncate">{t("camera")}</span>
@@ -54,7 +58,7 @@ export function ScanRow({ camera, upload }: CaptureActions) {
       <button
         type="button"
         onClick={upload}
-        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground transition-colors active:opacity-80 pointer-coarse:border pointer-coarse:border-border pointer-coarse:bg-transparent pointer-coarse:font-medium pointer-coarse:text-muted-foreground"
+        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground transition-colors active:opacity-80 lg:flex-none lg:px-4 pointer-coarse:border pointer-coarse:border-border pointer-coarse:bg-transparent pointer-coarse:font-medium pointer-coarse:text-muted-foreground"
       >
         <Upload aria-hidden="true" className="size-4 shrink-0" />
         <span className="truncate">{t("upload")}</span>

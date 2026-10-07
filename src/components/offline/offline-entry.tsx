@@ -14,6 +14,7 @@ import { useTranslations } from "next-intl";
 import { WifiOff } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
+  ENTRY_DESK,
   ENTRY_SHEET_CLASS,
   EntryFormSkeleton,
   openOnAmount,
@@ -145,6 +146,7 @@ function OfflineEntrySheet({
       <SheetContent
         side="bottom"
         showCloseButton={false}
+        desk={ENTRY_DESK}
         className={ENTRY_SHEET_CLASS}
         onOpenAutoFocus={openOnAmount}
       >

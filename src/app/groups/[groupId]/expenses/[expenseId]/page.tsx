@@ -25,14 +25,21 @@ import {
   CountChip,
   DetailCard,
   FileRow,
+  HeaderActions,
   MetaChip,
   MetaField,
+  MetaLine,
   MetaStrip,
   PartyRow,
   Section,
   TypeChip,
 } from "@/components/entries/detail-blocks";
-import { SplitCard, YourStake } from "@/components/entries/stake-blocks";
+import {
+  SplitCard,
+  SplitTable,
+  YourStake,
+} from "@/components/entries/stake-blocks";
+import { Button } from "@/components/ui/button";
 import { fileKindOf, fileSizeOf } from "@/components/entries/file-meta";
 import { DeleteEntryButton } from "@/components/entries/delete-entry-button";
 import { requireGroupAccess } from "@/lib/actions";
@@ -52,6 +59,7 @@ import {
 import { listQuery, withQuery } from "@/components/expenses/list-query";
 import { withFragment } from "@/components/entries/drawer-fragment";
 import { PUSH } from "@/components/motion/transitions";
+import { cn } from "@/lib/utils";
 import { titleAccess } from "../../title-access";
 
 /**
@@ -172,178 +180,270 @@ export default async function TransactionDetailPage({
   const converted =
     expense.convertedAmount !== null && expense.convertedCurrency !== null;
 
+  // The filters go into the drawer with it, so that a save which turns this
+  // entry into a repayment — and so lands the reader on another detail screen
+  // — still leaves them a way back to the list they were reading. In the
+  // fragment, because the drawer is an intercepted route and a query on one of
+  // those wedges it: see `components/entries/drawer-fragment.ts`.
+  const editHref = withFragment(
+    `/groups/${groupId}/expenses/${expenseId}/edit`,
+    listFilters,
+  );
+  const backTo = withQuery(`/groups/${groupId}/expenses`, listFilters);
+
+  /*
+   * Who put the money in, for the desk header's line of facts. A payer down
+   * for nothing is a leftover of a multi-payer edit — see `stakeOf` — and the
+   * reader is "you" here as everywhere they are a party.
+   */
+  const payers = expense.payers.filter((payer) => payer.amount > 0n);
+  const payerLine =
+    payers.length === 1 && payers[0].participantId === self
+      ? t(revenue ? "meta.receivedYou" : "meta.paidYou")
+      : payers.length > 0
+        ? t(revenue ? "meta.received" : "meta.paid", {
+            count: payers.length,
+            name: payers[0].displayName,
+          })
+        : null;
+
+  const splitLabel = t(revenue ? "creditedTo" : "splitBetween");
+  const hasAside = Boolean(expense.notes) || attachments.length > 0;
+
   return (
     // Clears the docked action bar, which the screen's own bottom inset only
-    // knows to clear the navigation under it.
-    <div className="flex flex-col gap-3 pb-[4.5rem]">
+    // knows to clear the navigation under it. From `lg` the actions are in
+    // the header and there is no bar to clear.
+    <div className="flex flex-col gap-3 pb-[4.5rem] lg:gap-4 lg:pb-0">
       {/* The entry names the screen, so the card below it does not say the
           description again — it opens on the figure, which is what the reader
           came back for. */}
       <PageHeader
         title={expense.description}
         back={{
-          href: withQuery(`/groups/${groupId}/expenses`, listFilters),
+          href: backTo,
           label: tCommon("backToTransactions"),
         }}
+        // Board 08: on a desk the header states the entry's facts in one line
+        // and carries its two actions, which a phone docks at its foot.
+        meta={
+          <MetaLine
+            items={[
+              dates.plain(expense.expenseDate, "long"),
+              ...(payerLine ? [payerLine] : []),
+              ...(categoryLabel ? [categoryLabel] : []),
+            ]}
+          />
+        }
+        trailing={
+          <HeaderActions>
+            <Button asChild variant="outline" size="lg">
+              <Link href={editHref} transitionTypes={PUSH}>
+                <Pencil aria-hidden="true" />
+                {t("edit")}
+              </Link>
+            </Button>
+            <DeleteEntryButton
+              groupId={groupId}
+              kind="expense"
+              id={expenseId}
+              description={expense.description}
+              backTo={backTo}
+              placement="header"
+            />
+          </HeaderActions>
+        }
       />
 
-      <DetailCard className="flex flex-col gap-3.5 p-4">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <TypeChip
-            tone={tone}
-            icon={revenue ? ArrowUp : ArrowDown}
-            label={t(`types.${tone}`)}
-          />
-          {categoryLabel && (
-            <MetaChip icon={CategoryGlyph}>{categoryLabel}</MetaChip>
-          )}
-          {attachments.length > 0 && (
-            <CountChip
-              icon={Paperclip}
-              label={t("attachments", { count: attachments.length })}
-            >
-              {attachments.length}
-            </CountChip>
-          )}
-        </div>
+      {/*
+       * From `xl` the entry and its split on the left, the notes and files in
+       * a column beside them (board 08). Between `lg` and `xl` the window
+       * beside the sidebar is not wide enough for both, so the second column
+       * wraps under the first — the order a phone reads them in, which is
+       * also the order they are in here. An entry with neither notes nor
+       * files has no second column, and keeps the one readable column every
+       * other pushed screen has.
+       */}
+      <div
+        data-layout={hasAside ? "wide" : undefined}
+        className={cn(
+          "flex flex-col gap-3 lg:gap-4",
+          hasAside &&
+            "xl:grid xl:grid-cols-[minmax(0,1fr)_21.25rem] xl:items-start xl:gap-7",
+        )}
+      >
+        <div className="flex min-w-0 flex-col gap-3 lg:gap-4">
+          <DetailCard className="flex flex-col gap-3.5 p-4">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <TypeChip
+                tone={tone}
+                icon={revenue ? ArrowUp : ArrowDown}
+                label={t(`types.${tone}`)}
+              />
+              {categoryLabel && (
+                <MetaChip icon={CategoryGlyph}>{categoryLabel}</MetaChip>
+              )}
+              {attachments.length > 0 && (
+                <CountChip
+                  icon={Paperclip}
+                  label={t("attachments", { count: attachments.length })}
+                >
+                  {attachments.length}
+                </CountChip>
+              )}
+            </div>
 
-        <BigAmount
-          minorUnits={expense.amount.toString()}
-          currency={currency}
-          locale={locale}
-          caption={
-            <YourStake
-              entry={expense}
-              participantId={self}
+            <BigAmount
+              minorUnits={expense.amount.toString()}
               currency={currency}
               locale={locale}
-            />
-          }
-        />
-
-        <MetaStrip>
-          <MetaField label={t("date")}>
-            {dates.plain(expense.expenseDate)}
-          </MetaField>
-          <MetaField label={t("repeats")}>
-            {cadence ? (
-              <>
-                <RefreshCw
-                  aria-hidden="true"
-                  className="size-3 shrink-0 text-muted-foreground"
+              caption={
+                <YourStake
+                  entry={expense}
+                  participantId={self}
+                  currency={currency}
+                  locale={locale}
                 />
-                {t(REPEAT_KEYS[cadence.frequency], {
-                  count: cadence.interval,
-                })}
-              </>
-            ) : (
-              t("oneOff")
-            )}
-          </MetaField>
-          {converted && (
-            <MetaField
-              label={t("inGroupCurrency", {
-                currency: expense.convertedCurrency as string,
-              })}
-              className="col-span-2"
-            >
-              <Amount
-                minorUnits={(expense.convertedAmount as bigint).toString()}
-                currency={expense.convertedCurrency as string}
-              />
-              {expense.exchangeRate && (
-                <span className="truncate text-muted-foreground">
-                  {t("atRate", {
-                    rate: formatRate(expense.exchangeRate, locale),
+              }
+            />
+
+            <MetaStrip>
+              <MetaField label={t("date")}>
+                {dates.plain(expense.expenseDate)}
+              </MetaField>
+              <MetaField label={t("repeats")}>
+                {cadence ? (
+                  <>
+                    <RefreshCw
+                      aria-hidden="true"
+                      className="size-3 shrink-0 text-muted-foreground"
+                    />
+                    {t(REPEAT_KEYS[cadence.frequency], {
+                      count: cadence.interval,
+                    })}
+                  </>
+                ) : (
+                  t("oneOff")
+                )}
+              </MetaField>
+              {converted && (
+                <MetaField
+                  label={t("inGroupCurrency", {
+                    currency: expense.convertedCurrency as string,
                   })}
-                </span>
-              )}
-            </MetaField>
-          )}
-        </MetaStrip>
-      </DetailCard>
-
-      <Section label={t(revenue ? "receivedBy" : "paidBy")}>
-        <DetailCard className="divide-y divide-border">
-          {expense.payers.map((payer) => (
-            <PartyRow
-              key={payer.participantId}
-              name={payer.displayName}
-              // Amber marks whoever put the money in, here as on the split
-              // sheet — the one role coral cannot carry, because the payer is
-              // usually in the split as well.
-              tone="payer"
-              minorUnits={payer.amount.toString()}
-              currency={currency}
-            />
-          ))}
-        </DetailCard>
-      </Section>
-
-      <Section
-        label={t(revenue ? "creditedTo" : "splitBetween")}
-        chip={
-          <MetaChip icon={split.icon} small>
-            {t(split.key)}
-          </MetaChip>
-        }
-      >
-        <SplitCard
-          entry={expense}
-          participantId={self}
-          currency={currency}
-          locale={locale}
-        />
-      </Section>
-
-      {expense.notes && (
-        <Section label={t("notes")}>
-          <DetailCard>
-            <p className="px-3.5 py-3 text-sm whitespace-pre-wrap">
-              {expense.notes}
-            </p>
-          </DetailCard>
-        </Section>
-      )}
-
-      {attachments.length > 0 && (
-        <Section label={t("files")}>
-          <DetailCard className="divide-y divide-border">
-            {attachments.map((attachment) => {
-              const size = fileSizeOf(attachment.byteSize);
-              return (
-                <FileRow
-                  key={attachment.id}
-                  href={`/api/groups/${groupId}/attachments/${attachment.id}`}
-                  name={attachment.fileName}
-                  meta={t(
-                    size.unit === "kilobytes"
-                      ? "fileKilobytes"
-                      : "fileMegabytes",
-                    {
-                      kind: t(`fileKind.${fileKindOf(attachment.contentType)}`),
-                      size: size.size,
-                    },
+                  className="col-span-2"
+                >
+                  <Amount
+                    minorUnits={(expense.convertedAmount as bigint).toString()}
+                    currency={expense.convertedCurrency as string}
+                  />
+                  {expense.exchangeRate && (
+                    <span className="truncate text-muted-foreground">
+                      {t("atRate", {
+                        rate: formatRate(expense.exchangeRate, locale),
+                      })}
+                    </span>
                   )}
-                />
-              );
-            })}
+                </MetaField>
+              )}
+            </MetaStrip>
           </DetailCard>
-        </Section>
-      )}
+
+          {/* Below `lg` only: from there the split table has a Paid column, and
+          a second list of the same payers above it would say it twice. */}
+          <div className="lg:hidden">
+            <Section label={t(revenue ? "receivedBy" : "paidBy")}>
+              <DetailCard className="divide-y divide-border">
+                {expense.payers.map((payer) => (
+                  <PartyRow
+                    key={payer.participantId}
+                    name={payer.displayName}
+                    // Amber marks whoever put the money in, here as on the split
+                    // sheet — the one role coral cannot carry, because the payer
+                    // is usually in the split as well.
+                    tone="payer"
+                    minorUnits={payer.amount.toString()}
+                    currency={currency}
+                  />
+                ))}
+              </DetailCard>
+            </Section>
+          </div>
+
+          <Section
+            label={splitLabel}
+            chip={
+              <MetaChip icon={split.icon} small>
+                {t(split.key)}
+              </MetaChip>
+            }
+          >
+            {/* A list on a phone, a table on a desk: the same people and the same
+            words, drawn for the width there is. Exactly one is ever shown. */}
+            <div className="lg:hidden">
+              <SplitCard
+                entry={expense}
+                participantId={self}
+                currency={currency}
+                locale={locale}
+              />
+            </div>
+            <div className="hidden lg:block">
+              <SplitTable
+                entry={expense}
+                participantId={self}
+                currency={currency}
+                locale={locale}
+                label={splitLabel}
+              />
+            </div>
+          </Section>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-3 empty:hidden lg:gap-4">
+          {expense.notes && (
+            <Section label={t("notes")}>
+              <DetailCard>
+                <p className="px-3.5 py-3 text-sm whitespace-pre-wrap">
+                  {expense.notes}
+                </p>
+              </DetailCard>
+            </Section>
+          )}
+
+          {attachments.length > 0 && (
+            <Section label={t("files")}>
+              <DetailCard className="divide-y divide-border">
+                {attachments.map((attachment) => {
+                  const size = fileSizeOf(attachment.byteSize);
+                  return (
+                    <FileRow
+                      key={attachment.id}
+                      href={`/api/groups/${groupId}/attachments/${attachment.id}`}
+                      name={attachment.fileName}
+                      meta={t(
+                        size.unit === "kilobytes"
+                          ? "fileKilobytes"
+                          : "fileMegabytes",
+                        {
+                          kind: t(
+                            `fileKind.${fileKindOf(attachment.contentType)}`,
+                          ),
+                          size: size.size,
+                        },
+                      )}
+                    />
+                  );
+                })}
+              </DetailCard>
+            </Section>
+          )}
+        </div>
+      </div>
 
       <ActionBar>
         <Link
-          // The filters go into the drawer with it, so that a save which turns
-          // this entry into a repayment — and so lands the reader on another
-          // detail screen — still leaves them a way back to the list they were
-          // reading. In the fragment, because the drawer is an intercepted
-          // route and a query on one of those wedges it: see
-          // `components/entries/drawer-fragment.ts`.
-          href={withFragment(
-            `/groups/${groupId}/expenses/${expenseId}/edit`,
-            listFilters,
-          )}
+          href={editHref}
           transitionTypes={PUSH}
           className={`${ACTION} ${ACTION_NEUTRAL}`}
         >
@@ -355,7 +455,7 @@ export default async function TransactionDetailPage({
           kind="expense"
           id={expenseId}
           description={expense.description}
-          backTo={withQuery(`/groups/${groupId}/expenses`, listFilters)}
+          backTo={backTo}
         />
       </ActionBar>
     </div>

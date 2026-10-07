@@ -21,8 +21,10 @@ import {
   BigAmount,
   ChangeRow,
   DetailCard,
+  HeaderActions,
   MetaChip,
   MetaField,
+  MetaLine,
   MetaStrip,
   PersonAvatar,
   Section,
@@ -30,6 +32,7 @@ import {
   type PersonTone,
 } from "@/components/entries/detail-blocks";
 import { DeleteEntryButton } from "@/components/entries/delete-entry-button";
+import { Button } from "@/components/ui/button";
 import { requireGroupAccess } from "@/lib/actions";
 import { getSettlement } from "@/modules/settlements/service";
 import { findPaymentMethod } from "@/modules/settlements/payment-methods";
@@ -175,16 +178,61 @@ export default async function SettlementDetailPage({
   const toneOf = (participantId: string): PersonTone =>
     participantId === self ? "self" : "other";
 
+  // The list's filters ride into the drawer in the fragment — see the expense
+  // screen's edit link, and `drawer-fragment.ts`.
+  const editHref = withFragment(
+    `/groups/${groupId}/settlements/${settlementId}/edit`,
+    listFilters,
+  );
+  const backTo = withQuery(`/groups/${groupId}/expenses`, listFilters);
+
+  // An unrecognised method came in through the API or an import and is shown
+  // exactly as it was recorded.
+  const methodLabel = settlement.paymentMethod
+    ? method
+      ? tMethods(method.id)
+      : settlement.paymentMethod
+    : null;
+
   return (
-    <div className="flex flex-col gap-3 pb-[4.5rem]">
+    // From `lg` the actions are in the header and there is no bar to clear.
+    <div className="flex flex-col gap-3 pb-[4.5rem] lg:gap-4 lg:pb-0">
       {/* Named above, so the card opens on the figure rather than repeating
           who paid whom a line under it. */}
       <PageHeader
         title={description}
         back={{
-          href: withQuery(`/groups/${groupId}/expenses`, listFilters),
+          href: backTo,
           label: tCommon("backToTransactions"),
         }}
+        // The expense screen's desk header, for a repayment: the day it was
+        // made and how, then its two actions where a phone docks them below.
+        meta={
+          <MetaLine
+            items={[
+              dates.plain(settlement.settledOn, "long"),
+              ...(methodLabel ? [methodLabel] : []),
+            ]}
+          />
+        }
+        trailing={
+          <HeaderActions>
+            <Button asChild variant="outline" size="lg">
+              <Link href={editHref} transitionTypes={PUSH}>
+                <Pencil aria-hidden="true" />
+                {t("edit")}
+              </Link>
+            </Button>
+            <DeleteEntryButton
+              groupId={groupId}
+              kind="settlement"
+              id={settlementId}
+              description={description}
+              backTo={backTo}
+              placement="header"
+            />
+          </HeaderActions>
+        }
       />
 
       <DetailCard className="flex flex-col gap-3.5 p-4">
@@ -194,13 +242,7 @@ export default async function SettlementDetailPage({
             icon={ArrowLeftRight}
             label={t("types.settlement")}
           />
-          {settlement.paymentMethod && (
-            <MetaChip icon={MethodGlyph}>
-              {/* An unrecognised method came in through the API or an import
-                  and is shown exactly as it was recorded. */}
-              {method ? tMethods(method.id) : settlement.paymentMethod}
-            </MetaChip>
-          )}
+          {methodLabel && <MetaChip icon={MethodGlyph}>{methodLabel}</MetaChip>}
         </div>
 
         <BigAmount
@@ -296,12 +338,7 @@ export default async function SettlementDetailPage({
 
       <ActionBar>
         <Link
-          // The list's filters ride into the drawer in the fragment — see the
-          // expense screen's edit link, and `drawer-fragment.ts`.
-          href={withFragment(
-            `/groups/${groupId}/settlements/${settlementId}/edit`,
-            listFilters,
-          )}
+          href={editHref}
           transitionTypes={PUSH}
           className={`${ACTION} ${ACTION_NEUTRAL}`}
         >
@@ -313,7 +350,7 @@ export default async function SettlementDetailPage({
           kind="settlement"
           id={settlementId}
           description={description}
-          backTo={withQuery(`/groups/${groupId}/expenses`, listFilters)}
+          backTo={backTo}
         />
       </ActionBar>
     </div>
