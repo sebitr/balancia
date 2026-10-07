@@ -63,7 +63,24 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     DATABASE_URL=postgres://build:build@localhost:5432/build \
     AUTH_SECRET=build-time-placeholder-not-used-at-runtime-0123456789
 
-RUN pnpm build
+# `next build` keeps Turbopack's work in .next/cache, and a build that starts
+# from it redoes only what changed, in a fraction of the time. No layer can
+# carry it — `COPY . .` above changes with every commit, and .next is in
+# .dockerignore — so it lives in a BuildKit cache mount, like the pnpm store:
+# kept by the builder between builds on the same host, never part of the
+# image, and simply empty the first time.
+#
+# The host that gains is a server running scripts/deploy.sh, whose
+# `up --build` builds here after every pull. GitHub's runners start with an
+# empty builder, and the gha cache that ci.yml and release.yml build with
+# stores layers, not mounts, so their image builds stay cold, as before.
+#
+# One cache per architecture, because Turbopack's cache belongs to the build of
+# Next that wrote it. Locked, so that two builds for one architecture at once
+# take turns with it rather than both writing it.
+ARG TARGETARCH
+RUN --mount=type=cache,id=next-build-${TARGETARCH},target=/app/.next/cache,sharing=locked \
+    pnpm build
 
 # Bundle the worker and migrator into standalone JS so the runtime stage needs
 # neither tsx nor the TypeScript sources. `server-only` is aliased away because
