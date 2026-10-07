@@ -12,8 +12,9 @@ import type { Intent } from "./route";
  * The address field and the code boxes are both disabled while their request
  * is out, and a focused control that becomes disabled lets go of focus — so a
  * refusal left the keyboard on the page body, and the message under the field,
- * which is not an alert on this screen, went unread. The caret goes back into
- * the field the refusal is about, and that field is described by it.
+ * which was not an alert on this screen, went unread. The caret goes back into
+ * the field the refusal is about, that field is described by it, and the
+ * message is an alert too, as the sign-in form's is.
  */
 
 const auth = vi.hoisted(() => ({
@@ -105,7 +106,10 @@ describe("after a refusal", () => {
 
     await waitFor(() => expect(email).toHaveFocus());
     expect(email).toHaveValue("ada@example.com");
-    // Not an alert on this screen, so the field is what reads it out.
+    // Announced as it appears, and read again with the field it is about.
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      en.serverErrors.emailTaken,
+    );
     expect(email).toHaveAccessibleDescription(en.serverErrors.emailTaken);
   });
 
@@ -137,6 +141,9 @@ describe("after a refusal", () => {
     await waitFor(() => expect(boxes).toHaveFocus());
     elsewhere.remove();
     expect(boxes).toHaveValue("");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      en.onboarding.identity.codeWrong,
+    );
     expect(boxes).toHaveAccessibleDescription(en.onboarding.identity.codeWrong);
     // The address keeps its own description clear: it was not what was wrong.
     expect(
@@ -247,6 +254,9 @@ describe("with neither a code nor a passkey to offer", () => {
     );
 
     await waitFor(() => expect(email).toHaveFocus());
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      en.serverErrors.emailTaken,
+    );
     expect(email).toHaveAccessibleDescription(en.serverErrors.emailTaken);
     expect(onDone).not.toHaveBeenCalled();
   });

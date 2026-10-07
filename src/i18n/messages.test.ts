@@ -208,9 +208,6 @@ describe("message catalogues", () => {
       // A category name and a count of the ones folded in behind it: a
       // placeholder, a plus sign and a placeholder.
       "expensesList.bandRemainder",
-      // A date and a payment method, joined by the separator the rest of the
-      // app uses. Both halves are already translated where they come from.
-      "settleUp.settledOnVia",
       // Product names. Interac and Bancontact Pay are called that in French
       // too — only the two generic methods, `bank` and `cash`, translate.
       "paymentMethods.interac",
@@ -304,6 +301,34 @@ describe("French copy", () => {
       .map(([key]) => key);
 
     expect(vouvoie).toEqual([]);
+  });
+
+  it("never puts de or que in front of a name somebody typed", () => {
+    // "de Marta" and "d’Alex": which one a message needs depends on a name
+    // nobody knows when the message is written, and ICU cannot elide. So a
+    // name a reader typed — a person, a group, a category, a city — never
+    // follows a word French elides, and the sentence is turned so that it
+    // does not have to: "le remboursement versé par {from}", "Tout ce qu’a
+    // payé ou partagé {name}", "Couper les notifications du groupe {group}".
+    // Amounts, dates and counts are not typed names: "de 24,00 €" is fine.
+    const TYPED =
+      "name|names|group|from|to|actor|inviter|account|counterpart|first|second|description|category|city|timezone|email|instance|provider|merchant";
+    const elided = new RegExp(
+      `\\b(de|que|jusque|lorsque|puisque) \\{(${TYPED})\\}`,
+      "i",
+    );
+    const PRODUCT_NAMES = new Set([
+      // {name} is Splitwise or tricount, on the comparison pages.
+      "compare.common.checked",
+    ]);
+
+    const unelided = [...french]
+      .filter(
+        ([key, message]) => !PRODUCT_NAMES.has(key) && elided.test(message),
+      )
+      .map(([key]) => key);
+
+    expect(unelided).toEqual([]);
   });
 
   it("keeps one French word per idea", () => {

@@ -4,6 +4,7 @@ import en from "../../../messages/en.json";
 import fr from "../../../messages/fr.json";
 import type { ActivityEntry } from "@/modules/activity/service";
 import {
+  actorOf,
   describeActivity,
   type ActivityReader,
   type ActivityTranslate,
@@ -160,5 +161,106 @@ describe("a recorded repayment", () => {
     expect(
       line(repayment({ action: "settlement.deleted" }), reader(MARTA)),
     ).toBe("deleted a repayment");
+  });
+});
+
+/**
+ * Who a line is about, when nobody typed anything.
+ *
+ * The scheduler and the import worker store a label where a name goes —
+ * "Scheduled", "Import" — and the feed printed it: "Scheduled generated a
+ * recurring expense", in French too. The app did that work, so the app is
+ * named, in its own words for what it did.
+ */
+describe("work the app does on its own", () => {
+  function event(overrides: Partial<ActivityEntry>): ActivityEntry {
+    return {
+      id: "a1",
+      action: "recurring.generated",
+      entityType: "expense",
+      entityId: "e1",
+      metadata: { description: "Rent", occurrenceDate: "2026-09-01" },
+      actorLabel: "Scheduled",
+      actorType: "system",
+      actorParticipantId: null,
+      createdAt: new Date("2026-09-01T10:00:00Z"),
+      ...overrides,
+    };
+  }
+
+  it("names Balancia for an expense a recurring rule added", () => {
+    const rent = event({});
+
+    expect(actorOf(rent, translator("en"))).toBe("Balancia");
+    expect(line(rent, reader(null))).toBe(
+      "added an expense automatically: Rent",
+    );
+    expect(line(rent, reader(null, "fr"), "fr")).toBe(
+      "a ajouté une dépense automatiquement : Rent",
+    );
+  });
+
+  it("names Balancia for an import, which the worker finishes", () => {
+    const run = event({
+      action: "import.completed",
+      entityType: "import_run",
+      actorLabel: "Import",
+      actorType: "user",
+      metadata: { imported: 12, skipped: 0, failed: 0 },
+    });
+
+    expect(actorOf(run, translator("en"))).toBe("Balancia");
+    expect(line(run, reader(null))).toBe("completed an import");
+  });
+
+  it("still names a person by the name they had", () => {
+    const lunch = event({
+      action: "expense.created",
+      actorLabel: "Ada",
+      actorType: "user",
+      actorParticipantId: ADA,
+    });
+
+    expect(actorOf(lunch, translator("en"))).toBe("Ada");
+  });
+});
+
+/**
+ * Somebody arriving with an account writes `member.added` as their own
+ * actor, and its plain phrase made "Ada added someone to the group" of Ada
+ * joining. The way they came in says what happened.
+ */
+describe("somebody joining with an account", () => {
+  function joined(metadata: Record<string, unknown> | null): ActivityEntry {
+    return {
+      id: "a1",
+      action: "member.added",
+      entityType: "group_member",
+      entityId: ADA,
+      metadata,
+      actorLabel: "Ada",
+      actorType: "user",
+      actorParticipantId: ADA,
+      createdAt: new Date("2026-09-01T10:00:00Z"),
+    };
+  }
+
+  it("says they joined with the group link", () => {
+    expect(line(joined({ via: "join_link", claimed: true }), reader(SAM))).toBe(
+      "joined with the group link",
+    );
+  });
+
+  it("says a guest turned their personal link into an account", () => {
+    expect(line(joined({ via: "guest_link" }), reader(SAM))).toBe(
+      "turned their personal link into an account",
+    );
+    expect(line(joined({ via: "guest_link" }), reader(SAM, "fr"), "fr")).toBe(
+      "a transformé son lien personnel en compte",
+    );
+  });
+
+  it("keeps the plain phrase for an event that never said how", () => {
+    expect(line(joined(null), reader(SAM))).toBe("added someone to the group");
   });
 });

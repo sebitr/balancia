@@ -25,6 +25,10 @@ import { remindRecipientsFor, SettleActions } from "./settle-actions";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import type { RemindRecipient } from "@/modules/reminders/types";
+import {
+  REPAYMENT_TITLE,
+  type RepaymentSide,
+} from "@/modules/settlements/side";
 import { PUSH } from "@/components/motion/transitions";
 import { cn } from "@/lib/utils";
 import { TONE, type BalanceTone } from "@/components/money/balance-tone";
@@ -80,6 +84,8 @@ export interface SettledRepaymentView {
   readonly id: string;
   readonly fromName: string;
   readonly toName: string;
+  /** Which end of it the reader was on; see `repaymentSide`. */
+  readonly side: RepaymentSide;
   readonly currency: string;
   readonly minorUnits: string;
   readonly settledOn: string;
@@ -728,6 +734,10 @@ function TheirRow({
  * A state, not a list of zeros. The card says the group is done and offers the
  * one thing there is left to do with it — read what happened — and the last
  * repayments sit under it as the evidence, read-only.
+ *
+ * Each is titled as the transactions list titles it, from the reader's side:
+ * "You paid Marta back", "Sam paid you back", "Sam paid Marta". These rows
+ * used to say "Robin paid Sam back" to Robin.
  */
 function NothingToSettle({
   groupId,
@@ -737,6 +747,7 @@ function NothingToSettle({
   lastSettled: readonly SettledRepaymentView[];
 }) {
   const t = useTranslations("settleUp");
+  const tList = useTranslations("expensesList");
 
   return (
     <>
@@ -780,7 +791,7 @@ function NothingToSettle({
                   </AvatarFallback>
                 </Avatar>
                 <p className="min-w-0 truncate text-sm font-medium text-secondary-foreground">
-                  {t("paidSentence", {
+                  {tList(REPAYMENT_TITLE[repayment.side], {
                     from: repayment.fromName,
                     to: repayment.toName,
                   })}

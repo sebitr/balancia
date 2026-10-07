@@ -5,6 +5,7 @@ import { participants, settlements } from "@/lib/db/schema";
 import type { GroupAccess } from "@/lib/security/authorization";
 import { loadGroupBalances } from "@/modules/balances/service";
 import type { RepaymentSuggestion } from "@/modules/balances/engine";
+import { repaymentSide, type RepaymentSide } from "./side";
 
 /**
  * The settle-up screen's read model.
@@ -55,6 +56,11 @@ export interface SettledRepayment {
   readonly id: string;
   readonly fromName: string;
   readonly toName: string;
+  /**
+   * Which end of it the reader was on, so its row can say "You paid Marta
+   * back" rather than find the reader's own name in the third person.
+   */
+  readonly side: RepaymentSide;
   readonly amount: bigint;
   readonly currency: string;
   /** The calendar day it was recorded for, `YYYY-MM-DD`. */
@@ -175,7 +181,9 @@ export async function loadSettleUp(
     currencies,
     transferCount,
     lastSettled:
-      transferCount === 0 ? await loadLastSettled(access.groupId, { db }) : [],
+      transferCount === 0
+        ? await loadLastSettled(access.groupId, access.participantId, { db })
+        : [],
   };
 }
 
@@ -189,6 +197,7 @@ export async function loadSettleUp(
  */
 async function loadLastSettled(
   groupId: string,
+  self: string | null,
   options: { db?: Database } = {},
 ): Promise<SettledRepayment[]> {
   const db = options.db ?? getDb();
@@ -224,6 +233,7 @@ async function loadLastSettled(
     id: row.id,
     fromName: nameById.get(row.fromParticipantId) ?? "",
     toName: nameById.get(row.toParticipantId) ?? "",
+    side: repaymentSide(row, self),
     amount: row.amount,
     currency: row.currency,
     settledOn: row.settledOn,

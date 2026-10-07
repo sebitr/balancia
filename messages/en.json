@@ -161,50 +161,11 @@
   },
   "expenses": {
     "form": {
-      "description": "Description",
-      "descriptionPlaceholder": "Dinner at the harbour",
-      "amount": "Amount",
-      "currency": "Currency",
-      "date": "Date",
-      "paidBy": "Paid by",
-      "amountPaidBy": "Amount paid by {name}",
-      "payersMustAddUp": "The payers' amounts must add up to the expense total.",
-      "split": "Split",
-      "percentageFor": "Percentage for {name}",
-      "sharesFor": "Shares for {name}",
-      "amountFor": "Amount for {name}",
       "category": "Category",
       "categoryPlaceholder": "Select a category…",
       "categoryDetected": "Detected automatically",
       "categorySuggestions": "Suggestions",
-      "categoryImported": "Imported: {value}",
-      "notes": "Notes",
-      "receipts": "Receipts",
-      "saveChanges": "Save changes",
-      "addExpense": "Add expense",
-      "remove": "Remove",
-      "exchangeRateHint": "This rate is frozen with the expense. Changing rates later never rewrites what is already recorded.",
-      "tabs": {
-        "equal": "Equally",
-        "exact": "Exact",
-        "percentage": "Percent",
-        "shares": "Shares"
-      },
-      "hints": {
-        "equal": "Split evenly between everyone selected.",
-        "exact": "Enter each person's exact amount.",
-        "percentage": "Percentages must add up to 100.",
-        "shares": "Weights, e.g. 2 shares versus 1."
-      },
-      "errors": {
-        "choosePayer": "Choose who paid.",
-        "chooseSplit": "Choose who this expense is split between.",
-        "payersMustBalance": "What the payers put in must add up to the expense total.",
-        "enterRate": "Enter the exchange rate: 1 {from} in {to}.",
-        "saveFailed": "The expense could not be saved."
-      },
-      "updated": "Expense updated",
-      "added": "Expense added"
+      "categoryImported": "Imported: {value}"
     },
     "categories": {
       "groceries": "Groceries",
@@ -560,7 +521,6 @@
     "sectionYouAreOwed": "You're owed",
     "sectionNoExpenses": "No expenses yet",
     "sectionSettled": "Settled up · {count}",
-    "sectionArchived": "Archived · {count}",
     "addExpense": "Add expense",
     "empty": "Nothing here yet",
     "sectionNeedsYou": "Needs you",
@@ -598,22 +558,11 @@
   "group": {
     "archived": "Archived",
     "guest": "Guest",
-    "convertedAll": "Everything converted to {currency}",
-    "separateCurrencies": "Each currency balanced separately",
     "noExpensesTitle": "No expenses yet",
-    "noExpensesDescription": "Add the first expense and Balancia will start working out who owes whom.",
     "addExpense": "Add an expense",
     "yourPosition": "Your position",
-    "youIn": "You, in {currency}",
-    "totalSpending": "Total spending",
     "balances": "Balances",
     "settleUp": "Settle up",
-    "owesMoney": "Owes money",
-    "shouldReceive": "Should receive",
-    "recentExpenses": "Recent expenses",
-    "seeAll": "See all",
-    "recentActivity": "Recent activity",
-    "noExpensesDescriptionSolo": "Add the people sharing these costs, then record the first expense.",
     "addPeople": "Add people",
     "importFromSplitwise": "Import from Splitwise",
     "metaPeople": "{count, plural, one {# person} other {# people}}",
@@ -621,20 +570,10 @@
     "metaSpan": "{first} – {last}",
     "youGetBack": "You get back",
     "youOwe": "You owe",
-    "yourPositionMixed": "Where you stand",
-    "settledPosition": "Your position",
     "nothingOutstanding": "You're settled up",
-    "fromPeople": "from {names}",
-    "toPeople": "to {names}",
-    "statGroupSpent": "Group spent",
     "statYouPaid": "You paid",
     "statYourShare": "Your share",
-    "whoOwesWhom": "Who owes whom",
-    "allBalances": "All balances",
     "you": "You",
-    "remindedAt": "Reminded {when}",
-    "sinceYouLastOpened": "Since you last opened",
-    "showEarlierActivity": "Show earlier activity",
     "activityMetaTitle": "Activity",
     "activityTitle": "Activity",
     "activityCaption": "Every change, deletions included",
@@ -739,7 +678,7 @@
     "uncategorised": "Uncategorised",
     "bandRemainder": "{first} +{count}",
     "kindFilterLabel": "Filter by kind",
-    "repeating": "{count, plural, =0 {Repeating} other {Repeating · #}}",
+    "repeating": "{count, plural, =0 {Recurring} other {Recurring · #}}",
     "kind_expense": "Expenses",
     "kind_revenue": "Income",
     "kind_settlement": "Repayments",
@@ -944,12 +883,10 @@
     "singleKeys": "Single-key shortcuts",
     "singleKeysHelp": "N adds an expense and S settles up when no field has the cursor. Stays on this device.",
     "currencyTitle": "Show my totals in",
-    "currencyHelp": "Every group is converted into this on your home screen. Each group keeps its own currency.",
     "currencySaved": "Preferred currency saved",
     "currencyFailed": "That preference could not be saved.",
     "dates": "Dates",
     "numbers": "Numbers",
-    "formatAuto": "Automatic ({sample})",
     "formatsFailed": "That format could not be saved.",
     "formatsNote": "Automatic follows your language and your browser’s region. Each group keeps its own currency.",
     "preview": "Preview",
@@ -1003,6 +940,7 @@
     "withDescription": "{action}: {description}",
     "left": "left the group",
     "joinedWithGroupLink": "joined with the group link",
+    "claimedPersonalLink": "turned their personal link into an account",
     "restore": {
       "action": "Restore",
       "expense": "Restore the expense “{description}”",
@@ -1028,9 +966,9 @@
         "restored": "restored a repayment"
       },
       "member": {
-        "added": "added a member",
-        "removed": "removed a member",
-        "role_changed": "changed a member's role"
+        "added": "added someone to the group",
+        "removed": "removed someone from the group",
+        "role_changed": "changed someone's role"
       },
       "participant": {
         "created": "added someone to the group",
@@ -1048,7 +986,7 @@
         "updated": "changed a recurring expense",
         "deleted": "removed a recurring expense",
         "restored": "restored a recurring expense",
-        "generated": "generated a recurring expense"
+        "generated": "added an expense automatically"
       },
       "import": {
         "completed": "completed an import"
@@ -1115,25 +1053,6 @@
       }
     }
   },
-  "settlement": {
-    "settleUp": "Settle up",
-    "title": "Record a repayment",
-    "description": "A repayment moves balances between two people. It is not counted as group spending.",
-    "whoPaid": "Who paid",
-    "whoReceived": "Who received it",
-    "amount": "Amount",
-    "currency": "Currency",
-    "date": "Date",
-    "notes": "Notes",
-    "rateHint": "Frozen with the repayment, like an expense's rate.",
-    "submit": "Record repayment",
-    "recorded": "Repayment recorded",
-    "errors": {
-      "samePerson": "Choose two different people.",
-      "enterRate": "Enter the exchange rate: 1 {from} in {to}.",
-      "saveFailed": "The repayment could not be recorded."
-    }
-  },
   "settleUp": {
     "title": "Settle up",
     "recordRepayment": "Record a repayment",
@@ -1142,15 +1061,12 @@
     "betweenOthers": "Between others",
     "settledUp": "Settled up",
     "paysSentence": "{from} pays {to}",
-    "paidSentence": "{from} paid {to} back",
-    "record": "Record",
     "recordFor": "Record {from}'s repayment to {to}",
     "remindPerson": "Remind {name}",
     "remindedWhen": "Reminded {when}",
     "allSettledTitle": "The group is settled",
     "allSettledDescription": "Every repayment is recorded. The next expenses start from zero.",
     "lastSettled": "Last repayments",
-    "settledOnVia": "{when} · {method}",
     "backToGroup": "Back to the group",
     "iPaid": "I paid {name}",
     "iWasPaid": "I was paid back",
@@ -1845,7 +1761,7 @@
   "register": {
     "metaTitle": "Create account",
     "closedTitle": "Registration is closed",
-    "closedBody": "This Balancia instance does not accept new sign-ups. Ask the administrator for an account, or open a guest invitation link if someone shared one with you.",
+    "closedBody": "This Balancia instance does not accept new sign-ups. Ask the administrator for an account, or open an invitation link if someone shared one with you.",
     "goToSignIn": "Go to sign in",
     "title": "Create your account",
     "subtitle": "You can add a passkey afterwards, from your account settings.",
@@ -1900,18 +1816,7 @@
     "askAgain": "Ask for a new link"
   },
   "invite": {
-    "metaTitle": "You have been invited",
-    "invitedBy": "{inviter} invited you, {name}",
-    "invited": "You have been invited, {name}",
-    "balanceLabel": "Your balance in this group",
-    "balanceFrom": "{name} owes you this",
-    "balanceTo": "You owe this to {name}",
-    "promiseExpenses": "See every expense and settle up",
-    "promiseAdd": "Add what you paid",
-    "promiseNoEmail": "No email needed to start",
-    "continueAsGuest": "Continue as guest",
-    "createAccount": "Create an account",
-    "haveAccount": "I already have an account"
+    "metaTitle": "You have been invited"
   },
   "joinGroup": {
     "metaTitle": "Join a group"
@@ -2160,7 +2065,7 @@
     "expiredValue": "Expired",
     "expiryFailed": "The expiry date could not be changed.",
     "noDuplicates": "No duplicates",
-    "noDuplicatesBody": "People already in the group can simply choose their name. Their expenses and history stay attached to the same member.",
+    "noDuplicatesBody": "People already in the group can simply choose their name. Their expenses and history stay attached to the same person.",
     "statusActive": "Active",
     "statusExpired": "Expired",
     "statusRevoked": "Revoked",
@@ -2199,7 +2104,7 @@
     "expenseYouAdded": "The expense you added",
     "kept": "Kept",
     "keptMore": "{count, plural, one {And # more expense you added} other {And # more expenses you added}}",
-    "linkRetired": "The old guest link no longer opens this group.",
+    "linkRetired": "Your personal link no longer opens this group.",
     "goToGroup": "Go to {group}"
   },
   "exchangeRate": {
@@ -2228,17 +2133,8 @@
   },
   "groupForm": {
     "name": "Group name",
-    "namePlaceholder": "Lisbon trip",
-    "description": "Description",
-    "descriptionPlaceholder": "Four days, three people, too much pastry.",
-    "yourName": "Your name in this group",
-    "yourNameHelp": "This is how you appear to everyone else in the group.",
-    "timezone": "Group timezone",
-    "timezoneHelp": "Used to decide when recurring expenses are due.",
-    "timezoneDetected": "Detected from your device. Used to decide when recurring expenses are due.",
     "submit": "Create group",
     "submitIn": "Create group in {currency}",
-    "created": "Group created",
     "failed": "The group could not be created.",
     "sheetTitle": "New group",
     "close": "Close",
@@ -2251,7 +2147,6 @@
     "addPerson": "Add a person",
     "add": "Add",
     "participantsHelp": "No account needed. You can add or rename people later on.",
-    "moreCurrencies": "More currencies",
     "foreignCurrencyQuestion": "If someone pays in another currency",
     "modeConvertedTitle": "One shared balance",
     "modeConvertedSubtitle": "Foreign amounts converted into {currency}",
@@ -2325,8 +2220,6 @@
     "failed": "That did not work."
   },
   "receipts": {
-    "removeFile": "Remove {name} from this expense",
-    "formats": "JPEG, PNG, WebP, GIF, HEIC or PDF. Stored on this server, visible only to this group.",
     "uploadFailed": "That file could not be uploaded.",
     "connectionFailed": "The upload failed. Check your connection and try again."
   },
@@ -2340,7 +2233,6 @@
     "added": "Added {date}",
     "lastUsed": "last used {date}",
     "removeLabel": "Remove {name}",
-    "thisPasskey": "this passkey",
     "removeTitle": "Remove this passkey?",
     "removeBody": "You will no longer be able to sign in with it. Make sure you still have your password or another passkey.",
     "removeCancel": "Keep this passkey",
@@ -2356,7 +2248,7 @@
     "title": "API keys",
     "keyCount": "{count, plural, one {# key} other {# keys}}",
     "emptyDescription": "Give a Shortcut, a script or a wall tablet its own key, so it never has to hold your password.",
-    "cardHint": "A key can read and write entries. It can never change your account, your groups' membership, or export a group.",
+    "cardHint": "A key can read and write entries. It can never change your account, who is in your groups, or export a group.",
     "nameLabel": "What is this key for",
     "namePlaceholder": "Kitchen tablet",
     "scopeLabel": "What it may do",
@@ -2408,14 +2300,7 @@
     "importRows": "{count, plural, one {Import # row} other {Import # rows}}",
     "differentFile": "Choose a different file"
   },
-  "securityPage": {
-    "metaTitle": "Passkeys & security",
-    "title": "Passkeys & security",
-    "intro": "A passkey lets you sign in with your device's own unlock — fingerprint, face or PIN — instead of typing a password.",
-    "insecure": "Passkeys need HTTPS. This instance is served over plain HTTP from a non-localhost address, so your browser will refuse to create one. Put Balancia behind a TLS-terminating reverse proxy and set <code></code> to the https:// address."
-  },
   "expensePages": {
-    "newTitle": "Add an expense",
     "noPeopleTitle": "Add someone first",
     "noPeopleDescription": "An expense needs at least one person to split it between.",
     "managePeople": "Manage people"
@@ -2645,15 +2530,15 @@
     "statEntries": "Entries",
     "statMedian": "Median entry",
     "flowsTitle": "Money in and out",
-    "netToggle": "Net of revenue",
+    "netToggle": "Net of income",
     "flowExpenses": "Expenses",
     "flowExpensesSub": "{count, plural, =0 {nothing spent} one {# entry} other {# entries}}",
-    "flowRevenue": "Revenue",
+    "flowRevenue": "Income",
     "flowRevenueSub": "{count, plural, =0 {nothing came in} one {# entry recorded as money in} other {# entries recorded as money in}}",
     "flowSettlements": "Repayments",
-    "flowSettlementsSub": "{count, plural, =0 {no repayments yet} one {# repayment between members} other {# repayments between members}}",
-    "flowsFootnoteGross": "The total spent above is gross of revenue. Repayments only move money between members and never count as spend.",
-    "flowsFootnoteNet": "Revenue is subtracted from the total spent above. Repayments only move money between members and never count as spend.",
+    "flowSettlementsSub": "{count, plural, =0 {no repayments yet} one {# repayment within the group} other {# repayments within the group}}",
+    "flowsFootnoteGross": "Income is not subtracted from the total spent above. Repayments only move money between people and never count as spend.",
+    "flowsFootnoteNet": "Income is subtracted from the total spent above. Repayments only move money between people and never count as spend.",
     "chartTitle": "Group spend",
     "granularity": {
       "week": "{count, plural, one {# week} other {# weeks}} · weekly",
@@ -2667,7 +2552,7 @@
     "trendLevel": "The last three periods held level with the average before them.",
     "membersTitle": "Who carries the group",
     "membersCaption": "sorted high to low",
-    "metricLabel": "Which figure the members are ranked by",
+    "metricLabel": "Which figure people are ranked by",
     "metrics": {
       "net": "Net",
       "paid": "Paid",
@@ -2702,7 +2587,7 @@
     "recordSquareSub": "Everyone at zero, {from} to {to}",
     "days": "{count, plural, one {# day} other {# days}}",
     "percent": "{percent, number, ::.0}%",
-    "method": "Shares use the split ratios recorded on each entry, not today's. Repayments move money between members and are never counted as spend. Amounts in other currencies are listed separately and never summed."
+    "method": "Shares use the split ratios recorded on each entry, not today's. Repayments move money between people and are never counted as spend. Amounts in other currencies are listed separately and never summed."
   },
   "recurringPage": {
     "title": "Recurring expenses",
@@ -2781,7 +2666,7 @@
       "receivedEven": "You received {received} · exactly your share",
       "othersPaid": "{count, plural, one {{name} paid} other {# people paid}} · <tone>you owe {amount}</tone>",
       "othersReceived": "{count, plural, one {{name} received it} other {# people received it}} · <tone>you get back {amount}</tone>",
-      "notInvolved": "{kind, select, revenue {You’re not part of this revenue} other {You’re not part of this expense}}"
+      "notInvolved": "{kind, select, revenue {You’re not part of this income} other {You’re not part of this expense}}"
     },
     "outcome": {
       "youGetBack": "You get back {amount}",
@@ -3047,7 +2932,6 @@
     "markAllReadFailed": "Those could not be marked as read.",
     "unread": "Unread",
     "settingsLink": "Notification settings",
-    "loadMore": "Show older",
     "filterLabel": "Show",
     "filterAll": "All",
     "filterUnread": "Unread",
@@ -3062,13 +2946,9 @@
     "emptyReminders": "No reminders",
     "emptyRemindersHint": "Nobody is nudging you about money right now.",
     "burst": "{actor} made {count} changes to {description}",
-    "burstExpand": "Show the changes",
-    "burstCollapse": "Hide the changes",
     "importsFinished": "{count} imports finished",
     "archive": "Archive · {count} read after 30 days",
     "archiveNote": "Read notifications move here after 30 days and stay searchable in the group's activity log.",
-    "archiveExpand": "Show the archive",
-    "archiveCollapse": "Hide the archive",
     "dismissed": "Notification dismissed",
     "dismissNamed": "Dismiss “{row}”",
     "settleUp": "Settle up",
@@ -3101,7 +2981,7 @@
     "expensesHelp": "Something I paid for, or owe a share of, is added or changed.",
     "settlements": "Repayments",
     "settlementsHelp": "Someone records money paid to or from me.",
-    "recurring": "Repeating expenses",
+    "recurring": "Recurring expenses",
     "recurringHelp": "A recurring expense lands in one of my groups.",
     "imports": "Imports",
     "importsHelp": "An import I started has finished.",
@@ -3390,11 +3270,11 @@
       "add": "Attach a file",
       "uploading": "Attaching…",
       "remove": "Remove {name}",
-      "notRepeating": "Files are not kept on a repeating entry."
+      "notRepeating": "Files are not kept on a recurring entry."
     },
     "amount": {
       "zero": "0.00",
-      "rateFrozen": "Frozen for this transaction. It won’t update automatically.",
+      "rateFrozen": "Frozen for this entry. It won’t update automatically.",
       "inBaseCurrency": "In the group's base currency"
     },
     "date": {
@@ -3502,19 +3382,12 @@
     },
     "repeat": {
       "title": "Repeat",
-      "oneOff": "One-off",
       "frequency": {
         "weekly": "Weekly",
         "monthly": "Monthly",
         "yearly": "Yearly",
         "daily": "Daily"
       },
-      "every": "Every",
-      "onDay": "On day",
-      "fewer": "Less often",
-      "more": "More often",
-      "previousDay": "Previous day",
-      "nextDay": "Next day",
       "ends": "Ends",
       "never": "Never",
       "onADate": "On a date",
@@ -3522,7 +3395,6 @@
       "label": "Repeats",
       "schedule": "Create this entry again on a schedule",
       "next": "Next: {dates}",
-      "onTheNth": "On the {week} {day}",
       "byDayOfMonth": "On the {day, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
       "byWeekday": "On the {week} {day}",
       "lastDayOfMonth": "Last day of the month",
@@ -3541,11 +3413,8 @@
       "timezoneNote": "Created in {timezone} time."
     },
     "scan": {
-      "title": "Scan a receipt",
-      "subtitle": "Fills amount, date, merchant and items",
       "camera": "Camera",
       "upload": "Upload",
-      "scanning": "Reading the receipt…",
       "read": "Read {count, plural, one {# item} other {# items}} from {merchant}",
       "check": "Check the amount and date before saving",
       "dismiss": "Dismiss",
@@ -3554,15 +3423,6 @@
       "tagEveryone": "all {count}",
       "tagWithBill": "with the bill",
       "tagUnassigned": "unassigned"
-    },
-    "items": {
-      "title": "Assign the items",
-      "everyone": "Everyone",
-      "tipNote": "Shared in proportion to what each person ordered.",
-      "owes": "Each person owes",
-      "matches": "Matches the receipt total.",
-      "unassigned": "Assigned {assigned} of {total} — the rest is unassigned.",
-      "use": "Use these amounts"
     },
     "settle": {
       "from": "From",
@@ -3634,9 +3494,7 @@
       "creditedWays": "{count, plural, one {credited to # person} other {credited to # people}}",
       "settledYouPaid": "You paid {to} back",
       "settledPaidYou": "{from} paid you back",
-      "settledBetween": "{from} paid {to} back",
-      "checkPayer": "Change who paid",
-      "checkSplit": "Change the split"
+      "settledBetween": "{from} paid {to} back"
     },
     "errors": {
       "amountRequired": "Enter an amount first.",
@@ -3790,7 +3648,6 @@
     "addressIncomplete": "To complete",
     "addressStreetHint": "Bahnhofstrasse",
     "addressTownHint": "Zermatt",
-    "addressRemove": "Remove my address",
     "qrTitle": "Scan to pay",
     "qrSwiss": "Swiss QR-bill — open your banking app and scan",
     "qrEpc": "Girocode — open your banking app and scan",

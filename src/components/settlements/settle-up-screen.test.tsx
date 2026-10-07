@@ -5,6 +5,7 @@ import { renderWithIntl } from "../../../tests/helpers/intl";
 import {
   SettleUpScreen,
   initialsOf,
+  type SettledRepaymentView,
   type SettleUpCurrencyView,
   type SettleUpTransferView,
 } from "./settle-up-screen";
@@ -534,28 +535,48 @@ describe("nothing to settle", () => {
     ).toHaveAttribute("href", "/groups/g1/expenses");
   });
 
+  function settled(
+    side: SettledRepaymentView["side"],
+    id = "s1",
+  ): SettledRepaymentView {
+    return {
+      id,
+      fromName: "Ravi",
+      toName: "Seb",
+      side,
+      currency: "CHF",
+      minorUnits: "6200",
+      settledOn: "2026-08-22",
+      paymentMethod: "Wero",
+    };
+  }
+
   it("names what cleared it", () => {
+    render({ transferCount: 0, lastSettled: [settled("between")] }, []);
+
+    const list = screen.getByRole("list");
+    expect(within(list).getByText("Ravi paid Seb")).toBeInTheDocument();
+    expect(within(list).getByText("CHF 62.00")).toBeInTheDocument();
+  });
+
+  /**
+   * Seb reading "Ravi paid Seb back" had to find his own name in a sentence
+   * about somebody else. The rows take the transactions list's titles, from
+   * the reader's side of each repayment.
+   */
+  it("says you where the reader paid or was paid", () => {
     render(
       {
         transferCount: 0,
-        lastSettled: [
-          {
-            id: "s1",
-            fromName: "Ravi",
-            toName: "Seb",
-            currency: "CHF",
-            minorUnits: "6200",
-            settledOn: "2026-08-22",
-            paymentMethod: "Wero",
-          },
-        ],
+        lastSettled: [settled("received", "s1"), settled("paid", "s2")],
       },
       [],
     );
 
     const list = screen.getByRole("list");
-    expect(within(list).getByText("Ravi paid Seb back")).toBeInTheDocument();
-    expect(within(list).getByText("CHF 62.00")).toBeInTheDocument();
+    expect(within(list).getByText("Ravi paid you back")).toBeInTheDocument();
+    expect(within(list).getByText("You paid Seb back")).toBeInTheDocument();
+    expect(within(list).queryByText(/Ravi paid Seb/)).toBeNull();
   });
 });
 

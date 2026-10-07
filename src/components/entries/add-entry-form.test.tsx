@@ -1337,7 +1337,7 @@ describe("attaching a file", () => {
     await user.click(screen.getByRole("switch", { name: "Repeats" }));
     expect(attach).toBeDisabled();
     expect(attach).toHaveAccessibleDescription(
-      "Files are not kept on a repeating entry.",
+      "Files are not kept on a recurring entry.",
     );
 
     await user.click(screen.getByRole("switch", { name: "Repeats" }));
