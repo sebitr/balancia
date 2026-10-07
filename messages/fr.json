@@ -965,9 +965,9 @@
         "restored": "a rétabli un remboursement"
       },
       "member": {
-        "added": "a ajouté un membre",
-        "removed": "a retiré un membre",
-        "role_changed": "a changé le rôle d’un membre"
+        "added": "a ajouté quelqu’un au groupe",
+        "removed": "a retiré quelqu’un du groupe",
+        "role_changed": "a changé le rôle de quelqu’un"
       },
       "participant": {
         "created": "a ajouté quelqu’un au groupe",
@@ -2065,7 +2065,7 @@
     "expiredValue": "Expiré",
     "expiryFailed": "La date d’expiration n’a pas pu être modifiée.",
     "noDuplicates": "Pas de doublons",
-    "noDuplicatesBody": "Les personnes déjà ajoutées peuvent simplement choisir leur nom. Leurs dépenses et leur historique restent associés au même membre.",
+    "noDuplicatesBody": "Les personnes déjà ajoutées peuvent simplement choisir leur nom. Leurs dépenses et leur historique restent associés à la même personne.",
     "statusActive": "Actif",
     "statusExpired": "Expiré",
     "statusRevoked": "Révoqué",
@@ -2104,7 +2104,7 @@
     "expenseYouAdded": "La dépense que tu as ajoutée",
     "kept": "Conservée",
     "keptMore": "{count, plural, one {Et # autre dépense que tu as ajoutée} other {Et # autres dépenses que tu as ajoutées}}",
-    "linkRetired": "L’ancien lien d’invité n’ouvre plus ce groupe.",
+    "linkRetired": "Ton lien personnel n’ouvre plus ce groupe.",
     "goToGroup": "Ouvrir {group}"
   },
   "exchangeRate": {
@@ -2248,7 +2248,7 @@
     "title": "Clés d’API",
     "keyCount": "{count, plural, one {# clé} other {# clés}}",
     "emptyDescription": "Donne à un raccourci, à un script ou à une tablette murale sa propre clé, pour qu’ils n’aient jamais à détenir ton mot de passe.",
-    "cardHint": "Une clé peut lire et écrire des dépenses. Elle ne peut jamais modifier ton compte, les membres de tes groupes, ni exporter un groupe.",
+    "cardHint": "Une clé peut lire et écrire des transactions. Elle ne peut jamais modifier ton compte, ni qui fait partie de tes groupes, ni exporter un groupe.",
     "nameLabel": "À quoi sert cette clé",
     "namePlaceholder": "Tablette de la cuisine",
     "scopeLabel": "Ce qu’elle peut faire",
@@ -2536,9 +2536,9 @@
     "flowRevenue": "Revenus",
     "flowRevenueSub": "{count, plural, =0 {rien reçu} one {# transaction enregistrée en argent reçu} other {# transactions enregistrées en argent reçu}}",
     "flowSettlements": "Remboursements",
-    "flowSettlementsSub": "{count, plural, =0 {aucun remboursement} one {# remboursement entre membres} other {# remboursements entre membres}}",
-    "flowsFootnoteGross": "Le total dépensé ci-dessus est brut des revenus. Les remboursements ne font que déplacer de l’argent entre membres et ne comptent jamais comme des dépenses.",
-    "flowsFootnoteNet": "Les revenus sont déduits du total dépensé ci-dessus. Les remboursements ne font que déplacer de l’argent entre membres et ne comptent jamais comme des dépenses.",
+    "flowSettlementsSub": "{count, plural, =0 {aucun remboursement} one {# remboursement dans le groupe} other {# remboursements dans le groupe}}",
+    "flowsFootnoteGross": "Le total dépensé ci-dessus est brut des revenus. Les remboursements ne font que déplacer de l’argent entre les personnes du groupe et ne comptent jamais comme des dépenses.",
+    "flowsFootnoteNet": "Les revenus sont déduits du total dépensé ci-dessus. Les remboursements ne font que déplacer de l’argent entre les personnes du groupe et ne comptent jamais comme des dépenses.",
     "chartTitle": "Dépenses du groupe",
     "granularity": {
       "week": "{count, plural, one {# semaine} other {# semaines}} · par semaine",
@@ -2552,7 +2552,7 @@
     "trendLevel": "Les trois dernières périodes sont au niveau de la moyenne des précédentes.",
     "membersTitle": "Qui porte le groupe",
     "membersCaption": "du plus grand au plus petit",
-    "metricLabel": "Chiffre selon lequel les membres sont classés",
+    "metricLabel": "Chiffre selon lequel les personnes sont classées",
     "metrics": {
       "net": "Net",
       "paid": "Payé",
@@ -2587,7 +2587,7 @@
     "recordSquareSub": "Tout le monde à zéro, du {from} au {to}",
     "days": "{count, plural, one {# jour} other {# jours}}",
     "percent": "{percent, number, ::.0} %",
-    "method": "Les parts utilisent les répartitions enregistrées sur chaque transaction, pas celles d’aujourd’hui. Les remboursements déplacent de l’argent entre membres et ne comptent jamais comme des dépenses. Les montants dans d’autres devises sont listés à part et jamais additionnés."
+    "method": "Les parts utilisent les répartitions enregistrées sur chaque transaction, pas celles d’aujourd’hui. Les remboursements déplacent de l’argent entre les personnes du groupe et ne comptent jamais comme des dépenses. Les montants dans d’autres devises sont listés à part et jamais additionnés."
   },
   "recurringPage": {
     "title": "Dépenses récurrentes",
@@ -2981,7 +2981,7 @@
     "expensesHelp": "Quelque chose que j’ai payé, ou dont je dois une part, est ajouté ou modifié.",
     "settlements": "Les remboursements",
     "settlementsHelp": "Quelqu’un enregistre de l’argent que je reçois ou que je verse.",
-    "recurring": "Les dépenses répétées",
+    "recurring": "Les dépenses récurrentes",
     "recurringHelp": "Une dépense récurrente arrive dans un de mes groupes.",
     "imports": "Les imports",
     "importsHelp": "Un import que j’ai lancé est terminé.",
@@ -3274,7 +3274,7 @@
     },
     "amount": {
       "zero": "0.00",
-      "rateFrozen": "Figé pour cette opération. Il ne sera pas mis à jour automatiquement.",
+      "rateFrozen": "Figé pour cette transaction. Il ne sera pas mis à jour automatiquement.",
       "inBaseCurrency": "Dans la devise de base du groupe"
     },
     "date": {
@@ -3586,7 +3586,7 @@
     "title": "Recevoir de l’argent",
     "sub": "La personne qui te doit de l’argent voit celui du haut en premier. Seules les personnes de tes groupes les voient, et seulement quand elles te doivent quelque chose.",
     "intro": "Choisis comment tu préfères être remboursé. Ton moyen de paiement préféré sera proposé en premier.",
-    "introPrivacy": "Seuls les membres qui te doivent de l’argent voient ces informations.",
+    "introPrivacy": "Seules les personnes qui te doivent de l’argent voient ces informations.",
     "preferred": "Préféré",
     "makePreferred": "Définir comme préféré",
     "addMethod": "Ajouter un moyen",

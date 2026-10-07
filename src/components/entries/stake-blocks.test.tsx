@@ -208,7 +208,7 @@ describe("your line under the total", () => {
   it("says the same to a member with no place in the money", async () => {
     const { container } = await stake(REFUND, null);
 
-    expect(container).toHaveTextContent("You’re not part of this revenue");
+    expect(container).toHaveTextContent("You’re not part of this income");
   });
 
   it("says it in French, as one sentence", async () => {

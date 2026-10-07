@@ -1006,7 +1006,7 @@ function FilterButton({
 }
 
 /**
- * The way to the group's recurring expenses: "Repeating · 2", with the number
+ * The way to the group's recurring expenses: "Recurring · 2", with the number
  * that are running.
  *
  * They used to be two levels down, behind a shortcut at the foot of group

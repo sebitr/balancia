@@ -205,16 +205,16 @@ describe("the group statistics island", () => {
       within(strip as HTMLElement).getByText("€12,480.00"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/The total spent above is gross of revenue/),
+      screen.getByText(/Income is not subtracted from the total spent above/),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Net of revenue" }));
+    await user.click(screen.getByRole("button", { name: "Net of income" }));
 
     expect(
       within(strip as HTMLElement).getByText("€11,718.00"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Revenue is subtracted from the total spent above/),
+      screen.getByText(/^Income is subtracted from the total spent above/),
     ).toBeInTheDocument();
   });
 
@@ -224,12 +224,12 @@ describe("the group statistics island", () => {
     const settlements = screen.getByText("Repayments").closest("div");
     expect(
       within(settlements as HTMLElement).getByText(
-        "14 repayments between members",
+        "14 repayments within the group",
       ),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Repayments only move money between members and never count as spend/,
+        /Repayments only move money between people and never count as spend/,
       ),
     ).toBeInTheDocument();
   });

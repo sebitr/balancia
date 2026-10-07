@@ -65,13 +65,13 @@ describe("the attach row", () => {
   it("is off and says why when nothing can be attached", () => {
     renderAttach({
       files: [{ id: "f1", name: "bill.pdf" }],
-      unavailable: "Files are not kept on a repeating entry.",
+      unavailable: "Files are not kept on a recurring entry.",
     });
 
     const row = screen.getByRole("button", { name: "Attach a file" });
     expect(row).toBeDisabled();
     expect(row).toHaveAccessibleDescription(
-      "Files are not kept on a repeating entry.",
+      "Files are not kept on a recurring entry.",
     );
     // What is already attached is still there, to come back with Repeats off.
     expect(screen.getByText("bill.pdf")).toBeInTheDocument();

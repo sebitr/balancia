@@ -679,7 +679,7 @@ describe("Transactions, and the recurring expenses", () => {
   it("leads to them, counting the ones running", () => {
     renderWith({ running: 2 });
 
-    const link = screen.getByRole("link", { name: /Repeating · 2/ });
+    const link = screen.getByRole("link", { name: /Recurring · 2/ });
     expect(link).toHaveAttribute("href", "/groups/g1/recurring");
     // It goes somewhere: it is not one of the chips that filter the list.
     expect(link).not.toHaveAttribute("aria-pressed");
@@ -693,7 +693,7 @@ describe("Transactions, and the recurring expenses", () => {
   it("drops the number when every one of them is paused", () => {
     renderWith({ running: 0 });
 
-    expect(screen.getByRole("link", { name: "Repeating" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Recurring" })).toHaveAttribute(
       "href",
       "/groups/g1/recurring",
     );
@@ -703,7 +703,7 @@ describe("Transactions, and the recurring expenses", () => {
     renderWith(null);
 
     expect(
-      screen.queryByRole("link", { name: /Repeating/ }),
+      screen.queryByRole("link", { name: /^Recurring/ }),
     ).not.toBeInTheDocument();
   });
 
@@ -715,7 +715,7 @@ describe("Transactions, and the recurring expenses", () => {
       screen.queryByRole("group", { name: "Filter by kind" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /Repeating · 1/ }),
+      screen.getByRole("link", { name: /Recurring · 1/ }),
     ).toBeInTheDocument();
   });
 

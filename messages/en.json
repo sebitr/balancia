@@ -678,7 +678,7 @@
     "uncategorised": "Uncategorised",
     "bandRemainder": "{first} +{count}",
     "kindFilterLabel": "Filter by kind",
-    "repeating": "{count, plural, =0 {Repeating} other {Repeating · #}}",
+    "repeating": "{count, plural, =0 {Recurring} other {Recurring · #}}",
     "kind_expense": "Expenses",
     "kind_revenue": "Income",
     "kind_settlement": "Repayments",
@@ -965,9 +965,9 @@
         "restored": "restored a repayment"
       },
       "member": {
-        "added": "added a member",
-        "removed": "removed a member",
-        "role_changed": "changed a member's role"
+        "added": "added someone to the group",
+        "removed": "removed someone from the group",
+        "role_changed": "changed someone's role"
       },
       "participant": {
         "created": "added someone to the group",
@@ -1761,7 +1761,7 @@
   "register": {
     "metaTitle": "Create account",
     "closedTitle": "Registration is closed",
-    "closedBody": "This Balancia instance does not accept new sign-ups. Ask the administrator for an account, or open a guest invitation link if someone shared one with you.",
+    "closedBody": "This Balancia instance does not accept new sign-ups. Ask the administrator for an account, or open an invitation link if someone shared one with you.",
     "goToSignIn": "Go to sign in",
     "title": "Create your account",
     "subtitle": "You can add a passkey afterwards, from your account settings.",
@@ -2065,7 +2065,7 @@
     "expiredValue": "Expired",
     "expiryFailed": "The expiry date could not be changed.",
     "noDuplicates": "No duplicates",
-    "noDuplicatesBody": "People already in the group can simply choose their name. Their expenses and history stay attached to the same member.",
+    "noDuplicatesBody": "People already in the group can simply choose their name. Their expenses and history stay attached to the same person.",
     "statusActive": "Active",
     "statusExpired": "Expired",
     "statusRevoked": "Revoked",
@@ -2104,7 +2104,7 @@
     "expenseYouAdded": "The expense you added",
     "kept": "Kept",
     "keptMore": "{count, plural, one {And # more expense you added} other {And # more expenses you added}}",
-    "linkRetired": "The old guest link no longer opens this group.",
+    "linkRetired": "Your personal link no longer opens this group.",
     "goToGroup": "Go to {group}"
   },
   "exchangeRate": {
@@ -2248,7 +2248,7 @@
     "title": "API keys",
     "keyCount": "{count, plural, one {# key} other {# keys}}",
     "emptyDescription": "Give a Shortcut, a script or a wall tablet its own key, so it never has to hold your password.",
-    "cardHint": "A key can read and write entries. It can never change your account, your groups' membership, or export a group.",
+    "cardHint": "A key can read and write entries. It can never change your account, who is in your groups, or export a group.",
     "nameLabel": "What is this key for",
     "namePlaceholder": "Kitchen tablet",
     "scopeLabel": "What it may do",
@@ -2530,15 +2530,15 @@
     "statEntries": "Entries",
     "statMedian": "Median entry",
     "flowsTitle": "Money in and out",
-    "netToggle": "Net of revenue",
+    "netToggle": "Net of income",
     "flowExpenses": "Expenses",
     "flowExpensesSub": "{count, plural, =0 {nothing spent} one {# entry} other {# entries}}",
-    "flowRevenue": "Revenue",
+    "flowRevenue": "Income",
     "flowRevenueSub": "{count, plural, =0 {nothing came in} one {# entry recorded as money in} other {# entries recorded as money in}}",
     "flowSettlements": "Repayments",
-    "flowSettlementsSub": "{count, plural, =0 {no repayments yet} one {# repayment between members} other {# repayments between members}}",
-    "flowsFootnoteGross": "The total spent above is gross of revenue. Repayments only move money between members and never count as spend.",
-    "flowsFootnoteNet": "Revenue is subtracted from the total spent above. Repayments only move money between members and never count as spend.",
+    "flowSettlementsSub": "{count, plural, =0 {no repayments yet} one {# repayment within the group} other {# repayments within the group}}",
+    "flowsFootnoteGross": "Income is not subtracted from the total spent above. Repayments only move money between people and never count as spend.",
+    "flowsFootnoteNet": "Income is subtracted from the total spent above. Repayments only move money between people and never count as spend.",
     "chartTitle": "Group spend",
     "granularity": {
       "week": "{count, plural, one {# week} other {# weeks}} · weekly",
@@ -2552,7 +2552,7 @@
     "trendLevel": "The last three periods held level with the average before them.",
     "membersTitle": "Who carries the group",
     "membersCaption": "sorted high to low",
-    "metricLabel": "Which figure the members are ranked by",
+    "metricLabel": "Which figure people are ranked by",
     "metrics": {
       "net": "Net",
       "paid": "Paid",
@@ -2587,7 +2587,7 @@
     "recordSquareSub": "Everyone at zero, {from} to {to}",
     "days": "{count, plural, one {# day} other {# days}}",
     "percent": "{percent, number, ::.0}%",
-    "method": "Shares use the split ratios recorded on each entry, not today's. Repayments move money between members and are never counted as spend. Amounts in other currencies are listed separately and never summed."
+    "method": "Shares use the split ratios recorded on each entry, not today's. Repayments move money between people and are never counted as spend. Amounts in other currencies are listed separately and never summed."
   },
   "recurringPage": {
     "title": "Recurring expenses",
@@ -2666,7 +2666,7 @@
       "receivedEven": "You received {received} · exactly your share",
       "othersPaid": "{count, plural, one {{name} paid} other {# people paid}} · <tone>you owe {amount}</tone>",
       "othersReceived": "{count, plural, one {{name} received it} other {# people received it}} · <tone>you get back {amount}</tone>",
-      "notInvolved": "{kind, select, revenue {You’re not part of this revenue} other {You’re not part of this expense}}"
+      "notInvolved": "{kind, select, revenue {You’re not part of this income} other {You’re not part of this expense}}"
     },
     "outcome": {
       "youGetBack": "You get back {amount}",
@@ -2981,7 +2981,7 @@
     "expensesHelp": "Something I paid for, or owe a share of, is added or changed.",
     "settlements": "Repayments",
     "settlementsHelp": "Someone records money paid to or from me.",
-    "recurring": "Repeating expenses",
+    "recurring": "Recurring expenses",
     "recurringHelp": "A recurring expense lands in one of my groups.",
     "imports": "Imports",
     "importsHelp": "An import I started has finished.",
@@ -3270,11 +3270,11 @@
       "add": "Attach a file",
       "uploading": "Attaching…",
       "remove": "Remove {name}",
-      "notRepeating": "Files are not kept on a repeating entry."
+      "notRepeating": "Files are not kept on a recurring entry."
     },
     "amount": {
       "zero": "0.00",
-      "rateFrozen": "Frozen for this transaction. It won’t update automatically.",
+      "rateFrozen": "Frozen for this entry. It won’t update automatically.",
       "inBaseCurrency": "In the group's base currency"
     },
     "date": {
