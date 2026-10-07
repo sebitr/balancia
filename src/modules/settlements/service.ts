@@ -407,6 +407,8 @@ export async function updateSettlement(
         id: settlements.id,
         fromParticipantId: settlements.fromParticipantId,
         toParticipantId: settlements.toParticipantId,
+        amount: settlements.amount,
+        currency: settlements.currency,
       })
       .from(settlements)
       .where(
@@ -498,7 +500,22 @@ export async function updateSettlement(
       entityType: "settlement",
       entityId: settlementId,
       ...activityActorFrom(access),
-      metadata: { amount: input.amount, currency: input.currency },
+      metadata: {
+        amount: input.amount,
+        currency: input.currency,
+        from: input.fromParticipantId,
+        to: input.toParticipantId,
+        // What the repayment was before, when this edit moved the figure.
+        ...(existing.amount !== BigInt(input.amount) ||
+        existing.currency !== input.currency
+          ? {
+              before: {
+                amount: existing.amount.toString(),
+                currency: existing.currency,
+              },
+            }
+          : {}),
+      },
     });
 
     const notificationIds = await recordSettlementNotification(tx, access, {
@@ -564,6 +581,8 @@ export async function removeSettlement(
     metadata: {
       amount: deletedSettlement.amount.toString(),
       currency: deletedSettlement.currency,
+      from: deletedSettlement.fromParticipantId,
+      to: deletedSettlement.toParticipantId,
       ...(options.replacedBy ? { replacedBy: options.replacedBy } : {}),
     },
   });
@@ -630,6 +649,8 @@ export async function restoreSettlement(
       .returning({
         amount: settlements.amount,
         currency: settlements.currency,
+        fromParticipantId: settlements.fromParticipantId,
+        toParticipantId: settlements.toParticipantId,
       });
 
     const [restoredSettlement] = restored;
@@ -649,6 +670,8 @@ export async function restoreSettlement(
       metadata: {
         amount: restoredSettlement.amount.toString(),
         currency: restoredSettlement.currency,
+        from: restoredSettlement.fromParticipantId,
+        to: restoredSettlement.toParticipantId,
       },
     });
   });

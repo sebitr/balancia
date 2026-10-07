@@ -986,7 +986,9 @@
         "updated": "a modifié une dépense récurrente",
         "deleted": "a supprimé une dépense récurrente",
         "restored": "a rétabli une dépense récurrente",
-        "generated": "a ajouté une dépense automatiquement"
+        "generated": "a ajouté une dépense automatiquement",
+        "paused": "a mis en pause une dépense récurrente",
+        "resumed": "a repris une dépense récurrente"
       },
       "import": {
         "completed": "a terminé un import"
@@ -994,10 +996,18 @@
       "group": {
         "created": "a créé le groupe",
         "updated": "a mis à jour le groupe",
-        "archived": "a archivé le groupe"
+        "archived": "a archivé le groupe",
+        "unarchived": "a sorti le groupe des archives"
       },
       "reminder": {
         "sent": "a envoyé une relance"
+      },
+      "income": {
+        "created": "a ajouté un revenu",
+        "updated": "a modifié un revenu",
+        "deleted": "a supprimé un revenu",
+        "restored": "a rétabli un revenu",
+        "generated": "a ajouté un revenu automatiquement"
       }
     },
     "actionsNamed": {
@@ -1010,12 +1020,18 @@
       "guest_link": {
         "created": "a envoyé un lien personnel à {name}",
         "revoked": "a révoqué le lien personnel pour {name}"
+      },
+      "reminder": {
+        "sent": "a envoyé une relance à {name}"
       }
     },
     "actionsYou": {
       "guest_link": {
         "created": "t’a envoyé un lien personnel",
         "revoked": "a révoqué ton lien personnel"
+      },
+      "reminder": {
+        "sent": "t’a envoyé une relance"
       }
     },
     "repaymentRecorded": {
@@ -1024,6 +1040,70 @@
       "yours": "a enregistré un remboursement de {amount} que tu as versé à {to}",
       "theirs": "a enregistré avoir remboursé {amount} à {to}",
       "theirsToYou": "a enregistré t’avoir remboursé {amount}"
+    },
+    "withAmount": "{action} : {description} ({amount})",
+    "repaymentWas": "{line} (avant : {before})",
+    "participantRenamed": "a renommé {before} en {name}",
+    "groupCreated": "a créé le groupe « {name} »",
+    "groupChanged": {
+      "renamed": "a renommé le groupe « {before} » en « {name} »",
+      "timezone": "a réglé le fuseau horaire du groupe sur {timezone}",
+      "fields": "a mis à jour le groupe : {fields}"
+    },
+    "groupFields": {
+      "name": "le nom",
+      "description": "la description",
+      "timezone": "le fuseau horaire",
+      "icon": "l’icône"
+    },
+    "expenseChanged": {
+      "amount": "a changé le montant de « {description} » de {before} à {after}",
+      "renamed": "a renommé « {before} » en « {description} »",
+      "fields": "a modifié « {description} » : {fields}"
+    },
+    "expenseFields": {
+      "description": "la description",
+      "amount": "le montant",
+      "direction": "le type",
+      "date": "la date",
+      "category": "la catégorie",
+      "payers": "qui a payé",
+      "split": "la répartition",
+      "notes": "les notes"
+    },
+    "importCompleted": "{imported, plural, =0 {n’a rien importé depuis « {file} »} one {a importé # transaction depuis « {file} »} other {a importé # transactions depuis « {file} »}}{failed, plural, =0 {} one {, # n’a pas pu être importée} other {, # n’ont pas pu être importées}}",
+    "repaymentEdited": {
+      "between": "a modifié le remboursement de {amount} versé par {from} à {to}",
+      "toYou": "a modifié le remboursement de {amount} qui t’a été versé par {from}",
+      "yours": "a modifié le remboursement de {amount} que tu as versé à {to}",
+      "theirs": "a modifié son remboursement de {amount} à {to}",
+      "theirsToYou": "a modifié son remboursement de {amount} qui t’a été versé"
+    },
+    "repaymentDeleted": {
+      "between": "a supprimé le remboursement de {amount} versé par {from} à {to}",
+      "toYou": "a supprimé le remboursement de {amount} qui t’a été versé par {from}",
+      "yours": "a supprimé le remboursement de {amount} que tu as versé à {to}",
+      "theirs": "a supprimé son remboursement de {amount} à {to}",
+      "theirsToYou": "a supprimé son remboursement de {amount} qui t’a été versé"
+    },
+    "repaymentRestored": {
+      "between": "a rétabli le remboursement de {amount} versé par {from} à {to}",
+      "toYou": "a rétabli le remboursement de {amount} qui t’a été versé par {from}",
+      "yours": "a rétabli le remboursement de {amount} que tu as versé à {to}",
+      "theirs": "a rétabli son remboursement de {amount} à {to}",
+      "theirsToYou": "a rétabli son remboursement de {amount} qui t’a été versé"
+    },
+    "convertedToRepayment": {
+      "between": "a transformé « {description} » en un remboursement de {amount} versé par {from} à {to}",
+      "toYou": "a transformé « {description} » en un remboursement de {amount} qui t’a été versé par {from}",
+      "yours": "a transformé « {description} » en un remboursement de {amount} que tu as versé à {to}",
+      "theirs": "a transformé « {description} » en son remboursement de {amount} à {to}",
+      "theirsToYou": "a transformé « {description} » en son remboursement de {amount} qui t’a été versé",
+      "plain": "a transformé « {description} » en remboursement"
+    },
+    "convertedToExpense": {
+      "full": "a transformé un remboursement de {before} en « {description} » ({amount})",
+      "plain": "a transformé un remboursement en « {description} »"
     }
   },
   "recurring": {

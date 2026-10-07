@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { getDateFormatter, getNumberLocale } from "@/i18n/preferences";
 import {
   restorableKind,
@@ -57,7 +57,11 @@ export async function ActivityFeed({
   // The action id is runtime data, so its key cannot be checked at compile
   // time; `t.has` inside the helper is what makes reading it back safe.
   const translate = t as unknown as ActivityTranslate;
-  const reader = { ...people, locale: numberLocale };
+  const reader = {
+    ...people,
+    locale: numberLocale,
+    language: await getLocale(),
+  };
 
   if (entries.length === 0) {
     return (
@@ -69,12 +73,12 @@ export async function ActivityFeed({
 
   return (
     <ol className="space-y-3">
-      {entries.map((entry, index) => {
-        const actor = actorOf(entry, translate);
-        // Named once per run of events by the same person; see the same rule
-        // in since-last-opened.tsx.
-        const repeats =
-          index > 0 && actorOf(entries[index - 1]!, translate) === actor;
+      {entries.map((entry) => {
+        // Every line names who did it. A run by one person once named them on
+        // its first line only, which left the lines under it with a verb and
+        // no subject — and each line here carries its own time, so each is
+        // read as an event of its own, not as a continuation of the one above.
+        const actor = actorOf(entry, translate, people.names);
         const kind = restorableKind(entry);
 
         return (
@@ -85,9 +89,7 @@ export async function ActivityFeed({
             />
             <span className="min-w-0 flex-1">
               <span className="block">
-                <span className={repeats ? "sr-only" : "font-medium"}>
-                  {actor}{" "}
-                </span>
+                <span className="font-medium">{actor} </span>
                 <span className="text-muted-foreground">
                   {describeActivity(entry, translate, reader)}
                 </span>

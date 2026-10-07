@@ -17,6 +17,7 @@ import type { ActivityEntry } from "@/modules/activity/service";
 vi.mock("next-intl/server", () => ({
   getTranslations: async (namespace: "activity" | "group") =>
     createTranslator({ locale: "en", messages: en, namespace }),
+  getLocale: async () => "en",
 }));
 
 vi.mock("@/i18n/preferences", () => ({

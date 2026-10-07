@@ -1467,13 +1467,23 @@ describe("changing an entry's kind", () => {
       { clientKey: randomUUID() },
     );
 
-    const entries = await listGroupActivity(group.groupId, { limit: 100 });
+    // The rows as written: the deletion is its own row, and says what
+    // replaced it. The screen reads them folded, which leaves no deletion
+    // to offer at all, so both are held to the same answer.
+    const entries = await listGroupActivity(group.groupId, {
+      limit: 100,
+      raw: true,
+    });
     const deletion = entries.find(
       (entry) =>
         entry.action === "expense.deleted" && entry.entityId === expenseId,
     );
     expect(deletion?.metadata).toMatchObject({ replacedBy: settlementId });
     expect(await findRestorableDeletions(group.access, entries)).toEqual(
+      new Set(),
+    );
+    const folded = await listGroupActivity(group.groupId, { limit: 100 });
+    expect(await findRestorableDeletions(group.access, folded)).toEqual(
       new Set(),
     );
   });
@@ -1489,7 +1499,10 @@ describe("changing an entry's kind", () => {
       { clientKey: randomUUID() },
     );
 
-    const entries = await listGroupActivity(group.groupId, { limit: 100 });
+    const entries = await listGroupActivity(group.groupId, {
+      limit: 100,
+      raw: true,
+    });
     const deletion = entries.find(
       (entry) =>
         entry.action === "settlement.deleted" &&
@@ -1497,6 +1510,10 @@ describe("changing an entry's kind", () => {
     );
     expect(deletion?.metadata).toMatchObject({ replacedBy: expenseId });
     expect(await findRestorableDeletions(group.access, entries)).toEqual(
+      new Set(),
+    );
+    const folded = await listGroupActivity(group.groupId, { limit: 100 });
+    expect(await findRestorableDeletions(group.access, folded)).toEqual(
       new Set(),
     );
   });

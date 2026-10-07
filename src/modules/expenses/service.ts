@@ -42,6 +42,7 @@ import {
 import { classifyRateSource } from "@/modules/currencies/rates";
 import { money } from "@/modules/currencies/money";
 import { AllocationError } from "./allocation";
+import { changedFields, splitEntriesOf } from "./changes";
 import type { EntryDirection } from "./direction";
 import type { SpreadGroup } from "./spread";
 import {
@@ -410,6 +411,7 @@ export async function writeExpense(
       description: input.description,
       amount: prepared.amount.toString(),
       currency: prepared.currency,
+      direction: input.direction ?? "out",
       splitMethod: input.splitMethod,
       payerCount: prepared.payers.length,
       shareCount: prepared.shares.length,
@@ -576,7 +578,19 @@ export async function updateExpense(
 
   const { notificationIds, version } = await db.transaction(async (tx) => {
     const [existing] = await tx
-      .select({ id: expenses.id, description: expenses.description })
+      .select({
+        id: expenses.id,
+        description: expenses.description,
+        amount: expenses.amount,
+        currency: expenses.currency,
+        direction: expenses.direction,
+        expenseDate: expenses.expenseDate,
+        category: expenses.category,
+        subcategory: expenses.subcategory,
+        notes: expenses.notes,
+        splitMethod: expenses.splitMethod,
+        splitInput: expenses.splitInput,
+      })
       .from(expenses)
       .where(
         and(
@@ -593,6 +607,26 @@ export async function updateExpense(
         "notInGroup",
       );
     }
+
+    // What the edit is about to overwrite, read now because the allocations
+    // are replaced wholesale below; the log says which parts of it moved.
+    const previousPayers = await tx
+      .select({
+        participantId: expensePayers.participantId,
+        amount: expensePayers.amount,
+      })
+      .from(expensePayers)
+      .where(eq(expensePayers.expenseId, expenseId));
+    // The split as it was asked for. A row that never kept it has only what
+    // the split came to, which still says who was in it.
+    const previousSplit =
+      splitEntriesOf(existing.splitInput) ??
+      (
+        await tx
+          .select({ participantId: expenseShares.participantId })
+          .from(expenseShares)
+          .where(eq(expenseShares.expenseId, expenseId))
+      ).map((share) => ({ participantId: share.participantId }));
 
     // Captured before the allocations are replaced: someone dropped from the
     // split needs to hear that their share is gone just as much as someone
@@ -686,6 +720,35 @@ export async function updateExpense(
       await linkAttachments(tx, access.groupId, expenseId, input.attachmentIds);
     }
 
+    const changed = changedFields(
+      {
+        description: existing.description,
+        amount: existing.amount,
+        currency: existing.currency,
+        direction: existing.direction,
+        expenseDate: existing.expenseDate,
+        category: existing.category,
+        subcategory: existing.subcategory,
+        notes: existing.notes,
+        splitMethod: existing.splitMethod,
+        splitEntries: previousSplit,
+        payers: previousPayers,
+      },
+      {
+        description: input.description,
+        amount: prepared.amount,
+        currency: prepared.currency,
+        direction: input.direction ?? "out",
+        expenseDate: input.expenseDate,
+        category: input.category || null,
+        subcategory: input.subcategory || null,
+        notes: input.notes || null,
+        splitMethod: input.splitMethod,
+        splitEntries: prepared.splitInput.entries,
+        payers: prepared.payers,
+      },
+    );
+
     await recordActivity(tx, {
       groupId: access.groupId,
       action: "expense.updated",
@@ -696,7 +759,16 @@ export async function updateExpense(
         description: input.description,
         amount: prepared.amount.toString(),
         currency: prepared.currency,
+        direction: input.direction ?? "out",
         splitMethod: input.splitMethod,
+        // Which parts of the entry this edit moved, and what the two figures
+        // a line can quote were before it. Never the notes themselves.
+        changed,
+        before: {
+          description: existing.description,
+          amount: existing.amount.toString(),
+          currency: existing.currency,
+        },
       },
     });
 
@@ -765,6 +837,7 @@ export async function removeExpense(
       description: expenses.description,
       amount: expenses.amount,
       currency: expenses.currency,
+      direction: expenses.direction,
     });
 
   const [deletedExpense] = deleted;
@@ -785,6 +858,7 @@ export async function removeExpense(
       description: deletedExpense.description,
       amount: deletedExpense.amount.toString(),
       currency: deletedExpense.currency,
+      direction: deletedExpense.direction,
       ...(options.replacedBy ? { replacedBy: options.replacedBy } : {}),
     },
   });
@@ -865,6 +939,7 @@ export async function restoreExpense(
         description: expenses.description,
         amount: expenses.amount,
         currency: expenses.currency,
+        direction: expenses.direction,
       });
 
     const [restoredExpense] = restored;
@@ -885,6 +960,7 @@ export async function restoreExpense(
         description: restoredExpense.description,
         amount: restoredExpense.amount.toString(),
         currency: restoredExpense.currency,
+        direction: restoredExpense.direction,
       },
     });
   });

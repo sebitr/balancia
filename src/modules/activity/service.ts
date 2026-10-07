@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, inArray, isNotNull, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, or, sql } from "drizzle-orm";
 import type { Database } from "@/lib/db/client";
 import { getDb } from "@/lib/db/client";
 import {
@@ -9,6 +9,7 @@ import {
   recurringExpenses,
   settlements,
 } from "@/lib/db/schema";
+import { foldConversions, type ReplacedEntry } from "./fold";
 import type {
   GroupAccess,
   GroupPermissions,
@@ -97,6 +98,15 @@ export async function recordActivity(
     actorUserId: input.actorUserId ?? null,
     actorParticipantId: input.actorParticipantId ?? null,
     actorLabel: input.actorLabel ?? null,
+    /*
+     * The clock, not the transaction. `now()` — the column's default — is the
+     * moment the transaction began, so everything one transaction wrote carried
+     * the same instant and the feed had no way to say which came first. A change
+     * of type writes a repayment and deletes an expense in one commit, and the
+     * two lines swapped places at random. `clock_timestamp()` moves with each
+     * statement, so a transaction's events keep the order they were written in.
+     */
+    createdAt: sql`clock_timestamp()`,
   });
 }
 
@@ -140,14 +150,127 @@ export interface ActivityEntry {
    */
   readonly actorParticipantId: string | null;
   readonly createdAt: Date;
+  /**
+   * The event this one stands in for, when the two were one act.
+   *
+   * Changing an entry from an expense into a repayment, or back, writes the new
+   * row and deletes the old one in a single transaction, so the log holds two
+   * events for what the reader did once. `listGroupActivity` folds such a pair
+   * into the creation, and keeps the deletion here so the line can say what the
+   * entry was before. See `foldConversions`.
+   */
+  readonly replaces?: ReplacedEntry;
 }
 
-/** Recent activity for a group. Always called with an authorized group ID. */
+type EventRow = Omit<ActivityEntry, "replaces"> & {
+  readonly actorUserId: string | null;
+};
+
+/**
+ * Gives an event whose actor left no participant row the one they have now.
+ *
+ * An import is finished by the worker, minutes after the person who started it
+ * left the page, and its event records an account and no one in the group. The
+ * account has a seat in this group, and the seat has a name — the one every
+ * other screen shows for them.
+ */
+async function withActorSeats(
+  db: Database,
+  groupId: string,
+  rows: readonly EventRow[],
+): Promise<EventRow[]> {
+  const userIds = [
+    ...new Set(
+      rows.flatMap((row) =>
+        row.actorParticipantId === null && row.actorUserId !== null
+          ? [row.actorUserId]
+          : [],
+      ),
+    ),
+  ];
+  if (userIds.length === 0) return [...rows];
+
+  const seats = await db
+    .select({ id: participants.id, userId: participants.userId })
+    .from(participants)
+    .where(
+      and(
+        eq(participants.groupId, groupId),
+        inArray(participants.userId, userIds),
+      ),
+    );
+  const seatOf = new Map(seats.map((seat) => [seat.userId, seat.id]));
+
+  return rows.map((row) =>
+    row.actorParticipantId === null && row.actorUserId !== null
+      ? { ...row, actorParticipantId: seatOf.get(row.actorUserId) ?? null }
+      : row,
+  );
+}
+
+/**
+ * Gives a repayment event the two people it was between, when it never said.
+ *
+ * Only the event that created a repayment recorded `from` and `to`; the ones
+ * that edited, deleted or restored it recorded an amount alone, which is why
+ * those lines read "deleted a repayment" and nothing more. The repayment row
+ * outlives its own deletion, and it knows who paid whom, so the answer is one
+ * query away — for every event ever written, not just the ones from here on.
+ */
+async function withRepaymentParties(
+  db: Database,
+  groupId: string,
+  rows: readonly EventRow[],
+): Promise<EventRow[]> {
+  const unknown = (row: EventRow): boolean =>
+    row.entityType === "settlement" &&
+    row.entityId !== null &&
+    row.action.startsWith("settlement.") &&
+    !(
+      typeof row.metadata?.from === "string" &&
+      typeof row.metadata?.to === "string"
+    );
+
+  const ids = [
+    ...new Set(rows.flatMap((row) => (unknown(row) ? [row.entityId!] : []))),
+  ];
+  if (ids.length === 0) return [...rows];
+
+  const found = await db
+    .select({
+      id: settlements.id,
+      from: settlements.fromParticipantId,
+      to: settlements.toParticipantId,
+    })
+    .from(settlements)
+    .where(and(eq(settlements.groupId, groupId), inArray(settlements.id, ids)));
+  const parties = new Map(found.map((row) => [row.id, row]));
+
+  return rows.map((row) => {
+    const known = unknown(row) ? parties.get(row.entityId!) : undefined;
+    if (!known) return row;
+    return {
+      ...row,
+      metadata: { ...row.metadata, from: known.from, to: known.to },
+    };
+  });
+}
+
+/**
+ * Recent activity for a group. Always called with an authorized group ID.
+ *
+ * Read for a person, by default: a change of type is one entry rather than two,
+ * a repayment's event names the two ends it was between, and an event the
+ * worker wrote on somebody's behalf has that person as its actor. `raw` is the
+ * rows as they were written, for the mobile API, whose clients word the events
+ * themselves and were written against that shape.
+ */
 export async function listGroupActivity(
   groupId: string,
-  options: { limit?: number; db?: Database } = {},
+  options: { limit?: number; db?: Database; raw?: boolean } = {},
 ): Promise<ActivityEntry[]> {
   const db = options.db ?? getDb();
+  const limit = options.limit ?? 25;
   const rows = await db
     .select({
       id: activityEvents.id,
@@ -157,35 +280,70 @@ export async function listGroupActivity(
       metadata: activityEvents.metadata,
       actorLabel: activityEvents.actorLabel,
       actorType: activityEvents.actorType,
+      actorUserId: activityEvents.actorUserId,
       actorParticipantId: activityEvents.actorParticipantId,
       createdAt: activityEvents.createdAt,
     })
     .from(activityEvents)
     .where(eq(activityEvents.groupId, groupId))
-    .orderBy(desc(activityEvents.createdAt))
-    .limit(options.limit ?? 25);
+    // The id is only there so that two events at one instant — every event
+    // written before the clock moved within a transaction — come back in the
+    // same order each time, rather than whichever the planner reached first.
+    .orderBy(desc(activityEvents.createdAt), desc(activityEvents.id))
+    // One more than asked for when folding, so that a pair split by the edge
+    // of the page is still found: its halves are adjacent.
+    .limit(options.raw ? limit : limit + 1);
 
-  return rows.map((row) => ({
+  const events: EventRow[] = rows.map((row) => ({
     ...row,
     metadata: (row.metadata as ActivityMetadata | null) ?? null,
   }));
+  // The account an event was written under is for resolving its seat above;
+  // nothing past this point, and nothing on the wire, carries it.
+  const withoutAccount = (row: EventRow): ActivityEntry => ({
+    id: row.id,
+    action: row.action,
+    entityType: row.entityType,
+    entityId: row.entityId,
+    metadata: row.metadata,
+    actorLabel: row.actorLabel,
+    actorType: row.actorType,
+    actorParticipantId: row.actorParticipantId,
+    createdAt: row.createdAt,
+  });
+
+  if (options.raw) return events.map(withoutAccount);
+
+  const seated = await withActorSeats(db, groupId, events);
+  const withParties = await withRepaymentParties(db, groupId, seated);
+  return foldConversions(withParties.map(withoutAccount)).slice(0, limit);
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * The participant ids a repayment's line names: who paid, and who was paid.
+ * The participant ids an event's line names: whoever did it, whoever it was
+ * done to, and the two ends of a repayment.
  *
- * Only `settlement.created` carries them — it is the one repayment event that
- * has recorded `from` and `to` since it was first written. The others record
- * an amount alone and keep their shorter line.
+ * Events record people by id, never by name, wherever they can — a name
+ * changes and an id does not — and the screen that lists them looks the names
+ * up once for the page.
  */
 function peopleNamedBy(entry: ActivityEntry): string[] {
-  if (entry.action !== "settlement.created") return [];
-  const { from, to } = entry.metadata ?? {};
+  const ids: unknown[] = [entry.actorParticipantId];
+  for (const metadata of [entry.metadata, entry.replaces?.metadata]) {
+    if (!metadata) continue;
+    ids.push(metadata.from, metadata.to, metadata.participantId);
+  }
+  if (
+    entry.entityType === "participant" ||
+    entry.entityType === "group_member"
+  ) {
+    ids.push(entry.entityId);
+  }
   // Metadata is free-form JSON; anything that is not an id would make the
   // uuid comparison below throw rather than simply match nothing.
-  return [from, to].filter(
+  return ids.filter(
     (id): id is string => typeof id === "string" && UUID.test(id),
   );
 }
@@ -196,6 +354,12 @@ function peopleNamedBy(entry: ActivityEntry): string[] {
  * One query for the page, and none at all when nothing on it names anybody.
  * Removed people are included: a repayment from somebody who has since left
  * the group still happened, and still has two ends.
+ *
+ * The actor is among them. An event keeps the label its actor had when it was
+ * written, which is the name on their *account* — and a group knows people by
+ * the name they chose in it, so a feed that printed the label called one
+ * person two things on two screens, and called somebody with no label at all
+ * "Someone".
  *
  * Scoped to `groupId`, which the caller has already authorized, so an id in
  * an event's metadata can never resolve to somebody in another group.

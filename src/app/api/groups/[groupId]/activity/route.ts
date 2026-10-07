@@ -42,7 +42,13 @@ async function handleGet(
       "GET",
     );
     const access = await authorizeGroup(actor, groupId);
-    const activity = await listGroupActivity(access.groupId, { limit });
+    // Raw: the events as they were written. Clients word them themselves, and
+    // were written against one row per event; the web feed's folded change of
+    // type and filled-in repayment parties are for the screen that prints them.
+    const activity = await listGroupActivity(access.groupId, {
+      limit,
+      raw: true,
+    });
     return noStore({ activity: activity.map(serializeActivity) });
   } catch (error) {
     return mobileApiError(error, "/api/groups/[groupId]/activity GET", {

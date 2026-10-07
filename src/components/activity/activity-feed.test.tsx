@@ -27,6 +27,7 @@ import { ActivityFeed } from "./activity-feed";
 vi.mock("next-intl/server", () => ({
   getTranslations: async (namespace: "activity") =>
     createTranslator({ locale: "en", messages: en, namespace }),
+  getLocale: async () => "en",
 }));
 
 /*
@@ -246,6 +247,132 @@ describe("a repayment in the feed", () => {
     expect(
       screen.getByText("recorded their repayment of €30.00 to you"),
     ).toBeVisible();
+  });
+});
+
+/**
+ * Who is named, and by what name.
+ *
+ * A run of lines by one person once named them on the first and left the rest
+ * a verb with no subject — "recorded Sam's repayment", "edited an expense" —
+ * which read as names missing. And the name printed was the label the event
+ * had kept, the one on the person's account, rather than the one the group
+ * knows them by.
+ */
+describe("who each line names", () => {
+  const NAMES = new Map([
+    ["p-ada", "Ada"],
+    ["p-sam", "Sam"],
+  ]);
+
+  // Read by Sam, so that "you" is the one the lines say it of.
+  const lines = (entries: ActivityEntry[]) =>
+    ActivityFeed({
+      entries,
+      groupId: "g1",
+      restorable: new Set(),
+      timeZone: "UTC",
+      people: { you: "p-sam", names: NAMES },
+    });
+
+  it("names the person on every line of a run, not just the first", async () => {
+    renderWithIntl(
+      await lines([
+        event({
+          id: "n1",
+          action: "expense.created",
+          entityType: "expense",
+          entityId: "e1",
+          metadata: { description: "Lunch", amount: "1200", currency: "EUR" },
+        }),
+        event({
+          id: "n2",
+          action: "expense.created",
+          entityType: "expense",
+          entityId: "e2",
+          metadata: { description: "Taxi", amount: "800", currency: "EUR" },
+        }),
+      ]),
+      GROUP,
+    );
+
+    const names = screen.getAllByText("Ada");
+    expect(names).toHaveLength(2);
+    for (const name of names) {
+      expect(name).toBeVisible();
+      expect(name.className).not.toContain("sr-only");
+    }
+  });
+
+  it("prints the name the group has for them, not the label the event kept", async () => {
+    renderWithIntl(
+      await lines([
+        event({
+          id: "n1",
+          action: "expense.created",
+          entityType: "expense",
+          entityId: "e1",
+          actorLabel: "Ada Lovelace-Byron",
+          metadata: { description: "Lunch", amount: "1200", currency: "EUR" },
+        }),
+      ]),
+      GROUP,
+    );
+
+    expect(screen.getByText("Ada")).toBeVisible();
+    expect(screen.queryByText(/Lovelace/)).toBeNull();
+  });
+
+  it("names somebody whose event kept no label, instead of 'Someone'", async () => {
+    renderWithIntl(
+      await lines([
+        event({
+          id: "n1",
+          action: "expense.created",
+          entityType: "expense",
+          entityId: "e1",
+          actorLabel: null,
+          metadata: { description: "Lunch", amount: "1200", currency: "EUR" },
+        }),
+      ]),
+      GROUP,
+    );
+
+    expect(screen.getByText("Ada")).toBeVisible();
+    expect(screen.queryByText("Someone")).toBeNull();
+  });
+
+  it("tells a change of type as the one line it was", async () => {
+    renderWithIntl(
+      await lines([
+        event({
+          id: "n1",
+          action: "settlement.created",
+          entityType: "settlement",
+          entityId: "s1",
+          metadata: {
+            amount: "3000",
+            currency: "EUR",
+            from: "p-sam",
+            to: "p-ada",
+          },
+          replaces: {
+            action: "expense.deleted",
+            entityType: "expense",
+            entityId: "e1",
+            metadata: { description: "Dinner", replacedBy: "s1" },
+          },
+        }),
+      ]),
+      GROUP,
+    );
+
+    expect(
+      screen.getByText("turned “Dinner” into your repayment of €30.00 to Ada"),
+    ).toBeVisible();
+    expect(screen.queryByText(/deleted/)).toBeNull();
+    // Nothing to put back: the entry was replaced, not lost.
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
   });
 });
 
