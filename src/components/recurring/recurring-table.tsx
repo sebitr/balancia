@@ -62,7 +62,9 @@ const WIDE = "hidden @min-[56rem]:table-cell";
  * which the menu's Edit opens, and only for whoever may change it. So the row
  * is not a link, as the transactions table's are; the menu is the one control
  * in it, and the row takes the hover wash and, while its menu is open, the
- * accent's tint, as the table recipe in the design system has them.
+ * deeper wash the people table gives an open row. Not the accent's tint the
+ * board's table recipe drew: the row holds an amount, and the accent never
+ * colours a money surface.
  *
  * A paused rule is drawn in the muted ink as well as badged, the way the
  * board draws it: it is still listed, and it is not running.
@@ -133,7 +135,7 @@ export function RecurringTable({
             return (
               <tr
                 key={row.id}
-                className="border-b transition-colors last:border-b-0 hover:bg-wash-1 has-[[aria-expanded=true]]:bg-primary/9 motion-reduce:transition-none"
+                className="border-b transition-colors last:border-b-0 hover:bg-wash-1 has-[[aria-expanded=true]]:bg-wash-2 motion-reduce:transition-none"
               >
                 <td className="h-13 py-2 pr-3 pl-4 align-middle">
                   <span className="flex min-w-0 items-center gap-2">
