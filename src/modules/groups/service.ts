@@ -451,6 +451,18 @@ export async function updateGroup(
   const db = options.db ?? getDb();
 
   await db.transaction(async (tx) => {
+    const [before] = await tx
+      .select({
+        name: groups.name,
+        description: groups.description,
+        timezone: groups.timezone,
+        icon: groups.icon,
+        iconColor: groups.iconColor,
+      })
+      .from(groups)
+      .where(eq(groups.id, access.groupId))
+      .limit(1);
+
     await tx
       .update(groups)
       .set({
@@ -474,9 +486,52 @@ export async function updateGroup(
       entityType: "group",
       entityId: access.groupId,
       ...activityActorFrom(access),
-      metadata: { name: input.name, timezone: input.timezone },
+      metadata: {
+        name: input.name,
+        timezone: input.timezone,
+        // Which settings this save moved. The form sends all of them every
+        // time, so without the comparison "updated the group" was all the log
+        // could say, whether a name was fixed or nothing at all changed.
+        changed: changedGroupSettings(before, input),
+        ...(before && before.name !== input.name
+          ? { previousName: before.name }
+          : {}),
+      },
     });
   });
+}
+
+type GroupSetting = "name" | "description" | "timezone" | "icon";
+
+/** The settings of `input` that differ from the group as it was. */
+function changedGroupSettings(
+  before:
+    | {
+        name: string;
+        description: string | null;
+        timezone: string;
+        icon: string | null;
+        iconColor: string | null;
+      }
+    | undefined,
+  input: UpdateGroupInput,
+): GroupSetting[] {
+  if (!before) return [];
+  const changed: GroupSetting[] = [];
+  if (before.name !== input.name) changed.push("name");
+  if ((before.description ?? "") !== (input.description ?? "")) {
+    changed.push("description");
+  }
+  if (before.timezone !== input.timezone) changed.push("timezone");
+  // Absent means "left as it was", as in the update itself.
+  if (
+    (input.icon !== undefined && (before.icon ?? "") !== input.icon) ||
+    (input.iconColor !== undefined &&
+      (before.iconColor ?? "") !== input.iconColor)
+  ) {
+    changed.push("icon");
+  }
+  return changed;
 }
 
 /**
@@ -720,7 +775,10 @@ export async function updateParticipant(
 
   await db.transaction(async (tx) => {
     const [target] = await tx
-      .select({ userId: participants.userId })
+      .select({
+        userId: participants.userId,
+        displayName: participants.displayName,
+      })
       .from(participants)
       .where(
         and(
@@ -774,7 +832,14 @@ export async function updateParticipant(
       entityType: "participant",
       entityId: participantId,
       ...activityActorFrom(access),
-      metadata: { displayName: input.displayName },
+      metadata: {
+        displayName: input.displayName,
+        // Said only when the name moved, so the line can be "renamed A to B"
+        // and an edit of somebody's email does not claim a rename.
+        ...(target.displayName !== input.displayName
+          ? { previousName: target.displayName }
+          : {}),
+      },
     });
   });
 }

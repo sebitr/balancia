@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { PUSH } from "@/components/motion/transitions";
 import { getNumberLocale } from "@/i18n/preferences";
 import type { ActivityEntry } from "@/modules/activity/service";
@@ -54,7 +54,11 @@ export async function SinceLastOpened({
   const t = await getTranslations("activity");
   const tGroup = await getTranslations("group");
   const translate = t as unknown as ActivityTranslate;
-  const reader = { ...people, locale: await getNumberLocale() };
+  const reader = {
+    ...people,
+    locale: await getNumberLocale(),
+    language: await getLocale(),
+  };
 
   return (
     <section
@@ -78,14 +82,10 @@ export async function SinceLastOpened({
       </div>
 
       <ol className="flex flex-col gap-2.5 rounded-2xl px-3.5 py-3 ring-1 ring-border">
-        {unseen.map((entry, index) => {
-          const actor = actorOf(entry, translate);
-          // A run of events by one person names them once. Seven lines that
-          // all began "Demo" put the part that differs a third of the way in,
-          // and the name is only news when it changes. It stays in the
-          // sentence for a screen reader, which meets each line on its own.
-          const repeats =
-            index > 0 && actorOf(unseen[index - 1]!, translate) === actor;
+        {unseen.map((entry) => {
+          // Named on every line, as in the full history: a line that begins
+          // with a verb reads as if its subject had been dropped.
+          const actor = actorOf(entry, translate, people.names);
 
           return (
             <li
@@ -97,13 +97,7 @@ export async function SinceLastOpened({
                 className="mt-[6px] size-[5px] shrink-0 rounded-full bg-primary"
               />
               <span className="min-w-0 flex-1 text-muted-foreground">
-                <span
-                  className={
-                    repeats ? "sr-only" : "font-medium text-foreground"
-                  }
-                >
-                  {actor}{" "}
-                </span>
+                <span className="font-medium text-foreground">{actor} </span>
                 {describeActivity(entry, translate, reader)}
               </span>
             </li>

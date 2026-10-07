@@ -197,6 +197,24 @@ do not both subscribe. See [environment.md](environment.md#background-jobs).
   worked out for the whole page in one query (`findRestorableDeletions`); a
   deletion that was half of a change of type records `replacedBy` and is not
   offered, since restoring it would count the same money twice.
+
+  The screen reads the log for a person, not row by row. Each event is stamped
+  with `clock_timestamp()`, not the transaction's `now()`, so what one
+  transaction wrote keeps the order it was written in. `listGroupActivity`
+  then folds a change of type — the repayment created and the expense deleted,
+  one act — into the entry that stands, carrying the deleted one as `replaces`
+  (`foldConversions`, paired by `replacedBy`, and for older rows by the same
+  instant and author); fills in the two people of a repayment event that never
+  recorded them, from the repayment row; and gives an event written by the
+  worker the seat of the account that started it. `raw: true` skips all of
+  that, and is what the mobile API serves. Events record people by id, and the
+  page's names are looked up once (`namesInActivity`): the actor is printed as
+  the group knows them now, not by the label the event kept. What an edit
+  changed is recorded as field names (`changed`, never the values) beside the
+  figure and name it had before, so the line can say "changed the amount from
+  … to …" — see `changedFields`, which does not count what a change of the
+  total rescales on its own.
+
 - **Notifications**: `notifications` is one row per person told about one
   event — the in-app inbox, and the outbox push delivery claims through
   `pushed_at`. `push_subscriptions` holds the browsers that agreed to receive

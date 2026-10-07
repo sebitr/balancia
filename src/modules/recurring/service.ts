@@ -874,6 +874,7 @@ export async function setRecurringPaused(
     const [template] = await tx
       .select({
         id: recurringExpenses.id,
+        description: recurringExpenses.description,
         pausedAt: recurringExpenses.pausedAt,
         ...scheduleColumns,
       })
@@ -915,7 +916,8 @@ export async function setRecurringPaused(
       entityType: "recurring_expense",
       entityId: templateId,
       ...activityActorFrom(access),
-      metadata: { paused },
+      // The name, so that "paused a recurring expense" says which.
+      metadata: { description: template.description, paused },
     });
   });
 }
@@ -1676,6 +1678,9 @@ async function generateSingleOccurrence(
         actorLabel: "Scheduled",
         metadata: {
           description: template.description,
+          amount: prepared.amount.toString(),
+          currency: prepared.currency,
+          direction: template.direction,
           occurrenceDate,
           recurringExpenseId: template.id,
         },

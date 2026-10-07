@@ -231,7 +231,7 @@ is off, which is the default.
 | GET    | `/api/groups/:groupId/settlements/:settlementId`         | One settlement **with `paymentMethod`** (the list omits it on purpose — see `getSettlement`) and its `version`, also sent as the `ETag`.                                                                                                                                                                                          |
 | GET    | `/api/groups/:groupId/expenses/:expenseId/attachments`   | The receipts on one expense (`id`, `fileName`, `contentType`, `byteSize`); bytes come from the per-attachment download route.                                                                                                                                                                                                     |
 | GET    | `/api/groups/:groupId/participants`                      | The People screen's rows: `listParticipants` with the invitation state (`hasActiveInvitation`, created/expires/last-used instants). Also inlined in the group read.                                                                                                                                                               |
-| GET    | `/api/groups/:groupId/activity?limit`                    | `listGroupActivity`, newest first (default 100, max 200). Each event carries `actorParticipantId`, the actor's own row in the group (null for the system); a removal whose actor is the person removed is somebody leaving.                                                                                                       |
+| GET    | `/api/groups/:groupId/activity?limit`                    | `listGroupActivity` as written, newest first (default 100, max 200). Each event carries `actorParticipantId`, the actor's own row in the group (null for the system); a removal whose actor is the person removed is somebody leaving. See [Reading the activity log](#reading-the-activity-log).                                 |
 | GET    | `/api/groups/:groupId/recurring`                         | `listRecurringExpenses`: templates with their schedule, `nextRunAt`, `pausedAt`, `generatedCount`.                                                                                                                                                                                                                                |
 | GET    | `/api/groups/:groupId/recurring/:templateId`             | `{template}`: one template **whole** — payers, `splitMethod`, `splitEntries`, `weekOfMonth`, `count`, rate, notes — in the shape `PUT` takes back, plus `editFrom` and `editEarliest`, the days an edit starts from and may start from. See [Changing a recurring expense](#changing-a-recurring-expense).                        |
 | GET    | `/api/groups/:groupId/reminders`                         | `listRemindRecipients`: who owes the reader, per-currency debts, the channel, the 24-hour lock, `payWith` (the reader's own ways to be paid this debt, `{method, kind, text, code}`, as ranked) and `link`: `{kind: "group"}`, or `{kind: "invite", url}` for an owner, never a key. See `docs/settling-up.md`.                   |
@@ -500,6 +500,35 @@ person who left as its own actor: `actorParticipantId` equals `entityId`. That
 is the line to word as "Grace left the group" rather than "Grace removed
 Grace". The action is a database enum, and a kind of its own would have needed
 a migration.
+
+### Reading the activity log
+
+`GET /api/groups/:groupId/activity` serves the events **as they were written**:
+one row per event, and no folding. The web feed folds a change of type into one
+line and fills in what a row never recorded; a client wording the events itself
+should do the same from these rows.
+
+- **A change of type** is two rows, a `settlement.created` and an
+  `expense.deleted` (or the reverse) in one transaction. The deletion carries
+  `replacedBy`, the id of the entry that took its place, which is what pairs
+  them. Rows within one transaction keep the order they were written in; rows
+  written before that was true share one instant, and rows of an older change of
+  type have no `replacedBy`.
+- **`expense.*`** events carry `direction` (`"in"` is an income). `expense.updated`
+  carries `changed`, the fields that moved (`description`, `amount`, `direction`,
+  `date`, `category`, `payers`, `split`, `notes`) and never their values, and
+  `before`: `description`, `amount` and `currency` as they were.
+- **`settlement.*`** events carry `from` and `to`, the two participant ids. An
+  edit that moved the figure carries `before` (`amount`, `currency`). Rows from
+  before this lack `from` and `to` on everything but `settlement.created`.
+- **`group.updated`** carries `changed` (`name`, `description`, `timezone`,
+  `icon`) and, for a rename, `previousName`. `group.archived` with
+  `archived: false` is the group coming _out_ of the archive.
+- **`participant.updated`** carries `previousName` when it was a rename.
+- **`recurring.updated`** with `paused` carries the template's `description`;
+  `recurring.generated` carries `amount`, `currency` and `direction`.
+
+All of these are additive, and every one can be missing from an older row.
 
 ### Creating an expense or a repayment exactly once
 

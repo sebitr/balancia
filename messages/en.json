@@ -986,7 +986,9 @@
         "updated": "changed a recurring expense",
         "deleted": "removed a recurring expense",
         "restored": "restored a recurring expense",
-        "generated": "added an expense automatically"
+        "generated": "added an expense automatically",
+        "paused": "paused a recurring expense",
+        "resumed": "resumed a recurring expense"
       },
       "import": {
         "completed": "completed an import"
@@ -994,10 +996,18 @@
       "group": {
         "created": "created the group",
         "updated": "updated the group",
-        "archived": "archived the group"
+        "archived": "archived the group",
+        "unarchived": "took the group out of the archive"
       },
       "reminder": {
         "sent": "sent a reminder"
+      },
+      "income": {
+        "created": "added an income",
+        "updated": "edited an income",
+        "deleted": "deleted an income",
+        "restored": "restored an income",
+        "generated": "added an income automatically"
       }
     },
     "actionsNamed": {
@@ -1010,12 +1020,18 @@
       "guest_link": {
         "created": "sent {name} a personal link",
         "revoked": "revoked the personal link for {name}"
+      },
+      "reminder": {
+        "sent": "sent {name} a reminder"
       }
     },
     "actionsYou": {
       "guest_link": {
         "created": "sent you a personal link",
         "revoked": "revoked your personal link"
+      },
+      "reminder": {
+        "sent": "sent you a reminder"
       }
     },
     "repaymentRecorded": {
@@ -1024,6 +1040,70 @@
       "yours": "recorded your repayment of {amount} to {to}",
       "theirs": "recorded their repayment of {amount} to {to}",
       "theirsToYou": "recorded their repayment of {amount} to you"
+    },
+    "withAmount": "{action}: {description} ({amount})",
+    "repaymentWas": "{line} (was {before})",
+    "participantRenamed": "renamed {before} to {name}",
+    "groupCreated": "created the group “{name}”",
+    "groupChanged": {
+      "renamed": "renamed the group from “{before}” to “{name}”",
+      "timezone": "set the group's time zone to {timezone}",
+      "fields": "updated the group: {fields}"
+    },
+    "groupFields": {
+      "name": "the name",
+      "description": "the description",
+      "timezone": "the time zone",
+      "icon": "the icon"
+    },
+    "expenseChanged": {
+      "amount": "changed the amount of “{description}” from {before} to {after}",
+      "renamed": "renamed “{before}” to “{description}”",
+      "fields": "edited “{description}”: {fields}"
+    },
+    "expenseFields": {
+      "description": "the description",
+      "amount": "the amount",
+      "direction": "the type",
+      "date": "the date",
+      "category": "the category",
+      "payers": "who paid",
+      "split": "the split",
+      "notes": "the notes"
+    },
+    "importCompleted": "{imported, plural, =0 {imported nothing from “{file}”} one {imported # entry from “{file}”} other {imported # entries from “{file}”}}{failed, plural, =0 {} one {, # could not be imported} other {, # could not be imported}}",
+    "repaymentEdited": {
+      "between": "edited {from}'s repayment of {amount} to {to}",
+      "toYou": "edited {from}'s repayment of {amount} to you",
+      "yours": "edited your repayment of {amount} to {to}",
+      "theirs": "edited their repayment of {amount} to {to}",
+      "theirsToYou": "edited their repayment of {amount} to you"
+    },
+    "repaymentDeleted": {
+      "between": "deleted {from}'s repayment of {amount} to {to}",
+      "toYou": "deleted {from}'s repayment of {amount} to you",
+      "yours": "deleted your repayment of {amount} to {to}",
+      "theirs": "deleted their repayment of {amount} to {to}",
+      "theirsToYou": "deleted their repayment of {amount} to you"
+    },
+    "repaymentRestored": {
+      "between": "restored {from}'s repayment of {amount} to {to}",
+      "toYou": "restored {from}'s repayment of {amount} to you",
+      "yours": "restored your repayment of {amount} to {to}",
+      "theirs": "restored their repayment of {amount} to {to}",
+      "theirsToYou": "restored their repayment of {amount} to you"
+    },
+    "convertedToRepayment": {
+      "between": "turned “{description}” into {from}'s repayment of {amount} to {to}",
+      "toYou": "turned “{description}” into {from}'s repayment of {amount} to you",
+      "yours": "turned “{description}” into your repayment of {amount} to {to}",
+      "theirs": "turned “{description}” into their repayment of {amount} to {to}",
+      "theirsToYou": "turned “{description}” into their repayment of {amount} to you",
+      "plain": "turned “{description}” into a repayment"
+    },
+    "convertedToExpense": {
+      "full": "turned a repayment of {before} into “{description}” ({amount})",
+      "plain": "turned a repayment into “{description}”"
     }
   },
   "recurring": {
