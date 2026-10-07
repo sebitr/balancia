@@ -7,6 +7,8 @@ import { Dialog as SheetPrimitive } from "radix-ui";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useKeyboardInset } from "@/components/ui/use-keyboard-inset";
+import { deskDialogClass, type DialogSize } from "@/components/ui/dialog-size";
+import { DESK_QUERY } from "@/components/ui/use-desk-width";
 import { XIcon } from "lucide-react";
 
 /** Share of its own height a sheet must travel before letting go closes it. */
@@ -38,13 +40,20 @@ const HEADROOM = 16;
  * down to how one commit's effects happened to interleave with the next,
  * which is the sort of thing that works in a test and not on a phone.
  */
-function useSwipeDismiss(enabled: boolean) {
+function useSwipeDismiss(enabled: boolean, deskDialog: boolean) {
   const [element, setElement] = React.useState<HTMLDivElement | null>(null);
   const close = React.useRef<HTMLButtonElement>(null);
 
   React.useEffect(() => {
     if (!element || !enabled) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    /*
+     * A sheet that is a dialog on a desk is not pushed away there: it has no
+     * bottom edge to go back to, and a finger on a touchscreen laptop would
+     * drag it off the middle of the window. Asked per touch rather than once,
+     * so a window resized across `lg` behaves as what it now is.
+     */
+    const desk = () => deskDialog && window.matchMedia(DESK_QUERY).matches;
 
     let tracking = false;
     let dragging = false;
@@ -83,6 +92,7 @@ function useSwipeDismiss(enabled: boolean) {
 
     const onPointerDown = (event: PointerEvent) => {
       if (event.pointerType !== "touch" || !event.isPrimary) return;
+      if (desk()) return;
       // Anywhere but the top of the content, the gesture is a scroll.
       if (!atTop(event.target)) return;
       tracking = true;
@@ -161,7 +171,7 @@ function useSwipeDismiss(enabled: boolean) {
       element.removeEventListener("pointercancel", onPointerUp);
       element.removeEventListener("touchmove", onTouchMove);
     };
-  }, [element, enabled]);
+  }, [element, enabled, deskDialog]);
 
   return { sheet: setElement, close };
 }
@@ -231,14 +241,29 @@ function SheetContent({
   children,
   side = "right",
   showCloseButton = true,
+  desk,
   style,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: "top" | "right" | "bottom" | "left";
   showCloseButton?: boolean;
+  /**
+   * From `lg` up, a dialog of this width in the upper middle of the window
+   * rather than a sheet along its foot — see `deskDialogClass`. Bottom sheets
+   * only. Below `lg` nothing about the sheet changes.
+   *
+   * One element at both widths rather than a sheet on a phone and a dialog on
+   * a desk, which is what makes it safe: a window resized across `lg` keeps
+   * the same component, so a half-written form inside it keeps what was
+   * typed; the server, which cannot know the width, draws the right thing at
+   * either; and the entry drawer's loading boundary can take the same shape
+   * from the same classes.
+   */
+  desk?: DialogSize;
 }) {
   const bottom = side === "bottom";
-  const { sheet, close } = useSwipeDismiss(bottom);
+  const deskDialog = bottom && desk !== undefined;
+  const { sheet, close } = useSwipeDismiss(bottom, deskDialog);
   // The close button's name, in the reader's language: an English "Close" was
   // the one word a French screen reader met on every sheet in the app.
   const tCommon = useTranslations("common");
@@ -298,6 +323,11 @@ function SheetContent({
           // `data-[side=bottom]:` one, so a caller that wants another width
           // says `md:max-w-*` and wins the merge.
           bottom && "md:mx-auto md:max-w-md",
+          deskDialog && deskDialogClass(desk),
+          // Nothing to pull on a dialog, so the grabber goes from `lg` — said
+          // here rather than on the pill, whose classes stay one plain string
+          // the grabber tests can find.
+          deskDialog && "lg:[&>[data-slot=sheet-grabber]]:hidden",
           className,
         )}
         style={
@@ -375,17 +405,41 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/**
+ * Whether the `SheetTitle`s below are titling a sheet at all.
+ *
+ * A sheet's contents are sometimes laid out somewhere that is not one: the
+ * category and currency pickers open as popovers in the entry dialog on a
+ * desk. A Radix title there would not title the popover — it would borrow the
+ * id of the dialog around it, and the page would carry two elements answering
+ * to the dialog's name. So inside `SheetTitleAsHeading` a title is a plain
+ * heading in the same type, and the component that draws it does not have to
+ * know where it was put.
+ */
+const PlainTitles = React.createContext(false);
+
+function SheetTitleAsHeading({ children }: { children: React.ReactNode }) {
+  return <PlainTitles.Provider value={true}>{children}</PlainTitles.Provider>;
+}
+
 function SheetTitle({
   className,
+  asChild,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Title>) {
+  const plain = React.useContext(PlainTitles);
+  const classes = cn(
+    "font-heading text-base font-medium text-foreground",
+    className,
+  );
+  if (plain && !asChild) {
+    return <h2 data-slot="sheet-title" className={classes} {...props} />;
+  }
   return (
     <SheetPrimitive.Title
       data-slot="sheet-title"
-      className={cn(
-        "font-heading text-base font-medium text-foreground",
-        className,
-      )}
+      className={classes}
+      asChild={asChild}
       {...props}
     />
   );
@@ -412,5 +466,6 @@ export {
   SheetHeader,
   SheetFooter,
   SheetTitle,
+  SheetTitleAsHeading,
   SheetDescription,
 };

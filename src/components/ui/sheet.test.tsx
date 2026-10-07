@@ -8,7 +8,7 @@ import {
   fakeViewport,
   releaseViewport,
 } from "../../../tests/helpers/viewport";
-import { Sheet, SheetContent, SheetTitle } from "./sheet";
+import { Sheet, SheetContent, SheetTitle, SheetTitleAsHeading } from "./sheet";
 
 /**
  * That a bottom sheet gets out from under the keyboard.
@@ -191,6 +191,98 @@ describe("a bottom sheet from md up", () => {
       </Sheet>,
     );
     expect(screen.getByRole("dialog")).not.toHaveClass("md:max-w-md");
+  });
+});
+
+/**
+ * A bottom sheet asked to be a dialog on a desk: the entry form, the group
+ * chooser. One element at both widths, so everything that makes it a dialog
+ * is a `lg:` class — the sheet a phone gets is the sheet it always got.
+ */
+describe("a bottom sheet that is a dialog from lg", () => {
+  function renderDeskSheet(desk?: "md" | "lg") {
+    renderWithIntl(
+      <Sheet open>
+        <SheetContent side="bottom" desk={desk}>
+          <SheetTitle>Add expense</SheetTitle>
+        </SheetContent>
+      </Sheet>,
+    );
+    return screen.getByRole("dialog");
+  }
+
+  it("leaves the foot of the window and rounds every corner, from lg", () => {
+    const sheet = renderDeskSheet("lg");
+    expect(sheet).toHaveClass(
+      "lg:data-[side=bottom]:bottom-auto",
+      "lg:rounded-[20px]",
+      "lg:max-w-[45rem]",
+      "xl:max-w-[55rem]",
+    );
+  });
+
+  it("is the chooser's width when asked for md", () => {
+    expect(renderDeskSheet("md")).toHaveClass("lg:max-w-[30rem]");
+  });
+
+  it("adds nothing below lg", () => {
+    const { unmount } = renderWithIntl(
+      <Sheet open>
+        <SheetContent side="bottom">
+          <SheetTitle>Add expense</SheetTitle>
+        </SheetContent>
+      </Sheet>,
+    );
+    const plain = new Set(screen.getByRole("dialog").classList);
+    unmount();
+
+    const added = [...renderDeskSheet("lg").classList].filter(
+      (name) => !plain.has(name),
+    );
+    expect(added.length).toBeGreaterThan(0);
+    expect(added.filter((name) => !/^(lg|xl):/.test(name))).toEqual([]);
+  });
+
+  // From the sheet rather than on the pill, whose classes stay one plain
+  // string for the grabber tests below to find.
+  const HIDES_GRABBER = "lg:[&>[data-slot=sheet-grabber]]:hidden";
+
+  it("hides its grabber from lg, where there is nothing to pull", () => {
+    expect(renderDeskSheet("lg")).toHaveClass(HIDES_GRABBER);
+    expect(
+      document.querySelector('[data-slot="sheet-grabber"]'),
+    ).toBeInTheDocument();
+  });
+
+  it("is a sheet everywhere when it is not asked", () => {
+    const sheet = renderDeskSheet();
+    expect(sheet).not.toHaveClass("lg:rounded-[20px]");
+    expect(sheet).not.toHaveClass(HIDES_GRABBER);
+  });
+});
+
+/**
+ * A sheet's contents laid out somewhere that is not a sheet — a picker in a
+ * popover — keep their title as a heading, but it must not be a second name
+ * for the dialog around them.
+ */
+describe("a sheet's title outside a sheet", () => {
+  it("is a plain heading, with no id to borrow the dialog's name", () => {
+    renderWithIntl(
+      <Sheet open>
+        <SheetContent side="bottom">
+          <SheetTitle>Add expense</SheetTitle>
+          <SheetTitleAsHeading>
+            <SheetTitle>Category</SheetTitle>
+          </SheetTitleAsHeading>
+        </SheetContent>
+      </Sheet>,
+    );
+
+    expect(screen.getByRole("dialog", { name: "Add expense" })).toBeVisible();
+    const category = screen.getByRole("heading", { name: "Category" });
+    expect(category.tagName).toBe("H2");
+    expect(category).not.toHaveAttribute("id");
   });
 });
 
