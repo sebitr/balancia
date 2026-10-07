@@ -246,9 +246,9 @@ describe("somebody joining with an account", () => {
   }
 
   it("says they joined with the group link", () => {
-    expect(
-      line(joined({ via: "join_link", claimed: true }), reader(SAM)),
-    ).toBe("joined with the group link");
+    expect(line(joined({ via: "join_link", claimed: true }), reader(SAM))).toBe(
+      "joined with the group link",
+    );
   });
 
   it("says a guest turned their personal link into an account", () => {

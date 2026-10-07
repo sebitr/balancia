@@ -557,8 +557,8 @@ describe("a recurring expense added on its own", () => {
     expect(renderNotification(rent, translate, "en").sentence).toBe(
       "Loyer was added automatically",
     );
-    expect(
-      renderNotification(rent, translateIn(fr), "fr").sentence,
-    ).toBe("Ajout automatique : Loyer");
+    expect(renderNotification(rent, translateIn(fr), "fr").sentence).toBe(
+      "Ajout automatique : Loyer",
+    );
   });
 });
