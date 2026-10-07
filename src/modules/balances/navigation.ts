@@ -41,6 +41,12 @@ export interface NavigationGroup {
   readonly amounts: readonly { minorUnits: string; currency: string }[];
   /** When money last moved in it, as ISO text — the chooser's order. */
   readonly lastActivityAt: string;
+  /**
+   * How many people are in it, which the chooser says on a desk. Optional
+   * only so that a list built by hand can leave it out; this module always
+   * fills it in.
+   */
+  readonly participantCount?: number;
 }
 
 function toNavigationGroup(position: GroupPosition): NavigationGroup {
@@ -56,6 +62,7 @@ function toNavigationGroup(position: GroupPosition): NavigationGroup {
       currency: amount.currency,
     })),
     lastActivityAt: group.lastActivityAt.toISOString(),
+    participantCount: group.participantCount,
   };
 }
 
