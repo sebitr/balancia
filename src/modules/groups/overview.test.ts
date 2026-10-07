@@ -153,6 +153,131 @@ describe("spending periods", () => {
   });
 });
 
+/**
+ * The spending card's category bars, drawn from `lg` up.
+ *
+ * What the card claims is that the bars take the total above them apart, so
+ * that is what is held here: the same entries, through the same gate, summed
+ * by category — and a category called what the statistics screen calls it.
+ */
+describe("spending by category", () => {
+  const entry = (
+    id: string,
+    amount: bigint,
+    category: string | null,
+    options: {
+      currency?: string;
+      direction?: "out" | "in";
+      subcategory?: string | null;
+      date?: string;
+    } = {},
+  ) => ({
+    id,
+    expenseDate: options.date ?? "2026-08-12",
+    currency: options.currency ?? "EUR",
+    direction: options.direction ?? ("out" as const),
+    category,
+    subcategory: options.subcategory ?? null,
+    payers: [{ participantId: "me", amount }],
+    shares: [{ participantId: "me", amount }],
+  });
+
+  const allTime = (facts: Parameters<typeof spendingPeriodsOf>[0]) =>
+    spendingPeriodsOf(
+      facts,
+      "me",
+      "Europe/Lisbon",
+      null,
+      new Date("2026-08-17T12:00:00Z"),
+    ).find((period) => period.key === "allTime")!;
+
+  it("takes the period's total apart, largest first, to the cent", () => {
+    const period = allTime([
+      entry("flat", 42000n, "lodging"),
+      entry("dinner", 12840n, "restaurants"),
+      entry("surf", 30600n, "activities"),
+      entry("tapas", 7740n, "restaurants"),
+      entry("market", 24120n, "groceries"),
+    ]);
+    const [eur] = period.stats;
+
+    expect(eur.categories).toEqual([
+      { category: "lodging", amount: 42000n },
+      { category: "activities", amount: 30600n },
+      { category: "groceries", amount: 24120n },
+      { category: "restaurants", amount: 20580n },
+    ]);
+    expect(
+      eur.categories.reduce((total, slice) => total + slice.amount, 0n),
+    ).toBe(eur.groupSpent);
+  });
+
+  it("leaves income out, as the total does", () => {
+    const [eur] = allTime([
+      entry("flat", 42000n, "lodging"),
+      entry("deposit back", 10000n, "lodging", { direction: "in" }),
+    ]).stats;
+
+    expect(eur.groupSpent).toBe(42000n);
+    expect(eur.categories).toEqual([{ category: "lodging", amount: 42000n }]);
+  });
+
+  it("keeps each currency's categories to itself", () => {
+    const stats = allTime([
+      entry("flat", 42000n, "lodging"),
+      entry("transfer", 9600n, "transport", { currency: "CHF" }),
+    ]).stats;
+
+    expect(stats.map((stat) => [stat.currency, stat.categories])).toEqual([
+      ["CHF", [{ category: "transport", amount: 9600n }]],
+      ["EUR", [{ category: "lodging", amount: 42000n }]],
+    ]);
+  });
+
+  it("files a retired code under its replacement, as the statistics do", () => {
+    const [eur] = allTime([
+      entry("rent", 50000n, "housing"),
+      entry("plumber", 8000n, "home"),
+    ]).stats;
+
+    expect(eur.categories).toEqual([{ category: "home", amount: 58000n }]);
+  });
+
+  it("puts unfiled spending under no category, and last among equals", () => {
+    const [eur] = allTime([
+      entry("mystery", 5000n, null),
+      entry("bread", 5000n, "groceries"),
+      entry("imported", 5000n, "Bar tab"),
+    ]).stats;
+
+    expect(eur.categories.map((slice) => slice.category)).toEqual([
+      "Bar tab",
+      "groceries",
+      null,
+    ]);
+  });
+
+  it("follows the period chosen", () => {
+    const periods = spendingPeriodsOf(
+      [
+        entry("july", 10000n, "groceries", { date: "2026-07-20" }),
+        entry("august", 20000n, "transport", { date: "2026-08-14" }),
+      ],
+      "me",
+      "Europe/Lisbon",
+      null,
+      new Date("2026-08-17T12:00:00Z"),
+    );
+
+    expect(
+      periods.find((period) => period.key === "thisMonth")?.stats[0].categories,
+    ).toEqual([{ category: "transport", amount: 20000n }]);
+    expect(
+      periods.find((period) => period.key === "lastMonth")?.stats[0].categories,
+    ).toEqual([{ category: "groceries", amount: 10000n }]);
+  });
+});
+
 describe("the counterparties behind a position", () => {
   it("names who would pay the reader, largest first", () => {
     const parties = counterpartiesOf(

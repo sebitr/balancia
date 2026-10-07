@@ -2409,6 +2409,8 @@
     "intro": "Everyone who shares expenses in this group. Tap a person to rename them, manage their access, or remove them.",
     "introMember": "Everyone who shares expenses in this group. Tap yourself to change the name you go by here or to leave, or anyone without an account to fix theirs. The group's owner looks after access.",
     "introReadOnly": "Everyone who shares expenses in this group.",
+    "introDesk": "Everyone who shares expenses in this group. Open a person to see what is between you, or their options to rename them, manage their access, or remove them.",
+    "introMemberDesk": "Everyone who shares expenses in this group. Open a person to see what is between you. Your own options change the name you go by here or let you leave, and those of anyone without an account fix theirs. The group's owner looks after access.",
     "footnote": "Expenses keep the name of whoever paid, even after someone leaves the group.",
     "owner": "Owner",
     "guest": "Guest",
@@ -2487,7 +2489,23 @@
     "justAddThemHint": "You can invite them later",
     "addPerson": "Add person",
     "addedNoAccess": "{name} added — no access yet",
-    "addFailed": "That person could not be added."
+    "addFailed": "That person could not be added.",
+    "table": {
+      "person": "Person",
+      "role": "Role",
+      "paid": "Paid",
+      "share": "Share",
+      "position": "Position",
+      "actions": "Actions",
+      "you": "you",
+      "options": "Options for {name}",
+      "positionGetsBack": "<figure>{amount}</figure> gets back",
+      "positionOwes": "<figure>{amount}</figure> owes",
+      "positionYouGetBack": "<figure>{amount}</figure> you get back",
+      "positionYouOwe": "<figure>{amount}</figure> you owe",
+      "footer": "{people, plural, one {# person} other {# people}}{unclaimed, plural, =0 {} one { · # person has no account yet} other { · # people have no account yet}}",
+      "footerCurrencies": "Paid and share in {currency} · {others} on each person’s page"
+    }
   },
   "memberStats": {
     "badgeYou": "You",

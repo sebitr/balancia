@@ -380,4 +380,22 @@ describe("the headline", () => {
       await screen.findByText(/Balancia never converts between them/),
     ).toBeVisible();
   });
+
+  /**
+   * Beside the sidebar the card's two buttons stop being halves of it and sit
+   * at their own width, with "How this is calculated" at the far end of the
+   * same row. Held as classes: jsdom has no viewport to draw `lg` in.
+   */
+  it("puts its actions and the way into the sheet on one row from lg up", () => {
+    renderCard([CHALET, OWED]);
+
+    const settle = screen.getByRole("link", { name: "Settle up" });
+    const how = screen.getByRole("button", { name: /How this is calculated/ });
+    const row = how.parentElement!;
+
+    expect(row).toContainElement(settle);
+    expect(row).toHaveClass("contents", "lg:flex");
+    expect(settle).toHaveClass("flex-1", "lg:flex-none");
+    expect(how).toHaveClass("self-start", "lg:ml-auto");
+  });
 });
