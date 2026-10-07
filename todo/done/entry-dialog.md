@@ -1,6 +1,6 @@
 # Add or change an entry in a dialog over the screen on a desktop, with the split laid out on the form and ⌘↵ to save
 
-Branch: `feat/entry-dialog`
+Merged: 2026-10-07 in #453
 
 Design: https://claude.ai/artifact/Nwc4hfpwGTdcHj4e7suBHQ (boards 14 · Add to which group?, 15 · Add expense, 16 · Record repayment)
 

@@ -1,6 +1,6 @@
 # On a desktop, Home says the day and how many groups are open, puts two currencies side by side, and keeps what changed recently in a column beside your groups
 
-Branch: `feat/desktop-home`
+Merged: 2026-10-07 in #451
 
 Design: https://claude.ai/artifact/Nwc4hfpwGTdcHj4e7suBHQ (board 01 · Home, board 20 · No groups yet, and 25 · Rules)
 

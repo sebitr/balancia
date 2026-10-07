@@ -1,6 +1,6 @@
 # Lay out a group's statistics, its recurring expenses and its settings for a desktop window
 
-Branch: `feat/desktop-stats-recurring-settings`
+Merged: 2026-10-07 in #452
 
 Design: https://claude.ai/artifact/Nwc4hfpwGTdcHj4e7suBHQ (board 11 · Statistics, board 12 · Recurring expenses, board 13 · Group settings, and the table recipe on 25 · Rules)
 

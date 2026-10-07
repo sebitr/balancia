@@ -1,6 +1,6 @@
 # Sign up with a password without leaving the sign-up steps, and say on the welcome what the app is for
 
-Branch: `fix/signup-in-flow`
+Merged: 2026-10-06 in #442
 
 Design: https://claude.ai/artifact/7krRtbYdVV5EaP4ozJSSND
 
