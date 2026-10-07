@@ -28,7 +28,8 @@ export function SidebarGroupAdd({ groupId }: { groupId: string }) {
         // No direction: what arrives is the entry drawer, over the screen,
         // and the screen underneath stays where it is.
         onClick={offlineAdd}
-        // Package 3 binds N to this.
+        // N presses this inside a group, so the key takes the same way into
+        // the drawer, offline fallback and all; see `use-shortcuts.ts`.
         data-shortcut="n"
         className={addControlClass(collapsed)}
       >

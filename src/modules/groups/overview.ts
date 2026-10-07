@@ -15,6 +15,7 @@ import {
   type RepaymentSuggestion,
   type Revenue,
 } from "@/modules/balances/engine";
+import { categoryKeyOf } from "./group-stats";
 
 /**
  * The group overview's read model.
@@ -69,12 +70,28 @@ export interface CurrencyPosition {
   };
 }
 
+/** What the group spent under one category, in one currency. */
+export interface CategorySpend {
+  /**
+   * A category code as it is called today, a label an import kept verbatim,
+   * or null for spending nobody filed — `categoryKeyOf`'s answer, so the card
+   * and the statistics screen name a category the same way.
+   */
+  readonly category: string | null;
+  readonly amount: bigint;
+}
+
 /** The three figures the stat strip shows, for one currency. */
 export interface CurrencyStats {
   readonly currency: string;
   readonly groupSpent: bigint;
   readonly youPaid: bigint;
   readonly yourShare: bigint;
+  /**
+   * `groupSpent`, taken apart by category, largest first. The amounts add up
+   * to it exactly: both are the same entries' payers, summed once each way.
+   */
+  readonly categories: readonly CategorySpend[];
 }
 
 export type SpendingPeriodKey =
@@ -312,6 +329,46 @@ export function orderBalanceRows(
 
 interface DatedExpense extends BalanceInputExpense {
   readonly expenseDate: string;
+  /** As stored. Absent, and so unfiled, wherever the rows were read without it. */
+  readonly category?: string | null;
+  readonly subcategory?: string | null;
+}
+
+/**
+ * Entries in one currency, spending only, by category, largest first.
+ *
+ * Summed from the payers and through the same gate `totalSpendByCurrency`
+ * uses — income is not spending — so the bars under a period's total always
+ * add up to that total. Categories are filed the way the statistics screen
+ * files them, a retired code under its replacement. Two of the same size are
+ * put in name order, unfiled last, so the bars do not swap places between two
+ * renders of the same figures.
+ */
+export function categorySpendOf(
+  facts: readonly DatedExpense[],
+  currency: string,
+): CategorySpend[] {
+  const totals = new Map<string | null, bigint>();
+  for (const fact of facts) {
+    if (fact.currency !== currency || !isSpending(fact.direction)) continue;
+    const paid = fact.payers.reduce((sum, payer) => sum + payer.amount, 0n);
+    const { key } = categoryKeyOf(
+      fact.category ?? null,
+      fact.subcategory ?? null,
+    );
+    totals.set(key, (totals.get(key) ?? 0n) + paid);
+  }
+
+  return [...totals.entries()]
+    .filter(([, amount]) => amount > 0n)
+    .map(([category, amount]) => ({ category, amount }))
+    .sort((a, b) => {
+      if (a.amount !== b.amount) return a.amount > b.amount ? -1 : 1;
+      if (a.category === b.category) return 0;
+      if (a.category === null) return 1;
+      if (b.category === null) return -1;
+      return a.category < b.category ? -1 : 1;
+    });
 }
 
 /** Four quiet spending views, all derived from the already-normalized facts. */
@@ -366,6 +423,7 @@ export function spendingPeriodsOf(
         groupSpent: group.get(currency) ?? 0n,
         youPaid: mine.get(currency)?.paid ?? 0n,
         yourShare: mine.get(currency)?.share ?? 0n,
+        categories: categorySpendOf(selected, currency),
       })),
     };
   });

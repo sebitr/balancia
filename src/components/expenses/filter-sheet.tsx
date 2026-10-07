@@ -31,7 +31,11 @@ import {
   KINDS,
   POSITION_CHOICES,
   SORT_CHOICES,
+  toggled,
   WHEN_CHOICES,
+  withCategory,
+  withSubcategory,
+  withWhen,
   type EntryKind,
   type ListFilter,
   type PositionChoice,
@@ -67,6 +71,12 @@ import {
  * that band shows Groceries already chosen next time the sheet opens. There is
  * no synchronisation because there is nothing to synchronise — the state lives
  * above all three of them, in the URL.
+ *
+ * A desktop window opens this same sheet from its More filters button, and
+ * draws Category and When as menus beside it. What a choice does to the filter
+ * is not decided here: `list-filter.ts` holds the moves — `toggled`,
+ * `withCategory`, `withSubcategory`, `withWhen` — and the menus make the same
+ * ones, so a period picked in either place is the same period.
  */
 
 export interface FilterSheetProps {
@@ -125,30 +135,10 @@ export function FilterSheet({
   >(
     field: K,
     value: ListFilter[K][number],
-  ) => {
-    const current = draft[field] as readonly ListFilter[K][number][];
-    const next = current.includes(value)
-      ? current.filter((item) => item !== value)
-      : [...current, value];
-    set({ [field]: next } as unknown as Partial<ListFilter>);
-  };
+  ) => onDraftChange(toggled(draft, field, value));
 
-  /*
-   * Choosing a custom range fills it with the group's whole history, so the
-   * default answer to "which dates?" is one the reader can narrow rather than
-   * a pair of empty fields they have to fill before anything happens.
-   */
-  const chooseWhen = (when: WhenChoice) => {
-    if (when !== "custom") {
-      set({ when, from: "", to: "" });
-      return;
-    }
-    set({
-      when,
-      from: draft.from || (firstDate ?? ""),
-      to: draft.to || today,
-    });
-  };
+  const chooseWhen = (when: WhenChoice) =>
+    onDraftChange(withWhen(draft, when, { firstDate, today }));
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -597,35 +587,11 @@ function CategorySection({
    */
   const shown = all ? EXPENSE_CATEGORY_IDS : used;
 
-  const toggleCategory = (category: ExpenseCategory) => {
-    const on = draft.categories.includes(category);
-    onDraftChange({
-      ...draft,
-      categories: on
-        ? draft.categories.filter((code) => code !== category)
-        : [...draft.categories, category],
-      // Picking the whole thing subsumes whichever parts were picked; letting
-      // go of it leaves nothing behind either.
-      subcategories: draft.subcategories.filter(
-        (pair) => !pair.startsWith(`${category}.`),
-      ),
-    });
-  };
+  const toggleCategory = (category: ExpenseCategory) =>
+    onDraftChange(withCategory(draft, category));
 
-  const toggleSubcategory = (category: ExpenseCategory, leaf: string) => {
-    const pair = `${category}.${leaf}`;
-    const on = draft.subcategories.includes(pair);
-    onDraftChange({
-      ...draft,
-      // A part of a category is not the category, so choosing one lets the
-      // whole go — otherwise the parent would keep every row the leaf was
-      // meant to narrow away.
-      categories: draft.categories.filter((code) => code !== category),
-      subcategories: on
-        ? draft.subcategories.filter((code) => code !== pair)
-        : [...draft.subcategories, pair],
-    });
-  };
+  const toggleSubcategory = (category: ExpenseCategory, leaf: string) =>
+    onDraftChange(withSubcategory(draft, category, leaf));
 
   return (
     <Section label={tf("category")} hint={tf("categoryHint")}>

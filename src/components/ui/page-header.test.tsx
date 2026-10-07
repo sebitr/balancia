@@ -33,6 +33,41 @@ describe("a page header", () => {
     expect(screen.queryByRole("link")).toBeNull();
   });
 
+  it("lets the title lead from lg where the way back stands beside it", () => {
+    // A settings screen: from `lg` up the hub is the pane to its left, so the
+    // arrow goes there and the screen is no longer somewhere it was pushed —
+    // the title takes the size a header with no arrow gives it. Below `lg`
+    // nothing changes.
+    render(
+      <PageHeader
+        title="Appearance & language"
+        back={{ href: "/settings", label: "Back to settings", until: "lg" }}
+      />,
+    );
+
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading).toHaveClass("text-base", "lg:text-2xl");
+    expect(screen.getByRole("link", { name: "Back to settings" })).toHaveClass(
+      "lg:hidden",
+    );
+  });
+
+  it("keeps the arrow at every width unless told otherwise", () => {
+    render(
+      <PageHeader
+        title="Statistics"
+        back={{ href: "/groups/g1", label: "Back to the group" }}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { level: 1 })).not.toHaveClass(
+      "lg:text-2xl",
+    );
+    expect(
+      screen.getByRole("link", { name: "Back to the group" }),
+    ).not.toHaveClass("lg:hidden");
+  });
+
   it("keeps the row's height when the screen names itself below", () => {
     // A screen whose own hero carries its name leaves the header with the
     // arrow and nothing else — and it still has to hold its line.

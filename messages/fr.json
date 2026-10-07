@@ -48,6 +48,27 @@
     "sidebarKeepGroup": "Garde {group}",
     "sidebarGuestNote": "Ton accès n’existe que dans ce navigateur."
   },
+  "palette": {
+    "label": "Rechercher des groupes, des personnes et des transactions",
+    "results": "Résultats",
+    "transactionsIn": "Transactions dans {group}",
+    "actions": "Actions",
+    "addExpense": "Ajouter une dépense",
+    "addExpenseTo": "Ajouter une dépense à {group}",
+    "settleUpIn": "Régler les comptes dans {group}",
+    "openSettings": "Ouvrir les paramètres",
+    "paidLine": "{who, select, you {Tu as payé} withYou {{names} avez payé} other {{count, plural, one {{names} a payé} other {{names} ont payé}}}}",
+    "you": "Toi",
+    "repayment": "Remboursement",
+    "income": "Revenu",
+    "nothing": "Aucun groupe, aucune personne ni aucune transaction ne correspond à « {query} ».",
+    "resultCount": "{count, plural, one {# résultat} other {# résultats}}",
+    "failed": "Impossible de chercher pour l’instant. Réessaie.",
+    "move": "Naviguer",
+    "open": "Ouvrir",
+    "openNewTab": "Ouvrir dans un nouvel onglet",
+    "close": "Fermer"
+  },
   "theme": {
     "menu": "Thème"
   },
@@ -564,6 +585,8 @@
     "pickerCount": "{shown} sur {total, plural, one {# groupe} other {# groupes}}",
     "pickerSearchLabel": "Rechercher dans tes groupes",
     "pickerSearchPlaceholder": "Rechercher un groupe",
+    "pickerMove": "Naviguer",
+    "pickerChoose": "Choisir",
     "peopleCount": "{count, plural, one {# personne} other {# personnes}}",
     "settledWord": "Soldé",
     "noExpensesWord": "Pas encore de dépense",
@@ -733,6 +756,22 @@
     "positionYouReceived": "Tu as reçu {amount}",
     "positionYouPaid": "Tu as remboursé {amount}",
     "positionEven": "{kind, select, revenue {Tu as reçu ta part} other {Tu as payé ta part}}",
+    "table": {
+      "date": "Date",
+      "description": "Description",
+      "category": "Catégorie",
+      "paidBy": "Payé par",
+      "split": "Répartition",
+      "amount": "Montant",
+      "forYou": "Pour toi",
+      "you": "Toi",
+      "paidByLine": "{who, select, you {Tu as payé} withYou {{names} avez payé} other {{count, plural, one {{names} a payé} other {{names} ont payé}}}}",
+      "split_ways": "{scope, select, all {{method, select, equal {{count} à parts égales} shares {{count}, par parts} percentage {{count}, par pourcentage} other {{count}, montants exacts}}} other {{method, select, equal {{count} sur {total}} shares {{count} sur {total}, par parts} percentage {{count} sur {total}, par pourcentage} other {{count} sur {total}, montants exacts}}}}",
+      "receipts": "{count, plural, one {# reçu} other {# reçus}}",
+      "footer": "{shown, plural, one {# transaction affichée} other {# transactions affichées}} sur {total} · {sort, select, oldest {triées par date, plus anciennes d’abord} largest {triées par montant, plus élevées d’abord} other {triées par date, plus récentes d’abord}}",
+      "footerUncounted": "{shown, plural, one {# transaction affichée} other {# transactions affichées}} · {sort, select, oldest {triées par date, plus anciennes d’abord} largest {triées par montant, plus élevées d’abord} other {triées par date, plus récentes d’abord}}",
+      "footerMore": "La suite se charge quand tu fais défiler"
+    },
     "filters": {
       "title": "Filtrer et trier",
       "description": "Affine la liste et choisis son ordre. Rien ne change tant que tu n’appliques pas.",
@@ -779,7 +818,12 @@
       "sort": "Trier",
       "sort_newest": "Plus récentes d’abord",
       "sort_oldest": "Plus anciennes d’abord",
-      "sort_largest": "Montant le plus élevé"
+      "sort_largest": "Montant le plus élevé",
+      "anyCategory": "Toutes les catégories",
+      "categoryMenu": "Catégorie : {value}",
+      "whenMenu": "Quand : {value}",
+      "more": "Plus de filtres",
+      "moreWith": "Plus de filtres, {count, plural, one {# appliqué} other {# appliqués}}"
     }
   },
   "userSettings": {
@@ -787,6 +831,7 @@
     "yourAccount": "Ton compte",
     "close": "Fermer les paramètres",
     "backToSettings": "Retour aux paramètres",
+    "signedInTo": "Connecté à {instance} en tant que {email}",
     "groupAccount": "Compte",
     "groupPreferences": "Préférences",
     "groupData": "Données",
@@ -893,6 +938,8 @@
     "accentFailed": "Cette couleur n’a pas pu être enregistrée.",
     "language": "Langue",
     "languageNote": "La langue change les mots. L’écriture des dates et des montants se règle dans Devise et formats, pour lire en anglais et écrire quand même 13/08/2026.",
+    "singleKeys": "Raccourcis à une touche",
+    "singleKeysHelp": "N ajoute une dépense et S règle les comptes quand aucun champ n’a le curseur. Reste sur cet appareil.",
     "currencyTitle": "Afficher mes totaux en",
     "currencyHelp": "Chaque groupe est converti dans cette devise sur ton écran d’accueil. Chaque groupe garde la sienne.",
     "currencySaved": "Devise préférée enregistrée",
@@ -1086,6 +1133,7 @@
   },
   "settleUp": {
     "title": "Régler les comptes",
+    "recordRepayment": "Enregistrer un remboursement",
     "clearsGroup": "{count, plural, one {# remboursement solde le groupe} other {# remboursements soldent le groupe}}",
     "clearsCurrency": "{count, plural, one {# remboursement solde cette devise} other {# remboursements soldent cette devise}}",
     "betweenOthers": "Entre les autres",
@@ -2389,6 +2437,8 @@
     "intro": "Toutes les personnes qui partagent des dépenses dans ce groupe. Touche une personne pour la renommer, gérer son accès ou la retirer.",
     "introMember": "Toutes les personnes qui partagent des dépenses dans ce groupe. Touche ton nom pour changer celui que tu portes ici ou pour quitter le groupe, ou une personne sans compte pour corriger le sien. Le propriétaire du groupe s’occupe des accès.",
     "introReadOnly": "Toutes les personnes qui partagent des dépenses dans ce groupe.",
+    "introDesk": "Toutes les personnes qui partagent des dépenses dans ce groupe. Ouvre une personne pour voir ce qu’il y a entre elle et toi, ou ses options pour la renommer, gérer son accès ou la retirer.",
+    "introMemberDesk": "Toutes les personnes qui partagent des dépenses dans ce groupe. Ouvre une personne pour voir ce qu’il y a entre elle et toi. Tes options permettent de changer le nom que tu portes ici ou de quitter le groupe, et celles d’une personne sans compte de corriger le sien. Le propriétaire du groupe s’occupe des accès.",
     "footnote": "Les dépenses conservent le nom de la personne qui a payé, même après son départ du groupe.",
     "owner": "Propriétaire",
     "guest": "Invité",
@@ -2467,7 +2517,23 @@
     "justAddThemHint": "Tu pourras envoyer l’invitation plus tard",
     "addPerson": "Ajouter la personne",
     "addedNoAccess": "{name} est dans le groupe — pas encore d’accès",
-    "addFailed": "Cette personne n’a pas pu être ajoutée."
+    "addFailed": "Cette personne n’a pas pu être ajoutée.",
+    "table": {
+      "person": "Personne",
+      "role": "Rôle",
+      "paid": "Payé",
+      "share": "Part",
+      "position": "Situation",
+      "actions": "Actions",
+      "you": "toi",
+      "options": "Options pour {name}",
+      "positionGetsBack": "récupère <figure>{amount}</figure>",
+      "positionOwes": "doit <figure>{amount}</figure>",
+      "positionYouGetBack": "tu récupères <figure>{amount}</figure>",
+      "positionYouOwe": "tu dois <figure>{amount}</figure>",
+      "footer": "{people, plural, one {# personne} other {# personnes}}{unclaimed, plural, =0 {} one { · # personne n’a pas encore de compte} other { · # personnes n’ont pas encore de compte}}",
+      "footerCurrencies": "Payé et part en {currency} · {others} sur la page de chaque personne"
+    }
   },
   "memberStats": {
     "badgeYou": "Toi",
@@ -3278,6 +3344,7 @@
   "addEntry": {
     "back": "Retour",
     "reload": "Recharger",
+    "saveKeys": "<keys></keys> pour enregistrer",
     "titles": {
       "expense": "Ajouter une dépense",
       "income": "Ajouter un revenu",
@@ -3511,6 +3578,8 @@
       "outcomeUnder": "Remboursement partiel — {from} devra encore {amount} à {to}.",
       "outcomeOver": "Plus que dû — {from} devra {amount} à {to}.",
       "outcomeExact": "{from} et {to} seront à jour.",
+      "outcomeExactIn": "{from} et {to} seront à jour en {currency}.",
+      "onlyRecords": "Balancia ne fait qu’enregistrer le remboursement. Il ne déplace jamais l’argent lui-même.",
       "outcomeOtherCurrency": "Payé en {currency} — {from} doit toujours {amount} à {to}.",
       "someoneElse": "Quelqu’un d’autre",
       "changeWhoPays": "Changer qui paie",

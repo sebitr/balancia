@@ -278,8 +278,10 @@ describe("the actions on a row", () => {
   it("leaves the amount off the link, so the drawer prices it itself", () => {
     render();
 
+    // The row's own link, named for its pair — not the header's "Record a
+    // repayment", which names nobody.
     const href = screen
-      .getByRole("link", { name: /^Record/ })
+      .getByRole("link", { name: /^Record .+ repayment to/ })
       .getAttribute("href");
 
     expect(href).not.toContain("14860");
@@ -1063,5 +1065,28 @@ describe("when there is no payment code", () => {
     render({ payoutHints: [{ ...noQr, qrMissing: "addressMissing" }] });
 
     expect(screen.getByRole("button", { name: "Copy" })).toBeInTheDocument();
+  });
+});
+
+/**
+ * A repayment the plan has no row for — cash handed to somebody owed nothing —
+ * still has to be recordable from here. On a desk the header offers it, into
+ * the entry dialog's Repayment tab with nobody picked.
+ */
+describe("recording a repayment the plan does not list", () => {
+  it("opens the entry form on the Repayment tab, with nobody named", () => {
+    render();
+
+    expect(
+      screen.getByRole("link", { name: "Record a repayment" }),
+    ).toHaveAttribute("href", "/groups/g1/expenses/new#type=settle");
+  });
+
+  it("leaves a settled group's screen with nothing to press", () => {
+    render({ transferCount: 0, lastSettled: [] }, []);
+
+    expect(
+      screen.queryByRole("link", { name: "Record a repayment" }),
+    ).toBeNull();
   });
 });

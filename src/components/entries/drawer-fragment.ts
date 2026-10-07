@@ -64,6 +64,23 @@ export function repeatsOf(params: URLSearchParams): boolean {
   return params.get(REPEAT_PARAM) === "1";
 }
 
+/**
+ * Set to `settle` to open a new entry on the Repayment tab with nobody
+ * picked — Settle up's "Record a repayment", for a payment its list of
+ * suggested ones does not hold. The form then asks who paid whom, from the
+ * debts that exist or from the whole group, rather than opening on the
+ * largest debt as switching to the tab does.
+ *
+ * `settle` is the only value anything writes. A debt to open on is not this:
+ * it is `settleIntentPath`, which names both people.
+ */
+export const TYPE_PARAM = "type";
+
+/** The tab a fragment asks for. Anything but `settle` is no tab. */
+export function typeOf(params: URLSearchParams): "settle" | undefined {
+  return params.get(TYPE_PARAM) === "settle" ? "settle" : undefined;
+}
+
 /** Anything `URLSearchParams` can be built from: a query string, another set, or a plain record. */
 export type FragmentParams =
   string | URLSearchParams | Readonly<Record<string, string>>;

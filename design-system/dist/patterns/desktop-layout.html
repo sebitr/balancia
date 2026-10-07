@@ -1,4 +1,4 @@
-<!-- @dsCard group="Patterns" name="Desktop layout" subtitle="The sidebar, a group's header and tabs, the overview in two columns, sheets at a phone's width" -->
+<!-- @dsCard group="Patterns" name="Desktop layout" subtitle="The sidebar, a group's header and tabs, the overview in two columns, the entry dialog, sheets at a phone's width" -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -1019,6 +1019,143 @@ a.list-row:focus-visible {
   font-variant-numeric: tabular-nums lining-nums;
 }
 
+/* The table at width — src/components/expenses/transactions-table.tsx. A card
+   box, a 36px header on a muted wash, 52px rows (60 with a second line), the
+   whole row one link, no zebra. Its columns are decided by the box, not the
+   window: under 60rem of table the middle columns fold into the description's
+   second line. */
+.tbl-box {
+  background: var(--card);
+  border-radius: 1rem;
+  box-shadow: 0 0 0 1px var(--border);
+  overflow: hidden;
+}
+.tbl-box .tbl {
+  table-layout: fixed;
+}
+.tbl-box .tbl thead {
+  background: color-mix(in oklch, var(--muted) 40%, var(--card));
+}
+.tbl-box .tbl td {
+  height: 3.25rem;
+  padding: 0.5rem 0.75rem;
+}
+.tbl-box .tbl th:first-child,
+.tbl-box .tbl td:first-child {
+  padding-left: 1rem;
+}
+.tbl-box .tbl th:last-child,
+.tbl-box .tbl td:last-child {
+  padding-right: 1rem;
+}
+.tbl-row {
+  position: relative;
+  transition: background-color 150ms ease;
+}
+.tbl-row:hover,
+.tbl-row:has(a:focus-visible) {
+  background: color-mix(in oklch, var(--foreground) 4%, transparent);
+}
+.tbl-link {
+  font-weight: 500;
+  color: inherit;
+  text-decoration: none;
+  outline: none;
+}
+.tbl-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.tbl-link:focus-visible::after {
+  box-shadow: inset 0 0 0 2px var(--ring);
+}
+.tbl-sub {
+  display: block;
+  margin-top: 0.125rem;
+  overflow: hidden;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tbl-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--foreground);
+}
+.tbl-sort svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.tbl-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklch, var(--muted) 30%, var(--card));
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+/* The filters on one row above that table — src/components/expenses/filter-row.tsx.
+   36px controls: the search field, the kind chips (several may be on), the
+   Category and When menus, More filters, and Add at the end. */
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.filter-row .input {
+  height: 2.25rem;
+  border-radius: 0.75rem;
+  background: var(--card);
+}
+.filter-chip {
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.filter-chip[aria-pressed="true"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+}
+.filter-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2.25rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--input);
+  border-radius: 0.75rem;
+  background: var(--card);
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.filter-select svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted-foreground);
+}
+.filter-select--on {
+  border-color: var(--primary);
+  background: color-mix(in oklch, var(--primary) 15%, transparent);
+}
+
 /* ── money — src/components/money/amount.tsx ── */
 .balance {
   display: inline-flex;
@@ -1721,6 +1858,115 @@ a[aria-current="page"] .nav-icon--primary {
   line-height: 1.35;
 }
 
+/* The command palette — src/components/layout/command-palette.tsx. "Search
+   or jump to", over the screen from lg up: a field, the list under it in
+   sections, and the keys along the foot. 40rem, anchored by its top. A row is
+   44px and lit with the sidebar's wash where ↵ will go; a figure in it is a
+   total in neutral ink, a position the sidebar's phrase in the tone's. */
+.palette {
+  display: flex;
+  flex-direction: column;
+  max-width: 40rem;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: var(--shadow-raised);
+  font-size: 0.875rem;
+}
+.palette-in {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  height: 3.5rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 1rem;
+}
+.palette-in svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+.palette-query {
+  flex: 1;
+  min-width: 0;
+}
+.palette-sec {
+  padding: 0.625rem 1rem 0.25rem;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.palette-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: calc(100% - 1rem);
+  min-height: 2.75rem;
+  margin: 0 0.5rem;
+  padding: 6px 0.625rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+.palette-row[aria-selected="true"] {
+  background: var(--sidebar-accent);
+}
+.palette-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+.palette-row-sub {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+.palette-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+.palette-glyph svg {
+  width: 1rem;
+  height: 1rem;
+}
+.palette-fig {
+  flex-shrink: 0;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.palette-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1rem;
+  padding: 0.625rem 1rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklch, var(--muted) 35%, var(--popover));
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+.palette-foot > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
 /* A group's header, above the screen on its four places from lg up: the
    tile, the name with its currencies, a meta line, and the places as a
    segmented row. `src/components/layout/group-header.tsx`. */
@@ -1815,6 +2061,123 @@ a[aria-current="page"] .nav-icon--primary {
   gap: 1.625rem;
   min-width: 0;
 }
+/* From xl (1280px) up the money gets the larger share: seven to five. Halves
+   at lg, where each column needs its 360px. */
+.overview-cols--wide {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+}
+/* A position card's actions beside the sidebar: the buttons at their own
+   width, "How this is calculated" at the far end of the same row. */
+.position-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+.position-actions .btn {
+  height: 2.875rem;
+  padding: 0 1rem;
+  font-weight: 600;
+}
+.position-actions .position-how {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+/* The spending card's category bars, from lg up: label, bar, figure, on
+   columns every row shares, so the bars start and end level down the card.
+   Chart colours by rank — never --chart-2, the accent, and never a money
+   colour. `src/components/groups/spending-card.tsx`. */
+.cat-bars-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.cat-bars {
+  display: grid;
+  grid-template-columns: minmax(0, 7rem) minmax(0, 1fr) auto;
+  gap: 0.625rem 0.75rem;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+}
+.cat-bars li {
+  display: contents;
+}
+.cat-bars i {
+  display: block;
+  height: 0.5rem;
+  border-radius: 9999px;
+}
+.cat-bars .cat-figure {
+  text-align: right;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Settings from lg up: still a surface, with no rail — the hub as a 20rem pane
+   beside the screen it led to, and the ✕ once along the top of both.
+   `src/app/settings/layout.tsx`. */
+.settings-desk {
+  max-width: 64rem;
+  padding: 2.25rem 1.5rem 3rem;
+}
+.settings-desk-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.settings-desk-title {
+  display: block;
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.settings-desk-sub {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+.settings-panes {
+  display: grid;
+  grid-template-columns: 20rem minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+.settings-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+}
+.settings-pane-label {
+  padding: 0 0.375rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+/* A row's value sits at its end, as on the phone's hub. */
+.settings-pane .list-row > .list-sub {
+  margin-top: 0;
+}
+/* The row whose screen is on the right: the third wash, a step past hover. */
+.settings-pane a.list-row[aria-current="page"] {
+  background: color-mix(in oklch, var(--foreground) 9%, transparent);
+}
 
 /* ── swatches ── */
 .swatches {
@@ -1899,7 +2262,8 @@ a[aria-current="page"] .nav-icon--primary {
         1024px and wider. The sidebar on every signed-in screen — Home and
         Notifications too — in place of the header and the bar; a group's header
         and tabs above its four places; on the overview, two columns. Settings
-        stays a surface of its own with its ✕, and no sidebar.
+        stays a surface of its own with its ✕, and no sidebar — its hub open
+        beside the screen it led to.
       </dd>
       <dt>xl up</dt>
       <dd>
@@ -2069,10 +2433,20 @@ a[aria-current="page"] .nav-icon--primary {
       <dt>width</dt>
       <dd>
         The screen widens to <code>--app-content-max</code> (75rem, gutters
-        included) for a layout marked <code>data-layout="wide"</code>, and only
-        for one — which is exactly what the expanded sidebar leaves at 1440px.
-        At 1024 the two columns are about 360px each. 24px between them; the
-        blocks inside each keep the overview's own gap.
+        included) for a layout marked <code>data-layout="wide"</code> — the
+        overview's two columns and the transactions table — and only for one,
+        which is exactly what the expanded sidebar leaves at 1440px. 24px
+        between the columns; the blocks inside each keep the overview's own gap.
+      </dd>
+      <dt>columns</dt>
+      <dd>
+        Halves at <code>lg</code>: at 1024 the sidebar leaves about 740px, and
+        360px each is what the balance rows' three columns and the spending
+        card's category rows need. Seven to five from <code>xl</code> (<code
+          >minmax(0, 7fr) minmax(0, 5fr)</code
+        >): at 1440 the money gets about 640px and the context about 460px. The
+        left column is the money at every width — first in the document, so the
+        phone's reading order survives — and is never the narrower one.
       </dd>
       <dt>group header</dt>
       <dd>
@@ -2096,13 +2470,144 @@ a[aria-current="page"] .nav-icon--primary {
   <section>
     <h2>Every other screen</h2>
     <p class="note">
-      Home, Notifications, Transactions, People, Settings, an entry, a person:
-      one column, <code>max-w-3xl</code>, centred in the space beside the
-      sidebar, never stretched across it. Gutters open to 24px at
-      <code>lg</code> and 40px at <code>xl</code>. Anything that was docked
-      above the bar — an entry's Edit and Remove — docks at the foot of the
-      window instead, starting where the sidebar stops.
+      Home, Notifications, People, Settings, an entry, a person: one column,
+      <code>max-w-3xl</code>, centred in the space beside the sidebar, never
+      stretched across it. Transactions is a table at this width instead, with
+      its filters on one row — see Expense timeline. Gutters open to 24px at
+      <code>lg</code> and 40px at <code>xl</code>. An entry's Edit and Remove,
+      docked above the bar on a phone, sit in the screen's header at this width
+      (board 08).
     </p>
+  </section>
+
+  <section>
+    <h2>Settings, from lg up</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      Still a surface — no rail, no wordmark, no bell — with the room used for
+      one thing: the hub stays open beside the screen it led to. Its rows down
+      the left, each with its value as a phone shows it; the chosen screen on
+      the right, exactly as it is on a phone; the ✕ once, along the top of both,
+      closing back to wherever settings was opened from.
+    </p>
+    <div class="frame settings-desk">
+      <div class="settings-desk-head">
+        <div>
+          <span class="settings-desk-title">Settings</span>
+          <span class="settings-desk-sub"
+            >Signed in to home.lan as sebastien@home.lan</span
+          >
+        </div>
+        <span class="screen-header-close" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </span>
+      </div>
+      <div class="settings-panes">
+        <div class="settings-pane" aria-hidden="true">
+          <ul class="list" style="background: var(--card)">
+            <li>
+              <a class="list-row"
+                ><span class="list-main"
+                  ><span class="list-title">Sébastien B.</span
+                  ><span class="list-sub">sebastien@home.lan</span></span
+                ></a
+              >
+            </li>
+          </ul>
+          <div>
+            <div class="settings-pane-label">Account</div>
+            <ul class="list" style="background: var(--card)">
+              <li>
+                <a class="list-row"
+                  ><span class="list-title">Notifications</span
+                  ><span class="list-sub">All on</span></a
+                >
+              </li>
+              <li>
+                <a class="list-row"
+                  ><span class="list-title">Sign-in &amp; security</span
+                  ><span class="list-sub">2 passkeys</span></a
+                >
+              </li>
+            </ul>
+          </div>
+          <div>
+            <div class="settings-pane-label">Preferences</div>
+            <ul class="list" style="background: var(--card)">
+              <li>
+                <a class="list-row" aria-current="page"
+                  ><span class="list-title">Appearance &amp; language</span
+                  ><span class="list-sub">Light</span></a
+                >
+              </li>
+              <li>
+                <a class="list-row"
+                  ><span class="list-title">Money &amp; formats</span
+                  ><span class="list-sub">EUR · DD/MM/YYYY</span></a
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div>
+          <span class="settings-desk-title">Appearance &amp; language</span>
+          <div class="card" style="margin-top: 1rem">
+            <div class="card-content">
+              <p class="card-desc" style="margin: 0">
+                The screen as it is on a phone: its cards, its controls, its
+                silence when a control flicks back.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>widths</dt>
+      <dd>
+        The surface stops at <code>max-w-280</code> (70rem) and centres, with
+        24px gutters at <code>lg</code> and 40px from <code>xl</code>. The pane
+        is 20rem: it holds the phone's own rows, tile and chevron included,
+        which were drawn for a phone's column. 32px between the panes; the
+        screen takes the rest.
+      </dd>
+      <dt>the pane</dt>
+      <dd>
+        The hub itself, read once and drawn twice — the phone's page below
+        <code>lg</code>, this pane above, each <code>display: none</code> at the
+        other's widths. One <code>navigation</code> landmark named "Settings".
+        The row whose screen is on the right carries
+        <code>aria-current="page"</code> and the wash a step past the hover's;
+        rows swap the screen without the push a phone's rows make, as a tab
+        does.
+      </dd>
+      <dt>the screen</dt>
+      <dd>
+        Unchanged, minus what the surface took over: no arrow back to the hub
+        beside it, so its title leads at <code>text-2xl</code>; no ✕ of its own;
+        no gutter; no sticky header. Nothing sticks at this width — it is a page
+        that scrolls.
+      </dd>
+      <dt>/settings</dt>
+      <dd>
+        Shows the first screen, the account, beside the pane rather than an
+        empty half, and lights the account at the top of the pane.
+      </dd>
+      <dt>keyboard</dt>
+      <dd>
+        A skip link past the ✕ and the pane to the screen, parked above the top
+        edge as the app shell's is.
+      </dd>
+    </dl>
   </section>
 
   <section>
@@ -2111,7 +2616,7 @@ a[aria-current="page"] .nav-icon--primary {
       <dt>1</dt>
       <dd>
         Second columns wrap under the first. The overview's two stay side by
-        side, about 360px each.
+        side, as halves of about 360px each rather than seven to five.
       </dd>
       <dt>2</dt>
       <dd>
@@ -2138,6 +2643,344 @@ a[aria-current="page"] .nav-icon--primary {
       loading skeleton is held to the same width, so the drawer does not change
       shape when the form arrives.
     </p>
+    <p class="note">
+      From <code>lg</code> up the entry drawer and the group chooser are not
+      sheets at all but dialogs — see <em>The entry dialog</em>. They are the
+      same element at both widths, asked for with <code>desk</code> on
+      <code>SheetContent</code>, so a window resized across 1024px keeps what
+      was typed. A sheet raised from inside the dialog — who pays whom, every
+      payment method, the schedule — is a 30rem dialog over it.
+    </p>
+  </section>
+
+  <section>
+    <h2>The entry dialog</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      Adding or changing an entry, on a desk. A dialog over the screen it was
+      started from, which stays where it was — the same intercepted route as the
+      phone's drawer, so Back closes it, and so do Esc, the scrim, the ✕ and
+      Cancel; what was typed is the draft whichever way it closed. 720px wide at
+      <code>lg</code> and 880px from <code>xl</code>
+      (<code>dialog-size.ts</code>), anchored by its top so a form that grows
+      pushes only its foot down, and capped at the window less 5rem, past which
+      the body scrolls between a fixed title row and a fixed foot.
+    </p>
+
+    <div class="spec-label">Add expense, at 1440px</div>
+    <div
+      class="frame"
+      style="
+        max-width: 55rem;
+        background: var(--background);
+        box-shadow: 0 24px 60px -18px oklch(0.226 0.072 319 / 0.45);
+      "
+    >
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          padding: 0.875rem 1.25rem;
+          border-bottom: 1px solid var(--border);
+        "
+      >
+        <span style="font-size: 1.125rem; font-weight: 600">Add expense</span>
+        <span
+          style="
+            display: inline-flex;
+            gap: 2px;
+            padding: 4px;
+            border-radius: var(--radius-xl);
+            background: var(--muted);
+            font-size: 0.875rem;
+          "
+        >
+          <span
+            style="
+              padding: 0.375rem 0.75rem;
+              border-radius: 8px;
+              background: var(--accent);
+              font-weight: 600;
+            "
+            >Expense</span
+          >
+          <span
+            style="
+              padding: 0.375rem 0.75rem;
+              color: var(--muted-foreground);
+              font-weight: 500;
+            "
+            >Income</span
+          >
+          <span
+            style="
+              padding: 0.375rem 0.75rem;
+              color: var(--muted-foreground);
+              font-weight: 500;
+            "
+            >Repayment</span
+          >
+        </span>
+        <span
+          class="btn btn--icon-sm btn--secondary"
+          style="margin-left: auto; border-radius: 999px"
+          >✕</span
+        >
+      </div>
+
+      <div
+        style="
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+          padding: 1.25rem;
+        "
+      >
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 18.75rem minmax(0, 1fr);
+            gap: 1rem;
+          "
+        >
+          <div class="card" style="padding: 1rem; gap: 0.5rem">
+            <span class="field-desc">Amount</span>
+            <span
+              style="
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                font-size: 2.5rem;
+                font-weight: 600;
+                letter-spacing: -0.03em;
+              "
+              >86.20<span
+                class="badge badge--outline"
+                style="margin-left: auto; font-size: 0.875rem"
+                >🇪🇺 EUR</span
+              ></span
+            >
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 0.75rem">
+            <div class="card" style="padding: 0; gap: 0">
+              <span
+                style="
+                  padding: 0.875rem 1rem;
+                  border-bottom: 1px solid var(--border);
+                "
+                >Groceries, Mercado da Ribeira</span
+              >
+              <span style="padding: 0.875rem 1rem; font-weight: 600"
+                >Groceries ✦</span
+              >
+            </div>
+            <div class="card" style="padding: 0.875rem 1rem; font-weight: 600">
+              Today
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.5rem">
+          <span class="spec-label" style="margin: 0">Paid by</span>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem">
+            <span
+              class="badge badge--outline"
+              style="border-color: var(--payer)"
+              ><span class="avatar">SB</span> You ✓</span
+            >
+            <span class="badge badge--outline"
+              ><span class="avatar">AM</span> Amélie</span
+            >
+            <span class="badge badge--outline"
+              ><span class="avatar">MI</span> Mira</span
+            >
+            <span class="badge badge--outline"
+              ><span class="avatar">RA</span> Ravi</span
+            >
+            <span class="badge badge--outline" style="border-style: dashed"
+              >Several</span
+            >
+          </div>
+          <span class="spec-label" style="margin: 0.25rem 0 0"
+            >Split between</span
+          >
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem">
+            <span
+              class="badge badge--outline"
+              style="border-color: var(--primary)"
+              ><span class="avatar">SB</span> You ✓</span
+            >
+            <span
+              class="badge badge--outline"
+              style="border-color: var(--primary)"
+              ><span class="avatar">AM</span> Amélie ✓</span
+            >
+            <span
+              class="badge badge--outline"
+              style="border-color: var(--primary)"
+              ><span class="avatar">MI</span> Mira ✓</span
+            >
+            <span
+              class="badge badge--outline"
+              style="border-color: var(--primary)"
+              ><span class="avatar">RA</span> Ravi ✓</span
+            >
+            <span class="badge badge--outline" style="border-style: dashed"
+              >+ Add someone</span
+            >
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.625rem">
+          <div style="display: flex; align-items: center; gap: 0.75rem">
+            <span
+              style="
+                display: inline-flex;
+                gap: 2px;
+                padding: 4px;
+                border-radius: var(--radius-xl);
+                background: var(--muted);
+                font-size: 0.875rem;
+              "
+            >
+              <span
+                style="
+                  padding: 0.375rem 0.75rem;
+                  border-radius: 8px;
+                  background: var(--accent);
+                  font-weight: 600;
+                "
+                >Equally</span
+              >
+              <span style="padding: 0.375rem 0.75rem">Shares</span>
+              <span style="padding: 0.375rem 0.75rem">Exact</span>
+              <span style="padding: 0.375rem 0.75rem">Percent</span>
+            </span>
+            <span class="field-desc"
+              >Split evenly between everyone selected.</span
+            >
+          </div>
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+              gap: 0 0.5rem;
+              padding: 0.25rem;
+              border-radius: 14px;
+              background: var(--wash-1, var(--muted));
+              font-size: 0.875rem;
+            "
+          >
+            <span
+              style="
+                display: flex;
+                justify-content: space-between;
+                padding: 0.875rem 0.75rem;
+              "
+              ><span>You</span><span>€21.55</span></span
+            >
+            <span
+              style="
+                display: flex;
+                justify-content: space-between;
+                padding: 0.875rem 0.75rem;
+              "
+              ><span>Amélie</span><span>€21.55</span></span
+            >
+            <span
+              style="
+                display: flex;
+                justify-content: space-between;
+                padding: 0.875rem 0.75rem;
+              "
+              ><span>Mira</span><span>€21.55</span></span
+            >
+            <span
+              style="
+                display: flex;
+                justify-content: space-between;
+                padding: 0.875rem 0.75rem;
+              "
+              ><span>Ravi</span><span>€21.55</span></span
+            >
+          </div>
+        </div>
+      </div>
+
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 0.5rem;
+          padding: 0.75rem 1.25rem;
+          border-top: 1px solid var(--border);
+        "
+      >
+        <span
+          class="field-desc"
+          style="
+            margin-right: auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+          "
+          ><span class="kbd">⌘</span><span class="kbd">↵</span> to save</span
+        >
+        <span class="btn btn--ghost btn--lg">Cancel</span>
+        <span class="btn btn--default btn--lg">Add expense</span>
+      </div>
+    </div>
+
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>title row</dt>
+      <dd>
+        The title, the three kinds of entry as tabs each as wide as its word,
+        and the ✕. Below <code>lg</code> the tabs are their own full-width row,
+        as ever.
+      </dd>
+      <dt>top</dt>
+      <dd>
+        The amount (18.75rem) beside the description, its category and the date
+        from <code>xl</code>; at <code>lg</code> they stack, the amount first.
+        The same cards as the phone's.
+      </dd>
+      <dt>split</dt>
+      <dd>
+        The split sheet's own contents, in place, with no row to open and no
+        Done: who paid, who is in — the reader "You" and first — the four
+        methods in full beside their hint, and the shares in two columns.
+      </dd>
+      <dt>pickers</dt>
+      <dd>
+        Category and currency open as popovers on the row and the chip that open
+        them; the currency list searches as it opens. Who pays whom, every
+        payment method and the schedule stay sheets, drawn as 30rem dialogs.
+      </dd>
+      <dt>⌘↵</dt>
+      <dd>
+        Ctrl ↵ off a Mac. The form's own key, not the window's: it presses the
+        button, from any field, and does nothing the button would not. The
+        button says so with <code>aria-keyshortcuts</code>; the hint beside it
+        is hidden from a screen reader.
+      </dd>
+      <dt>repayment</dt>
+      <dd>
+        The outstanding repayments one line each — the mark, the face, the
+        sentence, the figure — then the amount with Full and Part of it under
+        it, beside the description, the date and how it was paid as chips. The
+        outcome sits in a box with the currency the two end up square in, and a
+        line on Balancia only recording it. Settle up's Record a repayment opens
+        this tab with nobody picked.
+      </dd>
+      <dt>which group</dt>
+      <dd>
+        Add expense outside a group asks first, in a 30rem dialog: each row a
+        tile, the name, its people and last activity, and a number key. 1 to 9
+        pick, ↑ ↓ walk the rows, ↵ takes one; a digit typed into the search
+        stays a digit.
+      </dd>
+    </dl>
   </section>
 
   <section>
@@ -2444,6 +3287,105 @@ a[aria-current="page"] .nav-icon--primary {
       <dd>
         The list beside "how do you want to join" — see
         <em>Joining from a group link</em>.
+      </dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Keys</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      From <code>lg</code> up the shell answers a handful of keys, from one
+      listener mounted once beside the screen
+      (<code>src/components/layout/use-shortcuts.ts</code>). Every key presses a
+      control that is already on the screen — the sidebar's Search, its Add
+      expense and its fold toggle carry a <code>data-shortcut</code> for it —
+      and none is the only way to anything. Below <code>lg</code> there is no
+      sidebar and no key does anything.
+    </p>
+    <dl class="dl">
+      <dt><span class="kbd">⌘</span> <span class="kbd">K</span></dt>
+      <dd>
+        Search or jump to: the command palette, from any screen and from inside
+        a field. Ctrl K off a Mac — and only there, because Ctrl K in a Mac's
+        text field deletes to the end of the line. Pressed again, it closes the
+        palette. Under another dialog it does nothing.
+      </dd>
+      <dt><span class="kbd">N</span></dt>
+      <dd>
+        Add expense: to this group inside one, through "Add to which group?"
+        outside. It presses the sidebar's own Add, so the offline form and the
+        chooser come with it.
+      </dd>
+      <dt><span class="kbd">S</span></dt>
+      <dd>Settle up in this group. Nothing outside a group.</dd>
+      <dt><span class="kbd">⌘</span> <span class="kbd">\</span></dt>
+      <dd>
+        Folds the sidebar to its icons, or opens it again, remembered for the
+        device as a click on the toggle is.
+      </dd>
+      <dt><span class="kbd">Esc</span></dt>
+      <dd>
+        Closes the topmost thing — a menu, then the palette, then the dialog
+        under it. It is each layer's own, never the shell's: a second listener
+        would close the palette under an open menu.
+      </dd>
+      <dt>
+        <span class="kbd">↑</span> <span class="kbd">↓</span>
+        <span class="kbd">↵</span>
+      </dt>
+      <dd>
+        Move and follow inside the palette; <span class="kbd">⌘</span>
+        <span class="kbd">↵</span> opens a row in a new tab. See
+        <em>Navigation › Command palette</em>.
+      </dd>
+    </dl>
+    <div class="spec" style="margin-top: 1rem">
+      <div class="spec-label">
+        Single-key shortcuts — Settings › Appearance &amp; language, from lg up
+      </div>
+      <div
+        class="card"
+        style="
+          flex-direction: row;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1rem;
+          max-width: 34rem;
+        "
+      >
+        <span>
+          <span style="font-weight: 500">Single-key shortcuts</span><br /><span
+            class="note"
+            style="margin: 0"
+            >N adds an expense and S settles up when no field has the cursor.
+            Stays on this device.</span
+          >
+        </span>
+        <span
+          class="switch"
+          role="switch"
+          aria-checked="true"
+          aria-label="Single-key shortcuts"
+          data-checked=""
+          ><span class="switch-thumb"></span
+        ></span>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>letters</dt>
+      <dd>
+        N and S are single characters, so they fire only when nothing is being
+        typed — no field, select, editable region or list with its own typeahead
+        has the focus — and nothing is open over the screen. A switch turns them
+        off (WCAG 2.1.4): a reader who drives the page by voice can say a letter
+        without meaning a command. Keys with a modifier are not covered and stay
+        on.
+      </dd>
+      <dt>device</dt>
+      <dd>
+        The switch is kept per device in a cookie, like the dark surface and the
+        folded sidebar, so it is drawn the way it stands. On is the absence of a
+        choice. It saves in silence, as every switch in settings does.
       </dd>
     </dl>
   </section>

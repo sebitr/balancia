@@ -1,4 +1,4 @@
-<!-- @dsCard group="Components" name="Navigation" subtitle="App shell header, screen header, a group's bottom bar, and the desktop sidebar and group tabs" -->
+<!-- @dsCard group="Components" name="Navigation" subtitle="App shell header, screen header, a group's bottom bar, and the desktop sidebar, group tabs and command palette" -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -1019,6 +1019,143 @@ a.list-row:focus-visible {
   font-variant-numeric: tabular-nums lining-nums;
 }
 
+/* The table at width — src/components/expenses/transactions-table.tsx. A card
+   box, a 36px header on a muted wash, 52px rows (60 with a second line), the
+   whole row one link, no zebra. Its columns are decided by the box, not the
+   window: under 60rem of table the middle columns fold into the description's
+   second line. */
+.tbl-box {
+  background: var(--card);
+  border-radius: 1rem;
+  box-shadow: 0 0 0 1px var(--border);
+  overflow: hidden;
+}
+.tbl-box .tbl {
+  table-layout: fixed;
+}
+.tbl-box .tbl thead {
+  background: color-mix(in oklch, var(--muted) 40%, var(--card));
+}
+.tbl-box .tbl td {
+  height: 3.25rem;
+  padding: 0.5rem 0.75rem;
+}
+.tbl-box .tbl th:first-child,
+.tbl-box .tbl td:first-child {
+  padding-left: 1rem;
+}
+.tbl-box .tbl th:last-child,
+.tbl-box .tbl td:last-child {
+  padding-right: 1rem;
+}
+.tbl-row {
+  position: relative;
+  transition: background-color 150ms ease;
+}
+.tbl-row:hover,
+.tbl-row:has(a:focus-visible) {
+  background: color-mix(in oklch, var(--foreground) 4%, transparent);
+}
+.tbl-link {
+  font-weight: 500;
+  color: inherit;
+  text-decoration: none;
+  outline: none;
+}
+.tbl-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.tbl-link:focus-visible::after {
+  box-shadow: inset 0 0 0 2px var(--ring);
+}
+.tbl-sub {
+  display: block;
+  margin-top: 0.125rem;
+  overflow: hidden;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tbl-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--foreground);
+}
+.tbl-sort svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.tbl-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklch, var(--muted) 30%, var(--card));
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+/* The filters on one row above that table — src/components/expenses/filter-row.tsx.
+   36px controls: the search field, the kind chips (several may be on), the
+   Category and When menus, More filters, and Add at the end. */
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.filter-row .input {
+  height: 2.25rem;
+  border-radius: 0.75rem;
+  background: var(--card);
+}
+.filter-chip {
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.filter-chip[aria-pressed="true"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+}
+.filter-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2.25rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--input);
+  border-radius: 0.75rem;
+  background: var(--card);
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.filter-select svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted-foreground);
+}
+.filter-select--on {
+  border-color: var(--primary);
+  background: color-mix(in oklch, var(--primary) 15%, transparent);
+}
+
 /* ── money — src/components/money/amount.tsx ── */
 .balance {
   display: inline-flex;
@@ -1721,6 +1858,115 @@ a[aria-current="page"] .nav-icon--primary {
   line-height: 1.35;
 }
 
+/* The command palette — src/components/layout/command-palette.tsx. "Search
+   or jump to", over the screen from lg up: a field, the list under it in
+   sections, and the keys along the foot. 40rem, anchored by its top. A row is
+   44px and lit with the sidebar's wash where ↵ will go; a figure in it is a
+   total in neutral ink, a position the sidebar's phrase in the tone's. */
+.palette {
+  display: flex;
+  flex-direction: column;
+  max-width: 40rem;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: var(--shadow-raised);
+  font-size: 0.875rem;
+}
+.palette-in {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  height: 3.5rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 1rem;
+}
+.palette-in svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+.palette-query {
+  flex: 1;
+  min-width: 0;
+}
+.palette-sec {
+  padding: 0.625rem 1rem 0.25rem;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.palette-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: calc(100% - 1rem);
+  min-height: 2.75rem;
+  margin: 0 0.5rem;
+  padding: 6px 0.625rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+.palette-row[aria-selected="true"] {
+  background: var(--sidebar-accent);
+}
+.palette-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+.palette-row-sub {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+.palette-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+.palette-glyph svg {
+  width: 1rem;
+  height: 1rem;
+}
+.palette-fig {
+  flex-shrink: 0;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.palette-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1rem;
+  padding: 0.625rem 1rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklch, var(--muted) 35%, var(--popover));
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+.palette-foot > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
 /* A group's header, above the screen on its four places from lg up: the
    tile, the name with its currencies, a meta line, and the places as a
    segmented row. `src/components/layout/group-header.tsx`. */
@@ -1814,6 +2060,123 @@ a[aria-current="page"] .nav-icon--primary {
   flex-direction: column;
   gap: 1.625rem;
   min-width: 0;
+}
+/* From xl (1280px) up the money gets the larger share: seven to five. Halves
+   at lg, where each column needs its 360px. */
+.overview-cols--wide {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+}
+/* A position card's actions beside the sidebar: the buttons at their own
+   width, "How this is calculated" at the far end of the same row. */
+.position-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+.position-actions .btn {
+  height: 2.875rem;
+  padding: 0 1rem;
+  font-weight: 600;
+}
+.position-actions .position-how {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+/* The spending card's category bars, from lg up: label, bar, figure, on
+   columns every row shares, so the bars start and end level down the card.
+   Chart colours by rank — never --chart-2, the accent, and never a money
+   colour. `src/components/groups/spending-card.tsx`. */
+.cat-bars-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.cat-bars {
+  display: grid;
+  grid-template-columns: minmax(0, 7rem) minmax(0, 1fr) auto;
+  gap: 0.625rem 0.75rem;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+}
+.cat-bars li {
+  display: contents;
+}
+.cat-bars i {
+  display: block;
+  height: 0.5rem;
+  border-radius: 9999px;
+}
+.cat-bars .cat-figure {
+  text-align: right;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Settings from lg up: still a surface, with no rail — the hub as a 20rem pane
+   beside the screen it led to, and the ✕ once along the top of both.
+   `src/app/settings/layout.tsx`. */
+.settings-desk {
+  max-width: 64rem;
+  padding: 2.25rem 1.5rem 3rem;
+}
+.settings-desk-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.settings-desk-title {
+  display: block;
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.settings-desk-sub {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+.settings-panes {
+  display: grid;
+  grid-template-columns: 20rem minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+.settings-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+}
+.settings-pane-label {
+  padding: 0 0.375rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+/* A row's value sits at its end, as on the phone's hub. */
+.settings-pane .list-row > .list-sub {
+  margin-top: 0;
+}
+/* The row whose screen is on the right: the third wash, a step past hover. */
+.settings-pane a.list-row[aria-current="page"] {
+  background: color-mix(in oklch, var(--foreground) 9%, transparent);
 }
 
 /* ── swatches ── */
@@ -2004,14 +2367,17 @@ a[aria-current="page"] .nav-icon--primary {
       <dt>title</dt>
       <dd>
         <code>text-base</code> beside an arrow, <code>text-2xl</code> without
-        one. Truncates; it never wraps to a second line.
+        one. Truncates; it never wraps to a second line. A settings screen draws
+        its arrow below <code>lg</code> only — from there the hub stands beside
+        it — so from <code>lg</code> its title leads at <code>text-2xl</code>.
       </dd>
       <dt>close</dt>
       <dd>
         Filled, and only where a whole surface closes. Settings is the only one
         that has it. It goes back to the screen settings was opened from — the
         dashboard only when there is none — and animates as a
-        <code>pop</code>, like the arrow.
+        <code>pop</code>, like the arrow. From <code>lg</code> up the surface
+        draws it once, along the top of the hub and the screen beside it.
       </dd>
       <dt>padding</dt>
       <dd>
@@ -2682,6 +3048,227 @@ a[aria-current="page"] .nav-icon--primary {
       <dd>
         Outside the part of the page that moves, so a switch between tabs fades
         the screen through and leaves the tabs where they are.
+      </dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Command palette — from lg up</h2>
+    <p class="note" style="margin-bottom: 1rem">
+      "Search or jump to", opened by ⌘K (Ctrl K) on any signed-in screen or by
+      the sidebar's Search. One field over a list in four parts — the reader's
+      groups with where they stand in each, the transactions of the group they
+      are in, the people in their groups, and what this screen offers — and the
+      keys along the foot. An empty field lists the groups and the actions.
+      40rem wide, anchored 6rem from the top of the window, so the field stays
+      where it is while the list under it changes with every key.
+    </p>
+    <div
+      class="frame"
+      style="max-width: 46rem; padding: 1.5rem; background: var(--muted)"
+    >
+      <div class="palette" role="dialog" aria-label="Search or jump to">
+        <div class="palette-in">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <span class="palette-query">din</span>
+          <span class="kbd">Esc</span>
+        </div>
+        <div role="listbox" aria-label="Results" style="padding-bottom: 0.5rem">
+          <div role="group" aria-labelledby="pal-entries">
+            <div id="pal-entries" class="palette-sec" role="presentation">
+              Transactions in Lisbon, March
+            </div>
+            <a class="palette-row" href="#" role="option" aria-selected="true"
+              ><span class="palette-glyph"
+                ><svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8"
+                  />
+                  <path
+                    d="M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7"
+                  />
+                  <path d="m2.1 21.8 6.4-6.3" />
+                  <path d="m19 5-7 7" /></svg></span
+              ><span class="palette-row-text"
+                ><span
+                  ><span style="font-weight: 500"
+                    >Dinner at Trattoria Il Ponte</span
+                  >
+                  <span class="palette-row-sub"
+                    >· 12 Aug · Amélie paid</span
+                  ></span
+                ></span
+              ><span class="palette-fig">€128.40</span
+              ><span class="kbd">↵</span></a
+            >
+            <a class="palette-row" href="#" role="option" aria-selected="false"
+              ><span class="palette-glyph"
+                ><svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M8 3 4 7l4 4" />
+                  <path d="M4 7h16" />
+                  <path d="m16 21 4-4-4-4" />
+                  <path d="M20 17H4" /></svg></span
+              ><span class="palette-row-text"
+                ><span
+                  ><span style="font-weight: 500">Jonas paid Amélie</span>
+                  <span class="badge badge--outline">Repayment</span>
+                  <span class="palette-row-sub">· 11 Aug</span></span
+                ></span
+              ><span class="palette-fig">€120.00</span></a
+            >
+          </div>
+          <div role="group" aria-labelledby="pal-people">
+            <div id="pal-people" class="palette-sec" role="presentation">
+              People
+            </div>
+            <a class="palette-row" href="#" role="option" aria-selected="false"
+              ><span class="avatar">D</span
+              ><span class="palette-row-text"
+                ><span style="font-weight: 500">Dina</span
+                ><span class="palette-row-sub">Book club</span></span
+              ></a
+            >
+          </div>
+          <div role="group" aria-labelledby="pal-actions">
+            <div id="pal-actions" class="palette-sec" role="presentation">
+              Actions
+            </div>
+            <button
+              class="palette-row"
+              type="button"
+              role="option"
+              aria-selected="false"
+              aria-keyshortcuts="N"
+            >
+              <span class="palette-glyph"
+                ><svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M5 12h14" />
+                  <path d="M12 5v14" /></svg></span
+              ><span class="palette-row-text"
+                >Add an expense to Lisbon, March</span
+              ><span class="kbd">N</span>
+            </button>
+            <a
+              class="palette-row"
+              href="#"
+              role="option"
+              aria-selected="false"
+              aria-keyshortcuts="S"
+              ><span class="palette-glyph"
+                ><svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"
+                  />
+                  <path
+                    d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"
+                  /></svg></span
+              ><span class="palette-row-text">Settle up in Lisbon, March</span
+              ><span class="kbd">S</span></a
+            >
+          </div>
+        </div>
+        <div class="palette-foot" aria-hidden="true">
+          <span><span class="kbd">↑</span><span class="kbd">↓</span>Move</span>
+          <span><span class="kbd">↵</span>Open</span>
+          <span
+            ><span class="kbd">⌘</span><span class="kbd">↵</span>Open in a new
+            tab</span
+          >
+          <span style="margin-left: auto"
+            ><span class="kbd">Esc</span>Close</span
+          >
+        </div>
+      </div>
+    </div>
+    <div class="spec" style="margin-top: 1rem">
+      <div class="spec-label">A group, as the palette lists it</div>
+      <div class="palette" style="max-width: 40rem; padding: 0.5rem 0">
+        <div class="palette-row" role="option" aria-selected="true">
+          <span class="sidebar-tile">LM</span
+          ><span class="palette-row-text"
+            ><span style="font-weight: 500">Lisbon, March</span
+            ><span class="palette-row-sub"
+              ><span class="sidebar-pos--positive">you are owed €248.00</span> ·
+              <span class="sidebar-pos--negative">you owe CHF 62.20</span></span
+            ></span
+          ><span class="kbd">↵</span>
+        </div>
+      </div>
+    </div>
+    <dl class="dl" style="margin-top: 1rem">
+      <dt>pattern</dt>
+      <dd>
+        A combobox over a listbox. The field keeps the focus and names the row ↑
+        and ↓ have reached with <code>aria-activedescendant</code>; every row is
+        an option and the real thing behind it — a link to where it goes, or a
+        button for Add, which opens a dialog of its own once the palette has
+        closed. 44px rows, lit with <code>--sidebar-accent</code> where ↵ will
+        go, as the sidebar lights the current place.
+      </dd>
+      <dt>sections</dt>
+      <dd>
+        Groups, in the sidebar's order and words. Transactions in the group
+        being read, found as the list's own search finds them. People in the
+        reader's groups, the current group's first, the reader left out. Actions
+        — Add an expense to the group (N), Settle up in it (S), Open settings —
+        narrowed by what was typed like everything else. A guest has no list of
+        groups and no settings.
+      </dd>
+      <dt>money</dt>
+      <dd>
+        A group's position is the sidebar's phrase, one per currency, in the
+        tone's ink. A transaction's total is neutral: it is what the entry was
+        for, not where anybody stands. The accent never paints a figure.
+      </dd>
+      <dt>answers</dt>
+      <dd>
+        One Server Action per pause in typing, an answer to an older query
+        dropped. The groups narrow in the browser at every key; people and
+        transactions follow. Nothing found is said in a sentence, on the screen
+        and through the field's status line.
       </dd>
     </dl>
   </section>

@@ -48,6 +48,27 @@
     "sidebarKeepGroup": "Keep {group}",
     "sidebarGuestNote": "This browser is the only place your access lives."
   },
+  "palette": {
+    "label": "Search groups, people and transactions",
+    "results": "Results",
+    "transactionsIn": "Transactions in {group}",
+    "actions": "Actions",
+    "addExpense": "Add an expense",
+    "addExpenseTo": "Add an expense to {group}",
+    "settleUpIn": "Settle up in {group}",
+    "openSettings": "Open settings",
+    "paidLine": "{who, select, you {You paid} withYou {{names} paid} other {{count, plural, one {{names} paid} other {{names} paid}}}}",
+    "you": "You",
+    "repayment": "Repayment",
+    "income": "Income",
+    "nothing": "No group, person or transaction matches “{query}”.",
+    "resultCount": "{count, plural, one {# result} other {# results}}",
+    "failed": "Couldn't search just now. Try again.",
+    "move": "Move",
+    "open": "Open",
+    "openNewTab": "Open in a new tab",
+    "close": "Close"
+  },
   "theme": {
     "menu": "Theme"
   },
@@ -564,6 +585,8 @@
     "pickerCount": "{shown} of {total, plural, one {# group} other {# groups}}",
     "pickerSearchLabel": "Search your groups",
     "pickerSearchPlaceholder": "Search groups",
+    "pickerMove": "Move",
+    "pickerChoose": "Choose",
     "peopleCount": "{count, plural, one {# person} other {# people}}",
     "settledWord": "Settled",
     "noExpensesWord": "No expenses yet",
@@ -733,6 +756,22 @@
     "positionYouReceived": "You received {amount}",
     "positionYouPaid": "You paid {amount}",
     "positionEven": "{kind, select, revenue {You received your share} other {You paid your share}}",
+    "table": {
+      "date": "Date",
+      "description": "Description",
+      "category": "Category",
+      "paidBy": "Paid by",
+      "split": "Split",
+      "amount": "Amount",
+      "forYou": "For you",
+      "you": "You",
+      "paidByLine": "{who, select, you {You paid} withYou {{names} paid} other {{count, plural, one {{names} paid} other {{names} paid}}}}",
+      "split_ways": "{scope, select, all {{method, select, equal {{count} equally} shares {{count}, by shares} percentage {{count}, by percentage} other {{count}, exact amounts}}} other {{method, select, equal {{count} of {total}} shares {{count} of {total}, by shares} percentage {{count} of {total}, by percentage} other {{count} of {total}, exact amounts}}}}",
+      "receipts": "{count, plural, one {# receipt} other {# receipts}}",
+      "footer": "Showing {shown} of {total, plural, one {# transaction} other {# transactions}} · {sort, select, oldest {sorted by date, oldest first} largest {sorted by amount, largest first} other {sorted by date, newest first}}",
+      "footerUncounted": "Showing {shown, plural, one {# transaction} other {# transactions}} · {sort, select, oldest {sorted by date, oldest first} largest {sorted by amount, largest first} other {sorted by date, newest first}}",
+      "footerMore": "More load as you scroll"
+    },
     "filters": {
       "title": "Filter and sort",
       "description": "Narrow the list and choose its order. Nothing changes until you apply.",
@@ -779,7 +818,12 @@
       "sort": "Sort",
       "sort_newest": "Newest first",
       "sort_oldest": "Oldest first",
-      "sort_largest": "Largest amount"
+      "sort_largest": "Largest amount",
+      "anyCategory": "Any category",
+      "categoryMenu": "Category: {value}",
+      "whenMenu": "When: {value}",
+      "more": "More filters",
+      "moreWith": "More filters, {count, plural, one {# applied} other {# applied}}"
     }
   },
   "userSettings": {
@@ -787,6 +831,7 @@
     "yourAccount": "Your account",
     "close": "Close settings",
     "backToSettings": "Back to settings",
+    "signedInTo": "Signed in to {instance} as {email}",
     "groupAccount": "Account",
     "groupPreferences": "Preferences",
     "groupData": "Data",
@@ -893,6 +938,8 @@
     "accentFailed": "That colour could not be saved.",
     "language": "Language",
     "languageNote": "Language changes the words. How dates and amounts are written lives in Money & formats, so you can read English and still write 13/08/2026.",
+    "singleKeys": "Single-key shortcuts",
+    "singleKeysHelp": "N adds an expense and S settles up when no field has the cursor. Stays on this device.",
     "currencyTitle": "Show my totals in",
     "currencyHelp": "Every group is converted into this on your home screen. Each group keeps its own currency.",
     "currencySaved": "Preferred currency saved",
@@ -1086,6 +1133,7 @@
   },
   "settleUp": {
     "title": "Settle up",
+    "recordRepayment": "Record a repayment",
     "clearsGroup": "{count, plural, one {# repayment clears the group} other {# repayments clear the group}}",
     "clearsCurrency": "{count, plural, one {# repayment clears this currency} other {# repayments clear this currency}}",
     "betweenOthers": "Between others",
@@ -2389,6 +2437,8 @@
     "intro": "Everyone who shares expenses in this group. Tap a person to rename them, manage their access, or remove them.",
     "introMember": "Everyone who shares expenses in this group. Tap yourself to change the name you go by here or to leave, or anyone without an account to fix theirs. The group's owner looks after access.",
     "introReadOnly": "Everyone who shares expenses in this group.",
+    "introDesk": "Everyone who shares expenses in this group. Open a person to see what is between you, or their options to rename them, manage their access, or remove them.",
+    "introMemberDesk": "Everyone who shares expenses in this group. Open a person to see what is between you. Your own options change the name you go by here or let you leave, and those of anyone without an account fix theirs. The group's owner looks after access.",
     "footnote": "Expenses keep the name of whoever paid, even after someone leaves the group.",
     "owner": "Owner",
     "guest": "Guest",
@@ -2467,7 +2517,23 @@
     "justAddThemHint": "You can invite them later",
     "addPerson": "Add person",
     "addedNoAccess": "{name} added — no access yet",
-    "addFailed": "That person could not be added."
+    "addFailed": "That person could not be added.",
+    "table": {
+      "person": "Person",
+      "role": "Role",
+      "paid": "Paid",
+      "share": "Share",
+      "position": "Position",
+      "actions": "Actions",
+      "you": "you",
+      "options": "Options for {name}",
+      "positionGetsBack": "<figure>{amount}</figure> gets back",
+      "positionOwes": "<figure>{amount}</figure> owes",
+      "positionYouGetBack": "<figure>{amount}</figure> you get back",
+      "positionYouOwe": "<figure>{amount}</figure> you owe",
+      "footer": "{people, plural, one {# person} other {# people}}{unclaimed, plural, =0 {} one { · # person has no account yet} other { · # people have no account yet}}",
+      "footerCurrencies": "Paid and share in {currency} · {others} on each person’s page"
+    }
   },
   "memberStats": {
     "badgeYou": "You",
@@ -3278,6 +3344,7 @@
   "addEntry": {
     "back": "Back",
     "reload": "Reload",
+    "saveKeys": "<keys></keys> to save",
     "titles": {
       "expense": "Add expense",
       "income": "Add income",
@@ -3511,6 +3578,8 @@
       "outcomeUnder": "Partial repayment — {from} will still owe {to} {amount}.",
       "outcomeOver": "More than owed — {from} will owe {to} {amount}.",
       "outcomeExact": "{from} and {to} will be settled.",
+      "outcomeExactIn": "{from} and {to} will be settled in {currency}.",
+      "onlyRecords": "Balancia only records the repayment. It never moves the money itself.",
       "outcomeOtherCurrency": "Paid in {currency} — {from} still owes {to} {amount}.",
       "someoneElse": "Someone else",
       "changeWhoPays": "Change who pays",

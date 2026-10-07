@@ -1019,6 +1019,143 @@ a.list-row:focus-visible {
   font-variant-numeric: tabular-nums lining-nums;
 }
 
+/* The table at width — src/components/expenses/transactions-table.tsx. A card
+   box, a 36px header on a muted wash, 52px rows (60 with a second line), the
+   whole row one link, no zebra. Its columns are decided by the box, not the
+   window: under 60rem of table the middle columns fold into the description's
+   second line. */
+.tbl-box {
+  background: var(--card);
+  border-radius: 1rem;
+  box-shadow: 0 0 0 1px var(--border);
+  overflow: hidden;
+}
+.tbl-box .tbl {
+  table-layout: fixed;
+}
+.tbl-box .tbl thead {
+  background: color-mix(in oklch, var(--muted) 40%, var(--card));
+}
+.tbl-box .tbl td {
+  height: 3.25rem;
+  padding: 0.5rem 0.75rem;
+}
+.tbl-box .tbl th:first-child,
+.tbl-box .tbl td:first-child {
+  padding-left: 1rem;
+}
+.tbl-box .tbl th:last-child,
+.tbl-box .tbl td:last-child {
+  padding-right: 1rem;
+}
+.tbl-row {
+  position: relative;
+  transition: background-color 150ms ease;
+}
+.tbl-row:hover,
+.tbl-row:has(a:focus-visible) {
+  background: color-mix(in oklch, var(--foreground) 4%, transparent);
+}
+.tbl-link {
+  font-weight: 500;
+  color: inherit;
+  text-decoration: none;
+  outline: none;
+}
+.tbl-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.tbl-link:focus-visible::after {
+  box-shadow: inset 0 0 0 2px var(--ring);
+}
+.tbl-sub {
+  display: block;
+  margin-top: 0.125rem;
+  overflow: hidden;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tbl-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--foreground);
+}
+.tbl-sort svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.tbl-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklch, var(--muted) 30%, var(--card));
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+/* The filters on one row above that table — src/components/expenses/filter-row.tsx.
+   36px controls: the search field, the kind chips (several may be on), the
+   Category and When menus, More filters, and Add at the end. */
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.filter-row .input {
+  height: 2.25rem;
+  border-radius: 0.75rem;
+  background: var(--card);
+}
+.filter-chip {
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.filter-chip[aria-pressed="true"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+}
+.filter-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2.25rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--input);
+  border-radius: 0.75rem;
+  background: var(--card);
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.filter-select svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted-foreground);
+}
+.filter-select--on {
+  border-color: var(--primary);
+  background: color-mix(in oklch, var(--primary) 15%, transparent);
+}
+
 /* ── money — src/components/money/amount.tsx ── */
 .balance {
   display: inline-flex;
@@ -1721,6 +1858,115 @@ a[aria-current="page"] .nav-icon--primary {
   line-height: 1.35;
 }
 
+/* The command palette — src/components/layout/command-palette.tsx. "Search
+   or jump to", over the screen from lg up: a field, the list under it in
+   sections, and the keys along the foot. 40rem, anchored by its top. A row is
+   44px and lit with the sidebar's wash where ↵ will go; a figure in it is a
+   total in neutral ink, a position the sidebar's phrase in the tone's. */
+.palette {
+  display: flex;
+  flex-direction: column;
+  max-width: 40rem;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: var(--shadow-raised);
+  font-size: 0.875rem;
+}
+.palette-in {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  height: 3.5rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 1rem;
+}
+.palette-in svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+.palette-query {
+  flex: 1;
+  min-width: 0;
+}
+.palette-sec {
+  padding: 0.625rem 1rem 0.25rem;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.palette-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: calc(100% - 1rem);
+  min-height: 2.75rem;
+  margin: 0 0.5rem;
+  padding: 6px 0.625rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+.palette-row[aria-selected="true"] {
+  background: var(--sidebar-accent);
+}
+.palette-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+.palette-row-sub {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+.palette-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+.palette-glyph svg {
+  width: 1rem;
+  height: 1rem;
+}
+.palette-fig {
+  flex-shrink: 0;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.palette-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1rem;
+  padding: 0.625rem 1rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklch, var(--muted) 35%, var(--popover));
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+.palette-foot > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
 /* A group's header, above the screen on its four places from lg up: the
    tile, the name with its currencies, a meta line, and the places as a
    segmented row. `src/components/layout/group-header.tsx`. */
@@ -1814,6 +2060,123 @@ a[aria-current="page"] .nav-icon--primary {
   flex-direction: column;
   gap: 1.625rem;
   min-width: 0;
+}
+/* From xl (1280px) up the money gets the larger share: seven to five. Halves
+   at lg, where each column needs its 360px. */
+.overview-cols--wide {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+}
+/* A position card's actions beside the sidebar: the buttons at their own
+   width, "How this is calculated" at the far end of the same row. */
+.position-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+.position-actions .btn {
+  height: 2.875rem;
+  padding: 0 1rem;
+  font-weight: 600;
+}
+.position-actions .position-how {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+/* The spending card's category bars, from lg up: label, bar, figure, on
+   columns every row shares, so the bars start and end level down the card.
+   Chart colours by rank — never --chart-2, the accent, and never a money
+   colour. `src/components/groups/spending-card.tsx`. */
+.cat-bars-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.cat-bars {
+  display: grid;
+  grid-template-columns: minmax(0, 7rem) minmax(0, 1fr) auto;
+  gap: 0.625rem 0.75rem;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+}
+.cat-bars li {
+  display: contents;
+}
+.cat-bars i {
+  display: block;
+  height: 0.5rem;
+  border-radius: 9999px;
+}
+.cat-bars .cat-figure {
+  text-align: right;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Settings from lg up: still a surface, with no rail — the hub as a 20rem pane
+   beside the screen it led to, and the ✕ once along the top of both.
+   `src/app/settings/layout.tsx`. */
+.settings-desk {
+  max-width: 64rem;
+  padding: 2.25rem 1.5rem 3rem;
+}
+.settings-desk-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.settings-desk-title {
+  display: block;
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.settings-desk-sub {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+.settings-panes {
+  display: grid;
+  grid-template-columns: 20rem minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+.settings-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+}
+.settings-pane-label {
+  padding: 0 0.375rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+/* A row's value sits at its end, as on the phone's hub. */
+.settings-pane .list-row > .list-sub {
+  margin-top: 0;
+}
+/* The row whose screen is on the right: the third wash, a step past hover. */
+.settings-pane a.list-row[aria-current="page"] {
+  background: color-mix(in oklch, var(--foreground) 9%, transparent);
 }
 
 /* ── swatches ── */

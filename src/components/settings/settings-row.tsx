@@ -1,8 +1,7 @@
-import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 import { ChevronRight, type LucideIcon } from "lucide-react";
-import { PUSH } from "@/components/motion/transitions";
 import { cn } from "@/lib/utils";
+import { HubLink } from "./hub-link";
 
 /**
  * A row in a settings card, and the shape the whole hub is built from.
@@ -123,15 +122,25 @@ const ROW = cn(
   "focus-visible:ring-ring/50 focus-visible:outline-none focus-visible:-outline-offset-2",
 );
 
+/**
+ * The row whose screen stands beside the hub, from `lg` up.
+ *
+ * A wash a step past the hover's, so the row being pointed at and the row
+ * being shown never look alike — and a wash rather than the accent, because
+ * the summary beside the label is muted ink and has to stay legible on it.
+ * Hovering it keeps it as it is.
+ */
+const ROW_CURRENT = "bg-wash-3 hover:bg-wash-3";
+
 /** A row that goes somewhere. */
 export function SettingsLinkRow({
   href,
   ...content
 }: RowContent & { href: string }) {
   return (
-    <Link href={href} transitionTypes={PUSH} className={ROW}>
+    <HubLink href={href} className={ROW} currentClassName={ROW_CURRENT}>
       <RowBody {...content} chevron />
-    </Link>
+    </HubLink>
   );
 }
 

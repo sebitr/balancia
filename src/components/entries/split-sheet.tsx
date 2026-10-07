@@ -31,6 +31,11 @@ import { hasNoShare, remainingCandidate, stepShare } from "./split-shortcuts";
  * Income says the same things in its own words. Money that came in was
  * *received by* somebody and *credited to* the group, and calling that "paid
  * by" reads as a mistake on a screen whose whole job is who owes what.
+ *
+ * On a desk the same component is laid out in place, on the entry dialog
+ * under its amount, rather than behind a summary row in a sheet of its own —
+ * see `inline`. The dialog has the room a phone does not, and a sheet raised
+ * over a dialog is a second layer to dismiss on the way back to the form.
  */
 
 const METHODS: readonly SplitMethod[] = [
@@ -86,6 +91,7 @@ export function SplitSheet({
   onSplitPaymentEqually,
   onGiveRest,
   onDone,
+  inline = false,
 }: {
   members: readonly EntryMember[];
   /**
@@ -164,6 +170,13 @@ export function SplitSheet({
   onSplitPaymentEqually?: () => void;
   onGiveRest?: (participantId: string) => void;
   onDone: () => void;
+  /**
+   * Laid out in place on the form rather than in a sheet: no title and no
+   * total above it — the form's own amount is beside it — no Done under it,
+   * since there is nothing to close, and the people's rows in two columns
+   * with nothing to scroll but the form itself. The entry dialog on a desk.
+   */
+  inline?: boolean;
 }) {
   const t = useTranslations("addEntry.split");
 
@@ -236,6 +249,357 @@ export function SplitSheet({
     onSelect: onPayerChange,
   });
 
+  const methodTabs = (
+    <div
+      className={cn(
+        "flex gap-1 rounded-xl bg-muted p-1",
+        inline && "inline-flex shrink-0",
+      )}
+    >
+      {METHODS.map((candidate) => (
+        <button
+          key={candidate}
+          type="button"
+          onClick={() => chooseMethod(candidate)}
+          aria-pressed={candidate === method}
+          aria-label={t(`methods.${candidate}`)}
+          className={cn(
+            "tap-target h-9 flex-1 rounded-[calc(var(--radius-xl)_-_--spacing(1))] text-xs whitespace-nowrap transition-colors",
+            // Each as wide as its whole name: a desk has the room the short
+            // labels were cut for.
+            inline && "flex-none px-3 text-sm",
+            candidate === method
+              ? "bg-accent font-semibold text-foreground"
+              : "font-medium text-muted-foreground",
+          )}
+        >
+          {inline ? t(`methods.${candidate}`) : t(`methodTabs.${candidate}`)}
+        </button>
+      ))}
+    </div>
+  );
+  const methodHint = (
+    <p
+      className={cn(
+        "text-xs text-muted-foreground",
+        inline ? "min-w-0 flex-1" : "-mt-2",
+      )}
+    >
+      {t(`hints.${method}`)}
+    </p>
+  );
+
+  const body = (
+    <>
+      <section className="space-y-2">
+        <h3 className="text-2xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+          {t(received ? "receivedBy" : "paidBy")}
+        </h3>
+        {/* Wrapping pills rather than a row of equal columns: a group of ten
+              would otherwise divide the width ten ways and truncate every name
+              to its first letter.
+
+              The radio group is `contents`, so the faces and the "several"
+              pill after it still wrap as one line of pills, while only the
+              faces are the group — "several" is a switch of its own, and inside
+              a radio group it was announced as one more person to choose. */}
+        <div className="flex flex-wrap gap-2">
+          <div
+            role="radiogroup"
+            aria-label={t(received ? "receivedBy" : "paidBy")}
+            className="contents"
+          >
+            {shown.map((member) => (
+              <MemberPill
+                key={member.id}
+                name={member.displayName}
+                shownAs={nameOf(member)}
+                // Both halves of this sheet carry a control per person. The
+                // colours tell them apart on screen; these names do it for
+                // anyone who is not looking at the screen.
+                label={t(received ? "receiverOption" : "payerOption", {
+                  name: member.displayName,
+                  you: you(member.id),
+                })}
+                selected={!several && member.id === payerId}
+                onToggle={() => onPayerChange(member.id)}
+                tone="payer"
+                guest={member.guest}
+                choice
+                keys={payerKeys(member.id)}
+              />
+            ))}
+          </div>
+          {/*
+           * The last option, and dashed like every other "not one of these":
+           * two people splitting a deposit at the counter is real, and it was
+           * a permanent segmented control above these faces for a choice that
+           * goes the other way ninety-five times in a hundred.
+           *
+           * A toggle rather than a radio, because it is one: pressing it
+           * again turns it back off, which no radio does.
+           */}
+          {onSeveralChange && (
+            <button
+              type="button"
+              aria-pressed={several}
+              onClick={() => onSeveralChange(!several)}
+              className={cn(
+                "tap-target inline-flex h-10 items-center gap-2 rounded-full border pr-3 pl-1 text-sm transition-colors",
+                several
+                  ? "border-payer bg-payer/15 font-semibold text-foreground"
+                  : "border-dashed border-border bg-wash-1 font-normal text-muted-foreground",
+              )}
+            >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "grid size-[30px] shrink-0 place-items-center rounded-full border border-dashed",
+                  several ? "border-payer/40" : "border-border",
+                )}
+              >
+                <Users className="size-4" />
+              </span>
+              <span className="truncate">{t("several")}</span>
+            </button>
+          )}
+        </div>
+
+        {several && payerAmounts && onPayerAmountChange && (
+          <MultiPayerPanel
+            members={members}
+            selfId={selfId}
+            amounts={payerAmounts}
+            onAmountChange={onPayerAmountChange}
+            note={payerNote}
+            onJustOne={onJustOnePaid}
+            onSplitEqually={onSplitPaymentEqually}
+            onGiveRest={onGiveRest}
+          />
+        )}
+      </section>
+
+      <section className="space-y-2">
+        {/* No "Everyone" / "Just me" shortcuts: everyone is already the state
+              this sheet opens in, and the pills below reach either end in a tap
+              or two. Two more controls that mostly restate the selection cost
+              more attention than they save. */}
+        <h3 className="text-2xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+          {t(received ? "creditedTo" : "splitBetween")}
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          {shown.map((member) => (
+            <MemberPill
+              key={member.id}
+              name={member.displayName}
+              shownAs={nameOf(member)}
+              label={t("includeOption", {
+                name: member.displayName,
+                you: you(member.id),
+              })}
+              selected={includedIds.includes(member.id)}
+              onToggle={() => toggle(member.id)}
+              guest={member.guest}
+            />
+          ))}
+          {/*
+           * Somebody who is not on this instance and does not need to be.
+           * A split should not require everyone to have the app: the flatmate
+           * who never signed up is still owed their share, and inviting them
+           * first is a step between a person and the entry they are trying to
+           * write.
+           */}
+          {onAddGuest && (
+            <AddGuestPill onAdd={onAddGuest} label={t("addSomeone")} />
+          )}
+        </div>
+      </section>
+
+      {/* Four to a row at 360px leaves each tab 77px, and "À parts égales"
+            does not fit in that at the phone's 13px: it broke over two lines
+            beside three that did not. So a tab shows a short label where the
+            language needs one — "Égal", "%" — and is still called by the
+            method's whole name, which is what a screen reader says. On a desk
+            the hint is beside them, where the room is. */}
+      {inline ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          {methodTabs}
+          {methodHint}
+        </div>
+      ) : (
+        <>
+          {methodTabs}
+          {methodHint}
+        </>
+      )}
+
+      {/* The rows are a scroll container of their own past a few people, and
+            they must overflow rather than compress: a squashed row is how a
+            ten-person split loses its amounts. In place on a desk they are
+            two columns instead, and the form is what scrolls. */}
+      <ul
+        className={
+          inline
+            ? "grid grid-cols-2 gap-x-2 rounded-[14px] bg-wash-1 px-1 py-1"
+            : "max-h-[38vh] overflow-x-hidden overflow-y-auto rounded-[14px] bg-wash-1 [&>*]:shrink-0"
+        }
+      >
+        {readerFirst(rows, selfId).map((member) => {
+          const allocation = allocationFor(member.id);
+          const field = method !== "equal" && (
+            <Input
+              inputMode="decimal"
+              aria-label={t(`inputLabels.${method}`, {
+                name: member.displayName,
+                you: you(member.id),
+              })}
+              className={cn(
+                "h-9 tabular-nums",
+                // An exact split has no allocation column beside it, so the
+                // field takes that width back rather than leaving a gap: it
+                // is the one method whose typing is an amount, and amounts
+                // are the long thing to type. A share is a digit or two
+                // between its steppers.
+                method === "exact"
+                  ? "w-[154px] text-right"
+                  : method === "shares"
+                    ? "w-11 px-1 text-center"
+                    : "w-[72px] text-right",
+              )}
+              placeholder={method === "shares" ? "1" : "0"}
+              value={values[member.id] ?? ""}
+              onChange={(event) => typeValue(member.id, event.target.value)}
+            />
+          );
+          return (
+            <li
+              key={member.id}
+              className={
+                inline
+                  ? "flex h-13 min-w-0 items-center gap-3 px-3"
+                  : "flex h-15 items-center gap-3 border-b border-border p-3 last:border-b-0"
+              }
+            >
+              <MemberAvatar
+                name={member.displayName}
+                selected
+                tone={member.id === payerId ? "payer" : "primary"}
+                guest={member.guest}
+              />
+              <span className="min-w-0 flex-1 truncate text-sm">
+                {nameOf(member)}
+              </span>
+
+              {/* A share is 1, 2 or 3 nearly every time, and a keyboard is a
+                    lot of screen for one digit: a step either side, the field
+                    still there for a 1.5. */}
+              {method === "shares" ? (
+                <span className="flex shrink-0 items-center gap-2">
+                  <StepButton
+                    label={t("shareFewer", {
+                      name: member.displayName,
+                      you: you(member.id),
+                    })}
+                    disabled={hasNoShare(values[member.id])}
+                    onClick={() =>
+                      typeValue(member.id, stepShare(values[member.id], -1))
+                    }
+                  >
+                    <Minus aria-hidden="true" className="size-3.5" />
+                  </StepButton>
+                  {field}
+                  <StepButton
+                    label={t("shareMore", {
+                      name: member.displayName,
+                      you: you(member.id),
+                    })}
+                    onClick={() =>
+                      typeValue(member.id, stepShare(values[member.id], 1))
+                    }
+                  >
+                    <Plus aria-hidden="true" className="size-3.5" />
+                  </StepButton>
+                </span>
+              ) : (
+                field
+              )}
+
+              {/* Shares and percentages need telling what they came to; an
+                    exact amount is already the number in the field, and
+                    printing it twice per row reads as two different figures
+                    that happen to agree. */}
+              {method !== "exact" && (
+                <span className="w-[70px] shrink-0 text-right text-sm tabular-nums">
+                  {allocation?.formatted ?? "—"}
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+
+      {/* Which way the split is out and by how much, or who pays a cent
+            more than somebody who asked for the same — whichever is true. The
+            row on the form says the first one too, once the sheet is shut. */}
+      {note && (
+        <p
+          className={cn(
+            "text-xs",
+            note.tone === "error"
+              ? "text-destructive-ink"
+              : "text-muted-foreground",
+          )}
+        >
+          {t(`notes.${note.key}`, note.params)}
+        </p>
+      )}
+
+      {remainingTo && remainingMember && onGiveRemaining && (
+        <div className="-mt-2 flex flex-wrap gap-1.5">
+          <ShortcutButton
+            onClick={() => {
+              setEdited((current) => new Set(current).add(remainingTo));
+              onGiveRemaining(remainingTo);
+            }}
+          >
+            {t("giveRemaining", {
+              amount: String(note?.params?.amount ?? ""),
+              name: remainingMember.displayName,
+              you: you(remainingMember.id),
+            })}
+          </ShortcutButton>
+        </div>
+      )}
+
+      {/*
+       * "We always split 30/30/40" is the most-asked-for thing in this
+       * category, and re-entering a fixed uneven split every time is the
+       * actual grind. Shown only once the split differs from
+       * equal-between-everyone, because that is already what a new entry
+       * does and remembering it would remember nothing.
+       */}
+      {alwaysSplit !== null && (
+        <label className="flex min-h-[52px] items-center justify-between gap-3 rounded-2xl bg-card px-4 py-2.5 shadow-hairline">
+          <span className="min-w-0">
+            <span className="block text-sm font-medium">
+              {t("alwaysTitle")}
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              {t("alwaysHint")}
+            </span>
+          </span>
+          <Switch
+            checked={alwaysSplit}
+            onCheckedChange={onAlwaysSplitChange}
+            aria-label={t("alwaysTitle")}
+          />
+        </label>
+      )}
+    </>
+  );
+
+  if (inline) return <div className="flex flex-col gap-4">{body}</div>;
+
   return (
     <div className="flex min-h-0 flex-col">
       {/* Held above the scroll, so the total every share is a part of stays
@@ -249,311 +613,7 @@ export function SplitSheet({
         </span>
       </div>
 
-      <PinnedBody>
-        <section className="space-y-2">
-          <h3 className="text-2xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
-            {t(received ? "receivedBy" : "paidBy")}
-          </h3>
-          {/* Wrapping pills rather than a row of equal columns: a group of ten
-              would otherwise divide the width ten ways and truncate every name
-              to its first letter.
-
-              The radio group is `contents`, so the faces and the "several"
-              pill after it still wrap as one line of pills, while only the
-              faces are the group — "several" is a switch of its own, and inside
-              a radio group it was announced as one more person to choose. */}
-          <div className="flex flex-wrap gap-2">
-            <div
-              role="radiogroup"
-              aria-label={t(received ? "receivedBy" : "paidBy")}
-              className="contents"
-            >
-              {shown.map((member) => (
-                <MemberPill
-                  key={member.id}
-                  name={member.displayName}
-                  shownAs={nameOf(member)}
-                  // Both halves of this sheet carry a control per person. The
-                  // colours tell them apart on screen; these names do it for
-                  // anyone who is not looking at the screen.
-                  label={t(received ? "receiverOption" : "payerOption", {
-                    name: member.displayName,
-                    you: you(member.id),
-                  })}
-                  selected={!several && member.id === payerId}
-                  onToggle={() => onPayerChange(member.id)}
-                  tone="payer"
-                  guest={member.guest}
-                  choice
-                  keys={payerKeys(member.id)}
-                />
-              ))}
-            </div>
-            {/*
-             * The last option, and dashed like every other "not one of these":
-             * two people splitting a deposit at the counter is real, and it was
-             * a permanent segmented control above these faces for a choice that
-             * goes the other way ninety-five times in a hundred.
-             *
-             * A toggle rather than a radio, because it is one: pressing it
-             * again turns it back off, which no radio does.
-             */}
-            {onSeveralChange && (
-              <button
-                type="button"
-                aria-pressed={several}
-                onClick={() => onSeveralChange(!several)}
-                className={cn(
-                  "tap-target inline-flex h-10 items-center gap-2 rounded-full border pr-3 pl-1 text-sm transition-colors",
-                  several
-                    ? "border-payer bg-payer/15 font-semibold text-foreground"
-                    : "border-dashed border-border bg-wash-1 font-normal text-muted-foreground",
-                )}
-              >
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "grid size-[30px] shrink-0 place-items-center rounded-full border border-dashed",
-                    several ? "border-payer/40" : "border-border",
-                  )}
-                >
-                  <Users className="size-4" />
-                </span>
-                <span className="truncate">{t("several")}</span>
-              </button>
-            )}
-          </div>
-
-          {several && payerAmounts && onPayerAmountChange && (
-            <MultiPayerPanel
-              members={members}
-              selfId={selfId}
-              amounts={payerAmounts}
-              onAmountChange={onPayerAmountChange}
-              note={payerNote}
-              onJustOne={onJustOnePaid}
-              onSplitEqually={onSplitPaymentEqually}
-              onGiveRest={onGiveRest}
-            />
-          )}
-        </section>
-
-        <section className="space-y-2">
-          {/* No "Everyone" / "Just me" shortcuts: everyone is already the state
-              this sheet opens in, and the pills below reach either end in a tap
-              or two. Two more controls that mostly restate the selection cost
-              more attention than they save. */}
-          <h3 className="text-2xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
-            {t(received ? "creditedTo" : "splitBetween")}
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {shown.map((member) => (
-              <MemberPill
-                key={member.id}
-                name={member.displayName}
-                shownAs={nameOf(member)}
-                label={t("includeOption", {
-                  name: member.displayName,
-                  you: you(member.id),
-                })}
-                selected={includedIds.includes(member.id)}
-                onToggle={() => toggle(member.id)}
-                guest={member.guest}
-              />
-            ))}
-            {/*
-             * Somebody who is not on this instance and does not need to be.
-             * A split should not require everyone to have the app: the flatmate
-             * who never signed up is still owed their share, and inviting them
-             * first is a step between a person and the entry they are trying to
-             * write.
-             */}
-            {onAddGuest && (
-              <AddGuestPill onAdd={onAddGuest} label={t("addSomeone")} />
-            )}
-          </div>
-        </section>
-
-        {/* Four to a row at 360px leaves each tab 77px, and "À parts égales"
-            does not fit in that at the phone's 13px: it broke over two lines
-            beside three that did not. So a tab shows a short label where the
-            language needs one — "Égal", "%" — and is still called by the
-            method's whole name, which is what a screen reader says. */}
-        <div className="flex gap-1 rounded-xl bg-muted p-1">
-          {METHODS.map((candidate) => (
-            <button
-              key={candidate}
-              type="button"
-              onClick={() => chooseMethod(candidate)}
-              aria-pressed={candidate === method}
-              aria-label={t(`methods.${candidate}`)}
-              className={cn(
-                "tap-target h-9 flex-1 rounded-[calc(var(--radius-xl)_-_--spacing(1))] text-xs whitespace-nowrap transition-colors",
-                candidate === method
-                  ? "bg-accent font-semibold text-foreground"
-                  : "font-medium text-muted-foreground",
-              )}
-            >
-              {t(`methodTabs.${candidate}`)}
-            </button>
-          ))}
-        </div>
-        <p className="-mt-2 text-xs text-muted-foreground">
-          {t(`hints.${method}`)}
-        </p>
-
-        {/* The rows are a scroll container of their own past a few people, and
-            they must overflow rather than compress: a squashed row is how a
-            ten-person split loses its amounts. */}
-        <ul className="max-h-[38vh] overflow-x-hidden overflow-y-auto rounded-[14px] bg-wash-1 [&>*]:shrink-0">
-          {readerFirst(rows, selfId).map((member) => {
-            const allocation = allocationFor(member.id);
-            const field = method !== "equal" && (
-              <Input
-                inputMode="decimal"
-                aria-label={t(`inputLabels.${method}`, {
-                  name: member.displayName,
-                  you: you(member.id),
-                })}
-                className={cn(
-                  "h-9 tabular-nums",
-                  // An exact split has no allocation column beside it, so the
-                  // field takes that width back rather than leaving a gap: it
-                  // is the one method whose typing is an amount, and amounts
-                  // are the long thing to type. A share is a digit or two
-                  // between its steppers.
-                  method === "exact"
-                    ? "w-[154px] text-right"
-                    : method === "shares"
-                      ? "w-11 px-1 text-center"
-                      : "w-[72px] text-right",
-                )}
-                placeholder={method === "shares" ? "1" : "0"}
-                value={values[member.id] ?? ""}
-                onChange={(event) => typeValue(member.id, event.target.value)}
-              />
-            );
-            return (
-              <li
-                key={member.id}
-                className="flex h-15 items-center gap-3 border-b border-border p-3 last:border-b-0"
-              >
-                <MemberAvatar
-                  name={member.displayName}
-                  selected
-                  tone={member.id === payerId ? "payer" : "primary"}
-                  guest={member.guest}
-                />
-                <span className="min-w-0 flex-1 truncate text-sm">
-                  {nameOf(member)}
-                </span>
-
-                {/* A share is 1, 2 or 3 nearly every time, and a keyboard is a
-                    lot of screen for one digit: a step either side, the field
-                    still there for a 1.5. */}
-                {method === "shares" ? (
-                  <span className="flex shrink-0 items-center gap-2">
-                    <StepButton
-                      label={t("shareFewer", {
-                        name: member.displayName,
-                        you: you(member.id),
-                      })}
-                      disabled={hasNoShare(values[member.id])}
-                      onClick={() =>
-                        typeValue(member.id, stepShare(values[member.id], -1))
-                      }
-                    >
-                      <Minus aria-hidden="true" className="size-3.5" />
-                    </StepButton>
-                    {field}
-                    <StepButton
-                      label={t("shareMore", {
-                        name: member.displayName,
-                        you: you(member.id),
-                      })}
-                      onClick={() =>
-                        typeValue(member.id, stepShare(values[member.id], 1))
-                      }
-                    >
-                      <Plus aria-hidden="true" className="size-3.5" />
-                    </StepButton>
-                  </span>
-                ) : (
-                  field
-                )}
-
-                {/* Shares and percentages need telling what they came to; an
-                    exact amount is already the number in the field, and
-                    printing it twice per row reads as two different figures
-                    that happen to agree. */}
-                {method !== "exact" && (
-                  <span className="w-[70px] shrink-0 text-right text-sm tabular-nums">
-                    {allocation?.formatted ?? "—"}
-                  </span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-
-        {/* Which way the split is out and by how much, or who pays a cent
-            more than somebody who asked for the same — whichever is true. The
-            row on the form says the first one too, once the sheet is shut. */}
-        {note && (
-          <p
-            className={cn(
-              "text-xs",
-              note.tone === "error"
-                ? "text-destructive-ink"
-                : "text-muted-foreground",
-            )}
-          >
-            {t(`notes.${note.key}`, note.params)}
-          </p>
-        )}
-
-        {remainingTo && remainingMember && onGiveRemaining && (
-          <div className="-mt-2 flex flex-wrap gap-1.5">
-            <ShortcutButton
-              onClick={() => {
-                setEdited((current) => new Set(current).add(remainingTo));
-                onGiveRemaining(remainingTo);
-              }}
-            >
-              {t("giveRemaining", {
-                amount: String(note?.params?.amount ?? ""),
-                name: remainingMember.displayName,
-                you: you(remainingMember.id),
-              })}
-            </ShortcutButton>
-          </div>
-        )}
-
-        {/*
-         * "We always split 30/30/40" is the most-asked-for thing in this
-         * category, and re-entering a fixed uneven split every time is the
-         * actual grind. Shown only once the split differs from
-         * equal-between-everyone, because that is already what a new entry
-         * does and remembering it would remember nothing.
-         */}
-        {alwaysSplit !== null && (
-          <label className="flex min-h-[52px] items-center justify-between gap-3 rounded-2xl bg-card px-4 py-2.5 shadow-hairline">
-            <span className="min-w-0">
-              <span className="block text-sm font-medium">
-                {t("alwaysTitle")}
-              </span>
-              <span className="block text-xs text-muted-foreground">
-                {t("alwaysHint")}
-              </span>
-            </span>
-            <Switch
-              checked={alwaysSplit}
-              onCheckedChange={onAlwaysSplitChange}
-              aria-label={t("alwaysTitle")}
-            />
-          </label>
-        )}
-      </PinnedBody>
+      <PinnedBody>{body}</PinnedBody>
 
       {/* Pinned rather than last. At the end of the sheet it was below the
           edge on any split worth opening this for, and the exact amounts put
@@ -794,6 +854,9 @@ function AddGuestPill({
     <span className="inline-flex items-center gap-1.5">
       <Input
         autoFocus
+        // Esc closes this field and not the dialog around it, when the split
+        // is laid out on the entry dialog: see `add-entry-drawer.tsx`.
+        data-own-escape=""
         value={name}
         onChange={(event) => setName(event.target.value)}
         onKeyDown={(event) => {

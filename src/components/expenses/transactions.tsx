@@ -21,13 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import {
-  TONE,
-  toneFor,
-  type BalanceTone,
-} from "@/components/money/balance-tone";
 import { Amount } from "@/components/money/amount";
-import { formatMoney, money } from "@/modules/currencies/money";
 import { RANKED_BANDS, UNCATEGORISED } from "@/modules/expenses/spread";
 import { useCategoryLabel } from "@/components/expenses/category-field";
 import {
@@ -55,7 +49,10 @@ import {
   type RowView,
 } from "./list-filter";
 import { FilterSheet } from "./filter-sheet";
+import { FilterRow } from "./filter-row";
+import { badgeOf, Position, TypeBadge } from "./row-parts";
 import { SwipeToDelete } from "./swipe-to-delete";
+import { TransactionsTable, useDeskWidth } from "./transactions-table";
 import { forgetPlace, readPlace, rememberPlace } from "./list-place";
 
 /**
@@ -97,6 +94,17 @@ import { forgetPlace, readPlace, rememberPlace } from "./list-place";
  * three of them are named. What cannot travel that way — how much of the list
  * had been read in, and how far down it the reader was — is remembered for the
  * length of the trip in `list-place.ts` and spent on arrival.
+ *
+ * ## Two renderers, one list
+ *
+ * From `lg` up the rows are drawn as a table, `TransactionsTable`, and the
+ * chips, the spine and the search row give way to one row of filters,
+ * `FilterRow`. Only the drawing forks. The filter, the paging, the place kept
+ * across a round trip, the sheet and the sentinel that asks for the next page
+ * are this component's and are shared by both: the table is handed the very
+ * rows the list would have drawn. The sentinel stays in one place in the tree
+ * for that reason — the observer watching it is set up once, and must not lose
+ * it when the window crosses `lg` and one renderer gives way to the other.
  */
 
 export interface BandView {
@@ -203,6 +211,8 @@ export function Transactions({
   byAmount,
   firstDate,
   today,
+  self = null,
+  total = null,
   repeating = null,
 }: {
   groupId: string;
@@ -230,6 +240,13 @@ export function Transactions({
   firstDate: string | null;
   /** Today, in the group's timezone. */
   today: string;
+  /** The reader's participant id, so the table can say "You" for them. */
+  self?: string | null;
+  /**
+   * How many transactions the group holds, counted on the server — the "of
+   * 42" the table's footer reads before any filter narrows it.
+   */
+  total?: number | null;
   /**
    * The group's recurring expenses, counted, when it has any — the way to
    * them beside the kind chips. See `RepeatingLink`.
@@ -241,6 +258,14 @@ export function Transactions({
   const locale = useNumberLocale();
   const searchParams = useSearchParams();
   const categoryLabel = useCategoryLabel();
+  /*
+   * Which renderer the window can see: the phone's list below `lg`, the table
+   * from it. Unknown on the server and through hydration, when both are drawn
+   * and CSS shows one — see `useDeskWidth`.
+   */
+  const desk = useDeskWidth();
+  const showList = desk !== true;
+  const showTable = desk !== false;
   const spineRef = useRef<HTMLDivElement>(null);
   /*
    * However long the spine is along the axis it actually runs on.
@@ -265,7 +290,9 @@ export function Transactions({
     });
     observer.observe(spine);
     return () => observer.disconnect();
-  }, [bands]);
+    // `showList` too: a window narrowed past `lg` mounts a new spine, and the
+    // one the observer was watching has gone with the table's arrival.
+  }, [bands, showList]);
 
   /*
    * Which chips exist is counted over everything the group has recorded, not
@@ -525,6 +552,34 @@ export function Transactions({
     ? selectRows(paging.base, draft, context).length
     : counted;
 
+  /*
+   * The "of 42" under the table. The rows in hand once they are the whole
+   * group, since then they are the exact answer; the group's own count, from
+   * the server, while nothing narrows a list still being read; and the
+   * server's count of a filter the rows in hand cannot answer — asked only
+   * where a table is drawn, because the phone's list has no footer to say it
+   * in. Null while nobody knows, and the footer then says what it is showing
+   * without claiming a total.
+   */
+  const countedApplied = useCount(
+    groupId,
+    filterParams(applied).toString(),
+    // Known to be a table, not merely possibly one while hydrating: a phone
+    // must not send a count it has nowhere to show.
+    desk === true && filtering && !paging.complete,
+  );
+  const listTotal = paging.complete
+    ? shown.length
+    : filtering
+      ? countedApplied
+      : total;
+
+  /** Opens the sheet on the list the reader is looking at. */
+  const openSheet = () => {
+    setDraft(applied);
+    setOpen(true);
+  };
+
   /** Which colour a row's rail takes, from the band its category sits in. */
   const railOf = (category: string | null): string => {
     if (category === null || !visibleBands) return "bg-border";
@@ -546,7 +601,10 @@ export function Transactions({
   const signature = filterParams({ ...applied, query: "" }).toString() || "all";
 
   return (
-    <div className="flex flex-col gap-4">
+    // `data-layout="wide"` asks the screen around this for the room a table
+    // needs from `lg` up, as the overview's two columns do. Below `lg` it
+    // changes nothing: the screen only reads it from there.
+    <div data-layout="wide" className="flex flex-col gap-4">
       {eyebrow}
 
       {/* One chip per kind the group actually holds, and none at all when it
@@ -562,9 +620,12 @@ export function Transactions({
           The recurring expenses end the row: transactions that have not
           happened yet, one tap from the ones that have. A link rather than a
           chip, so it wraps to a line of its own before any chip is cut short
-          — which on a 360px phone in French it does. */}
-      {(present.length > 1 || repeating) && (
-        <div className="flex flex-wrap items-center gap-2">
+          — which on a 360px phone in French it does.
+
+          From `lg` up the chips stand in the table's filter row and the
+          link in its trailing slot; this row is not drawn there. */}
+      {showList && (present.length > 1 || repeating) && (
+        <div className="flex flex-wrap items-center gap-2 lg:hidden">
           {present.length > 1 && (
             <div
               role="group"
@@ -609,7 +670,7 @@ export function Transactions({
       {/* Column on a phone, row at the desk — which is what puts the spine
           above the list in the hand and beside it on a screen. */}
       <div className="flex flex-col gap-3.5 md:flex-row">
-        {visibleBands && (
+        {showList && visibleBands && (
           <div
             ref={spineRef}
             role="group"
@@ -638,11 +699,11 @@ export function Transactions({
              * preserve every band's minimum readable, tappable size along
              * whichever axis it is running on.
              *
-             * From `lg` up there is neither a header above nor a bar below —
-             * the sidebar has taken both — so it sticks at the screen's own top
-             * padding and runs to its bottom one.
+             * From `lg` up it is not drawn. The rows stand in a table there,
+             * and a table has a Category column that says the same thing row
+             * by row; the filter it was is the Category menu in `FilterRow`.
              */
-            className="flex h-[4.5rem] w-full shrink-0 flex-row gap-[3px] overflow-hidden md:sticky md:top-[4.5rem] md:h-[calc(100dvh-12rem)] md:w-20 md:flex-col md:self-start lg:top-8 lg:h-[calc(100dvh-5rem)]"
+            className="flex h-[4.5rem] w-full shrink-0 flex-row gap-[3px] overflow-hidden md:sticky md:top-[4.5rem] md:h-[calc(100dvh-12rem)] md:w-20 md:flex-col md:self-start lg:hidden"
           >
             {visibleBands.map((band) => {
               const dimmed = selected.size > 0 && !hasSelection(band);
@@ -704,57 +765,93 @@ export function Transactions({
               cannot ask. The button does not join the chip row above: every
               control in that row is one of the kinds a row can be, and a
               button that opens a sheet is not one of them. */}
-          <div className="flex items-center gap-2">
-            <div className="relative min-w-0 flex-1">
-              <Search
-                aria-hidden="true"
-                className="pointer-events-none absolute top-1/2 left-2.5 size-[15px] -translate-y-1/2 text-muted-foreground"
+          {showList && (
+            <div className="flex items-center gap-2 lg:hidden">
+              <div className="relative min-w-0 flex-1">
+                <Search
+                  aria-hidden="true"
+                  className="pointer-events-none absolute top-1/2 left-2.5 size-[15px] -translate-y-1/2 text-muted-foreground"
+                />
+                <Input
+                  type="search"
+                  value={applied.query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  aria-label={t("searchLabel")}
+                  placeholder={t("searchPlaceholder")}
+                  // The platform's own clear affordance is hidden: it sits where
+                  // ours does and only one of them tells the URL about it.
+                  className="h-[34px] rounded-xl pr-9 pl-[34px] text-base md:text-xs [&::-webkit-search-cancel-button]:hidden"
+                />
+                {applied.query !== "" && (
+                  <button
+                    type="button"
+                    onClick={() => setQuery("")}
+                    aria-label={t("clearSearch")}
+                    className="tap-target absolute top-1/2 right-2.5 flex size-5 -translate-y-1/2 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+                  >
+                    <X aria-hidden="true" className="size-[11px]" />
+                  </button>
+                )}
+              </div>
+              <FilterButton
+                count={filterDimensions(applied)}
+                // The draft starts as what is already applied, so the sheet
+                // opens showing the list the reader is looking at.
+                onClick={openSheet}
               />
-              <Input
-                type="search"
-                value={applied.query}
-                onChange={(event) => setQuery(event.target.value)}
-                aria-label={t("searchLabel")}
-                placeholder={t("searchPlaceholder")}
-                // The platform's own clear affordance is hidden: it sits where
-                // ours does and only one of them tells the URL about it.
-                className="h-[34px] rounded-xl pr-9 pl-[34px] text-base md:text-xs [&::-webkit-search-cancel-button]:hidden"
-              />
-              {applied.query !== "" && (
-                <button
-                  type="button"
-                  onClick={() => setQuery("")}
-                  aria-label={t("clearSearch")}
-                  className="tap-target absolute top-1/2 right-2.5 flex size-5 -translate-y-1/2 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
-                >
-                  <X aria-hidden="true" className="size-[11px]" />
-                </button>
-              )}
             </div>
-            <FilterButton
-              count={filterDimensions(applied)}
-              // The draft starts as what is already applied, so the sheet
-              // opens showing the list the reader is looking at.
-              onClick={() => {
-                setDraft(applied);
-                setOpen(true);
-              }}
+          )}
+
+          {showTable && (
+            <FilterRow
+              className="hidden lg:flex"
+              applied={applied}
+              onChange={write}
+              present={present}
+              onToggleKind={toggleKind}
+              used={used}
+              counts={counts}
+              firstDate={firstDate}
+              today={today}
+              nameOf={nameOf}
+              trailing={
+                repeating ? (
+                  <RepeatingLink
+                    groupId={groupId}
+                    running={repeating.running}
+                  />
+                ) : undefined
+              }
+              // What the sheet holds that the row cannot show: the kinds, the
+              // category and the period are on the row already, and the order
+              // is on the table's header. A badge counting them again would
+              // say the list is narrower than it is.
+              moreCount={filterDimensions({
+                ...applied,
+                kinds: [],
+                categories: [],
+                subcategories: [],
+                when: "any",
+                sort: "newest",
+              })}
+              onMore={openSheet}
+              groupId={groupId}
             />
-          </div>
+          )}
 
           {/* "Nothing matches" is only true once there is nothing left to
               read. Said while pages are still arriving it would be a verdict
               on a search that has not finished — and it would flash up on
               every filter that has to reach back a few pages. */}
-          {shown.length === 0 && unread === null ? (
-            <div className="flex flex-col items-center gap-2 px-4 py-9 text-center">
+          {!showList ? null : shown.length === 0 && unread === null ? (
+            <div className="flex flex-col items-center gap-2 px-4 py-9 text-center lg:hidden">
               <p className="text-sm font-medium">{t("noMatchTitle")}</p>
               <p className="text-xs text-muted-foreground">
                 {t("noMatchHint")}
               </p>
             </div>
           ) : (
-            <ul className="mt-3 flex flex-col gap-[22px]">
+            <ul className="mt-3 flex flex-col gap-[22px] lg:hidden">
               {shown.map((row, index) => (
                 <li
                   key={`${row.kind}-${row.id}-${signature}`}
@@ -783,8 +880,31 @@ export function Transactions({
             </ul>
           )}
 
+          {showTable && (
+            <div className="hidden lg:block">
+              <TransactionsTable
+                rows={shown}
+                groupId={groupId}
+                query={filterQuery}
+                onOpen={remember}
+                self={self}
+                members={members}
+                today={today}
+                sort={applied.sort}
+                // The same rule the sheet's Sort section follows.
+                byAmount={byAmount}
+                onSort={(sort) => write({ ...applied, sort })}
+                total={listTotal}
+                more={unread !== null}
+                nameOf={nameOf}
+              />
+            </div>
+          )}
+
           {/* Always mounted, so the observer watching it never has to be
-              rebuilt, and empty whenever there is nothing to say. */}
+              rebuilt, and empty whenever there is nothing to say. Shared by
+              both renderers for the same reason: it is the one element the
+              observer was given, whichever of them is on screen. */}
           <div ref={sentinelRef} className="pt-6 empty:pt-0">
             {failed ? (
               <div className="flex flex-col items-center gap-1.5 text-center">
@@ -1272,13 +1392,7 @@ function Row({
     ? CATEGORY_GLYPHS[row.category]
     : FALLBACK_GLYPH;
 
-  const badge = row.revenue
-    ? ("revenue" as const)
-    : row.kind === "settlement"
-      ? ("settlement" as const)
-      : row.recurring
-        ? ("recurring" as const)
-        : null;
+  const badge = badgeOf(row);
 
   const body = (
     <>
@@ -1299,7 +1413,11 @@ function Row({
             ? `${dates.plain(row.date)} · ${row.note}`
             : dates.plain(row.date)}
         </span>
-        {badge && <TypeBadge kind={badge} />}
+        {badge && (
+          <span className="mt-[5px] flex">
+            <TypeBadge kind={badge} />
+          </span>
+        )}
       </span>
       <span className="flex shrink-0 flex-col items-end gap-[3px]">
         <Amount
@@ -1353,99 +1471,6 @@ function Row({
     >
       {body}
     </Link>
-  );
-}
-
-function TypeBadge({ kind }: { kind: "revenue" | "settlement" | "recurring" }) {
-  const t = useTranslations("expensesList");
-  const Glyph = TYPE_GLYPHS[kind];
-  const label = t(
-    kind === "revenue"
-      ? "revenueBadge"
-      : kind === "settlement"
-        ? "paymentBadge"
-        : "recurringBadge",
-  );
-
-  return (
-    <span className="mt-[5px] flex">
-      <span
-        className={cn(
-          "inline-flex h-[18px] shrink-0 items-center gap-1 rounded-full px-2 text-2xs font-semibold",
-          kind === "revenue" && "bg-positive/15 text-positive-ink",
-          kind === "settlement" && "border text-foreground",
-          kind === "recurring" && "bg-accent text-accent-foreground",
-        )}
-      >
-        <Glyph aria-hidden="true" className="size-[11px] shrink-0" />
-        {label}
-      </span>
-    </span>
-  );
-}
-
-/**
- * What the row left the reader holding, said in words.
- *
- * It used to be a sign and a colour — "+ €60.00", "− €30.00" — with the word
- * read out to a screen reader and kept from everyone else, so the colour was
- * doing the explaining. Worse, a repayment the reader had *received* printed
- * "− €30.00" too, because a repayment is neutral and the neutral tone signs
- * with a minus. A sentence cannot be read the wrong way round: "you get back
- * €60.00", "you owe €30.00", and for a repayment, which way the money went —
- * "you received", "you paid".
- *
- * The figure carries no sign now: the words say which way it goes, and a
- * minus inside "you owe" would say it twice and read as a typo. The line
- * starts with the words, so it starts with a capital — the expense's own
- * screen writes its outcomes the same way, and the two should read alike.
- *
- * The colour stays, from `TONE`, so the eye can still sort a column of them at
- * a glance. A repayment stays neutral: it closes a position rather than
- * opening one. A row the reader is not in has no position and says nothing.
- */
-function Position({
-  minorUnits,
-  currency,
-  kind,
-}: {
-  minorUnits: string;
-  currency: string;
-  /** A repayment's position is which way the money went, not a debt. */
-  kind: EntryKind;
-}) {
-  const t = useTranslations("expensesList");
-  const locale = useNumberLocale();
-  const signed = BigInt(minorUnits);
-  const direction = toneFor(signed);
-  const repayment = kind === "settlement";
-  const tone: BalanceTone = repayment ? "neutral" : direction;
-  const amount = formatMoney(money(signed < 0n ? -signed : signed, currency), {
-    locale,
-  });
-
-  const words =
-    direction === "neutral"
-      ? t("positionEven", { kind })
-      : repayment
-        ? direction === "positive"
-          ? t("positionYouReceived", { amount })
-          : t("positionYouPaid", { amount })
-        : direction === "positive"
-          ? t("positionYouGetBack", { amount })
-          : t("positionYouOwe", { amount });
-
-  return (
-    // A sentence, so the caption size rather than the label floor; and on one
-    // line, because a figure broken from its words reads as two facts.
-    <span
-      className={cn(
-        "text-xs font-medium whitespace-nowrap tabular-nums",
-        TONE[tone].ink,
-      )}
-    >
-      {words}
-    </span>
   );
 }
 
