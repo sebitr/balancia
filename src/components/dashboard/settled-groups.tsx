@@ -30,6 +30,13 @@ import { PUSH } from "@/components/motion/transitions";
  * has been revealed, what has been typed into it, and whether the archived
  * rows are open. Everything else is server-rendered, so this island stays
  * small.
+ *
+ * From `lg` the archived groups' row is drawn as the desktop board's pill,
+ * and opens the same rows under it. The board folds the settled groups behind
+ * a "Settled up · 2" pill beside it; that is not drawn, for the reason given
+ * above — they are "rows in the same list as every other section", which a
+ * pill would turn back into the tail #48 took away — so the settled groups
+ * stay rows in the one list, at every width, under their own heading.
  */
 
 export interface SettledGroupView {
@@ -164,12 +171,18 @@ export function SettledGroups({
       )}
 
       {archived.length > 0 && (
-        <section className={settled.length > 0 ? "-mt-[26px]" : undefined}>
+        // Below `lg` the row closes the settled list it follows, so it is
+        // pulled up against it. From `lg` it is a pill of its own under the
+        // list, as the desktop board draws "Archived · 1", and keeps the
+        // column's spacing.
+        <section
+          className={settled.length > 0 ? "-mt-[26px] lg:mt-0" : undefined}
+        >
           <button
             type="button"
             onClick={() => setArchivedOpen((open) => !open)}
             aria-expanded={archivedOpen}
-            className="flex w-full items-center gap-2.5 border-t py-3.5 text-left text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="tap-target flex w-full items-center gap-2.5 border-t py-3.5 text-left text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none lg:inline-flex lg:h-9 lg:w-auto lg:gap-2 lg:rounded-[10px] lg:border lg:bg-card lg:px-2.5 lg:py-0 lg:font-medium"
           >
             <Archive aria-hidden="true" className="size-[15px] shrink-0" />
             <span className="flex-1">
