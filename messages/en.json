@@ -940,6 +940,7 @@
     "withDescription": "{action}: {description}",
     "left": "left the group",
     "joinedWithGroupLink": "joined with the group link",
+    "claimedPersonalLink": "turned their personal link into an account",
     "restore": {
       "action": "Restore",
       "expense": "Restore the expense “{description}”",
@@ -985,7 +986,7 @@
         "updated": "changed a recurring expense",
         "deleted": "removed a recurring expense",
         "restored": "restored a recurring expense",
-        "generated": "generated a recurring expense"
+        "generated": "added an expense automatically"
       },
       "import": {
         "completed": "completed an import"

@@ -940,6 +940,7 @@
     "withDescription": "{action} : {description}",
     "left": "a quitté le groupe",
     "joinedWithGroupLink": "a rejoint le groupe avec le lien du groupe",
+    "claimedPersonalLink": "a transformé son lien personnel en compte",
     "restore": {
       "action": "Rétablir",
       "expense": "Rétablir la dépense « {description} »",
@@ -985,7 +986,7 @@
         "updated": "a modifié une dépense récurrente",
         "deleted": "a supprimé une dépense récurrente",
         "restored": "a rétabli une dépense récurrente",
-        "generated": "a généré une dépense récurrente"
+        "generated": "a ajouté une dépense automatiquement"
       },
       "import": {
         "completed": "a terminé un import"

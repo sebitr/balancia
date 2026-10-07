@@ -72,6 +72,9 @@ export function describeActivity(
   const link = describeLinkEvent(entry, t, reader.you);
   if (link !== null) return link;
 
+  const joined = describeJoin(entry, t);
+  if (joined !== null) return joined;
+
   const base = t.has(`actions.${entry.action}`)
     ? t(`actions.${entry.action}`)
     : entry.action;
@@ -233,8 +236,47 @@ function describeLinkEvent(
   return null;
 }
 
+/**
+ * Somebody coming into the group with an account of their own.
+ *
+ * Both ways in write `member.added` with the newcomer as their own actor, and
+ * the event's plain phrase — "added someone to the group", once "added a
+ * member" — then read as if they had brought somebody else in: "Ada added a
+ * member", about Ada arriving. `via` says which way it was. Through the group
+ * link it is the same join a guest's own line already tells; through their
+ * personal link it is a guest who has just made an account of it.
+ *
+ * An event with neither keeps the plain phrase.
+ */
+function describeJoin(
+  entry: ActivityEntry,
+  t: ActivityTranslate,
+): string | null {
+  if (entry.action !== "member.added") return null;
+  const via = entry.metadata?.via;
+  if (via === "join_link") return t("joinedWithGroupLink");
+  if (via === "guest_link") return t("claimedPersonalLink");
+  return null;
+}
+
+/**
+ * Work the app does on its own, though the event stores a label for it.
+ *
+ * The scheduler writes "Scheduled" and the import worker "Import" where a
+ * person's name goes, in English, and the feed printed them as written:
+ * "Scheduled generated a recurring expense", in French as much as in
+ * English. Neither is anybody. An import is started by a person, but the
+ * worker finishes it minutes later, and its event has never recorded who.
+ */
+const DONE_BY_BALANCIA: ReadonlySet<string> = new Set([
+  "recurring.generated",
+  "import.completed",
+]);
+
 /** Who did it, with the two stand-ins for "nobody in particular". */
 export function actorOf(entry: ActivityEntry, t: ActivityTranslate): string {
-  if (entry.actorLabel) return entry.actorLabel;
-  return entry.actorType === "system" ? "Balancia" : t("someone");
+  if (entry.actorType === "system" || DONE_BY_BALANCIA.has(entry.action)) {
+    return "Balancia";
+  }
+  return entry.actorLabel || t("someone");
 }
