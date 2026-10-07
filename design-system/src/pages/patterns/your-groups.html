@@ -262,15 +262,14 @@
                   >
                   <span class="badge badge--secondary">2 currencies</span>
                 </div>
-                <div
-                  style="
-                    display: grid;
-                    grid-template-columns: repeat(2, minmax(0, 1fr));
-                    gap: 1.5rem;
-                  "
-                >
+                <div style="display: flex; flex-wrap: wrap; gap: 1rem 1.5rem">
                   <div
-                    style="display: flex; flex-direction: column; gap: 0.25rem"
+                    style="
+                      display: flex;
+                      flex: 1 1 calc(50% - 0.75rem);
+                      flex-direction: column;
+                      gap: 0.25rem;
+                    "
                   >
                     <span
                       class="tabular-nums"
@@ -294,7 +293,12 @@
                     >
                   </div>
                   <div
-                    style="display: flex; flex-direction: column; gap: 0.25rem"
+                    style="
+                      display: flex;
+                      flex: 1 1 calc(50% - 0.75rem);
+                      flex-direction: column;
+                      gap: 0.25rem;
+                    "
                   >
                     <span
                       class="tabular-nums"
