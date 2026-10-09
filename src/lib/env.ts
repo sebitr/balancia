@@ -505,8 +505,9 @@ const envSchema = z
     /**
      * Run the *collector*: accept reports from other installations.
      *
-     * Off everywhere except the one deployment that is telemetry.balancia.app,
-     * where it is the whole job. With it off the receiving routes do not exist
+     * Off everywhere except the one deployment that is balancia.app, where it
+     * sits beside everything else the application does. With it off the
+     * receiving routes do not exist
      * — they answer 404, not 403, so an instance does not advertise a
      * collector it is not running.
      */

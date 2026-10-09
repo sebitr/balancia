@@ -37,9 +37,11 @@ import { getEffectiveTelemetry } from "@/lib/telemetry/settings";
  * one would quietly carry "…unless somebody changed it", and a reader would
  * have to go and check the environment before believing any of it.
  *
- * With a constant, the network-level check is one hostname: blocking
- * telemetry.balancia.app is enough to be certain, whatever the settings say —
- * the same hostname that already covers the weekly report.
+ * With a constant, the network-level check is two hostnames and no more:
+ * blocking telemetry.balancia.app covers the page counts, and blocking
+ * balancia.app — where the weekly report goes — covers the rest, whatever the
+ * settings say. They cannot be one host: Umami answers at this one, and the
+ * report's collector is the application itself, at the other.
  *
  * A fork edits this line. Under the AGPL it is building from source to do
  * that anyway, so the cost is close to nothing next to the claim above.

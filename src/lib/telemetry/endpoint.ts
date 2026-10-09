@@ -22,5 +22,11 @@
  *
  * HTTPS is not a validated rule here because there is nothing to validate: the
  * value is a literal, and `endpoint.test.ts` holds it to that.
+ *
+ * Not telemetry.balancia.app, though that is where this pointed first. That
+ * host runs Umami, which has no `/v1/report`: every send answered 404, which
+ * the administration page could only call "could not be sent". The collector
+ * is this application with `TELEMETRY_RECEIVER=true`, and the deployment that
+ * has it on is balancia.app itself, where `/v1/report` and `/v1/crash` answer.
  */
-export const TELEMETRY_ENDPOINT = "https://telemetry.balancia.app";
+export const TELEMETRY_ENDPOINT = "https://balancia.app";

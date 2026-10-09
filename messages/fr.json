@@ -3879,7 +3879,11 @@
     "testSending": "Envoi…",
     "testHelp": "Envoie le rapport ci-dessus maintenant, pour vérifier qu’il atteint la destination. Rien n’est envoyé sans cette action.",
     "testSent": "Rapport envoyé.",
-    "testFailed": "Le rapport n’a pas pu être envoyé."
+    "testFailed": "Le rapport n’a pas pu être envoyé.",
+    "testFailedRejected": "La destination a répondu par une erreur et n’a pas accepté le rapport.",
+    "testFailedNetwork": "Ce serveur n’a pas pu joindre la destination.",
+    "testFailedTimeout": "La destination n’a pas répondu à temps.",
+    "testFailedBlocked": "Le rapport a été retenu avant l’envoi, car il n’a pas passé les contrôles de ce serveur."
   },
   "demo": {
     "signInBody": "Teste Balancia avec des groupes de démonstration prêts à l’emploi. Rien n’est conservé et les données sont supprimées après quelques heures.",

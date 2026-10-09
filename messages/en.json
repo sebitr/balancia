@@ -3879,7 +3879,11 @@
     "testSending": "Sending…",
     "testHelp": "Sends the report above now, so you can confirm it reaches the endpoint. Nothing is sent unless you press it.",
     "testSent": "Report sent.",
-    "testFailed": "The report could not be sent."
+    "testFailed": "The report could not be sent.",
+    "testFailedRejected": "The destination answered with an error and did not accept the report.",
+    "testFailedNetwork": "This server could not reach the destination.",
+    "testFailedTimeout": "The destination did not answer in time.",
+    "testFailedBlocked": "The report was held back before sending because it did not pass this server’s own checks."
   },
   "demo": {
     "signInBody": "Explore Balancia with ready-made demo groups. Nothing is kept, and the data is deleted after a couple of hours.",

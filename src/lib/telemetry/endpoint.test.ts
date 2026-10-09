@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { UMAMI_SCRIPT_URL } from "@/lib/analytics/umami";
 import { ENV_VARIABLE_NAMES } from "@/lib/env";
 import { TELEMETRY_ENDPOINT } from "./endpoint";
 
@@ -14,7 +15,16 @@ import { TELEMETRY_ENDPOINT } from "./endpoint";
 
 describe("the telemetry endpoint", () => {
   it("is the project's collector", () => {
-    expect(TELEMETRY_ENDPOINT).toBe("https://telemetry.balancia.app");
+    expect(TELEMETRY_ENDPOINT).toBe("https://balancia.app");
+  });
+
+  it("is not the host Umami runs on", () => {
+    // That host answers 404 to `/v1/report`, so a report sent there is never
+    // collected. Two services cannot share one hostname unless something
+    // routes between them, and nothing in this repository does.
+    expect(new URL(TELEMETRY_ENDPOINT).hostname).not.toBe(
+      new URL(UMAMI_SCRIPT_URL).hostname,
+    );
   });
 
   it("is HTTPS, with no room for it not to be", () => {
@@ -25,7 +35,7 @@ describe("the telemetry endpoint", () => {
 
   it("is one host and nothing else", () => {
     const url = new URL(TELEMETRY_ENDPOINT);
-    expect(url.hostname).toBe("telemetry.balancia.app");
+    expect(url.hostname).toBe("balancia.app");
     expect(url.search).toBe("");
     expect(url.username).toBe("");
     expect(url.password).toBe("");
