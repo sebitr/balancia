@@ -51,6 +51,7 @@ a limitation here stops being true.
 | 30  | Group and member statistics                                                      | ✅     |
 | 31  | Transaction search, filtering and keyset pagination                              | ✅     |
 | 32  | Offline expense entry with a send queue                                          | ✅     |
+| 33  | Encrypted cloud backup of the groups an owner owns (opt-in)                      | ✅     |
 
 ## Verification
 

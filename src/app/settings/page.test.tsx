@@ -6,6 +6,7 @@ import en from "../../../messages/en.json";
 import fr from "../../../messages/fr.json";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import type { DateFormat } from "@/i18n/format";
+import type { BackupSummary } from "@/modules/backup/view";
 
 /**
  * The settings hub: the way out of it, and what its rows say before a tap.
@@ -27,6 +28,10 @@ const state = vi.hoisted(() => ({
   locale: "en" as "en" | "fr",
   dateFormat: "auto" as DateFormat,
   currency: "CHF" as string | null,
+  // What the Cloud backup row is written from: the one-line summary, and the
+  // destinations behind it for the one state that names a provider by reading.
+  backup: { state: "none" } as BackupSummary,
+  backupDestinations: [] as { label: string; status: string }[],
 }));
 
 vi.mock("next-intl/server", () => ({
@@ -67,6 +72,12 @@ vi.mock("@/lib/telemetry/environment", () => ({ appVersion: () => "1.2.3" }));
 vi.mock("@/modules/auth/webauthn", () => ({ listPasskeys: async () => [] }));
 vi.mock("@/modules/auth/service", () => ({
   getUserPreferredCurrency: async () => state.currency,
+}));
+vi.mock("@/modules/backup/view", () => ({
+  loadBackupSummary: async () => state.backup,
+}));
+vi.mock("@/modules/backup/service", () => ({
+  listDestinations: async () => state.backupDestinations,
 }));
 vi.mock("@/modules/groups/service", () => ({
   listGroupsForUser: async () => [],
@@ -127,6 +138,8 @@ beforeEach(() => {
   state.locale = "en";
   state.dateFormat = "auto";
   state.currency = "CHF";
+  state.backup = { state: "none" };
+  state.backupDestinations = [];
   sessionStorage.clear();
 });
 
@@ -226,5 +239,85 @@ describe("the Money & formats row", () => {
 
     // The same fallback currency the screen behind the row shows.
     expect(summaryOf("Devise et formats")).toBe("EUR · JJ/MM/AAAA");
+  });
+});
+
+describe("the Cloud backup row", () => {
+  /** The row's own link, found from its label. */
+  const row = (name = "Cloud backup") =>
+    screen.getByText(name).closest("a") as HTMLAnchorElement;
+
+  it("leads to the screen, straight after Data", async () => {
+    await renderHub();
+
+    expect(row()).toHaveAttribute("href", "/settings/backup");
+    const hrefs = screen
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("href"));
+    expect(hrefs[hrefs.indexOf("/settings/data") + 1]).toBe("/settings/backup");
+  });
+
+  it("says Not set up when nothing is", async () => {
+    await renderHub();
+
+    expect(summaryOf("Cloud backup")).toBe("Not set up");
+  });
+
+  it("names the schedule and the provider while it runs", async () => {
+    state.backup = {
+      state: "on",
+      frequency: "daily",
+      labels: ["Google Drive · ada@example.com"],
+    };
+    const { unmount } = await renderHub();
+    expect(summaryOf("Cloud backup")).toBe("Daily · Google Drive");
+    unmount();
+
+    state.backup = { state: "on", frequency: "weekly", labels: ["Dropbox"] };
+    await renderHub();
+    expect(summaryOf("Cloud backup")).toBe("Weekly · Dropbox");
+  });
+
+  it("says Paused, with the provider it would back up to", async () => {
+    state.backup = { state: "paused" };
+    state.backupDestinations = [
+      { label: "Google Drive · ada@example.com", status: "paused" },
+    ];
+
+    await renderHub();
+
+    expect(summaryOf("Cloud backup")).toBe("Paused · Google Drive");
+  });
+
+  it("does not take a connection still being set up for the destination", async () => {
+    state.backup = { state: "paused" };
+    state.backupDestinations = [
+      { label: "Dropbox", status: "setup" },
+      { label: "S3 · backups", status: "paused" },
+    ];
+
+    await renderHub();
+
+    expect(summaryOf("Cloud backup")).toBe("Paused · S3");
+  });
+
+  it("shows a pill with an icon and the words, and no summary, when it needs attention", async () => {
+    state.backup = { state: "attention", reason: "reconnect" };
+
+    await renderHub();
+
+    const pill = screen.getByText("Needs attention");
+    expect(row()).toContainElement(pill);
+    expect(pill.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+    expect(row().textContent).not.toMatch(/Daily|Weekly|Paused|Not set up/);
+  });
+
+  it("is written in French in French", async () => {
+    state.locale = "fr";
+    state.backup = { state: "on", frequency: "weekly", labels: ["Dropbox"] };
+
+    await renderHub();
+
+    expect(summaryOf("Sauvegarde cloud")).toBe("Chaque semaine · Dropbox");
   });
 });

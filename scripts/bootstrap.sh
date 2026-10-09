@@ -115,7 +115,7 @@ resolve_paths() {
 # a list as well as in the code so the prompts can say "3 of 7" — a wizard that
 # will not say how long it is stays longer than it should. One name per
 # question block; adding a block means adding a name.
-question_keys='APP_URL ALLOW_REGISTRATION DEMO_URL EXCHANGE_RATE_PROVIDER RECEIPT_SCANNING SEMANTIC_CATEGORIZATION PUSH_VAPID_PUBLIC_KEY SMTP_HOST TELEMETRY_MODE METRICS_ENABLED'
+question_keys='APP_URL ALLOW_REGISTRATION DEMO_URL EXCHANGE_RATE_PROVIDER RECEIPT_SCANNING SEMANTIC_CATEGORIZATION PUSH_VAPID_PUBLIC_KEY SMTP_HOST TELEMETRY_MODE METRICS_ENABLED BACKUP_ALLOW_PRIVATE_ENDPOINTS'
 
 # ── Presentation ────────────────────────────────────────────────────────────
 
@@ -1615,6 +1615,32 @@ TEXT
         'No metrics endpoint. Set to true to expose /api/metrics.'
     fi
   fi
+
+  # ── Cloud backup ──────────────────────────────────────────────────────────
+  if ! has_value BACKUP_ALLOW_PRIVATE_ENDPOINTS; then
+    question 'Cloud backup'
+    prose <<'TEXT'
+The owner of a group can back it up to a cloud of their own choosing, encrypted
+before it leaves this server so that neither this server nor the cloud can read
+it. Google Drive, Dropbox and OneDrive need an app registration you make
+yourself (docs/cloud-backup.md); a bucket or a WebDAV server such as Nextcloud
+needs nothing.
+
+The one question is whether a backup may go to a server on this machine's own
+network, such as a NAS at home. It is off by default because it also lets any
+account on this instance make this server open connections to internal
+addresses. On a household instance where everyone is family, it is usually
+what you want.
+
+TEXT
+    if ask_yes_no 'Allow backups to servers on your local network?' n; then
+      write_setting BACKUP_ALLOW_PRIVATE_ENDPOINTS true \
+        'Cloud backups may go to addresses on the local network, such as a NAS.'
+    else
+      write_setting BACKUP_ALLOW_PRIVATE_ENDPOINTS false \
+        'Cloud backups go to the internet only. Set to true to allow a NAS or LAN Nextcloud.'
+    fi
+  fi
 fi
 
 # ── Repairs ─────────────────────────────────────────────────────────────────
@@ -2136,6 +2162,11 @@ summary() {
     fi
   else
     row 'Metrics' 'off'
+  fi
+  if is_enabled BACKUP_ALLOW_PRIVATE_ENDPOINTS; then
+    row 'Cloud backup' 'encrypted; local-network destinations allowed'
+  else
+    row 'Cloud backup' 'encrypted; internet destinations only'
   fi
   # Only when on, like demo mode: the ordinary state is a refusal nobody sees
   # until the day it matters.

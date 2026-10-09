@@ -199,6 +199,41 @@ How somebody wants to be paid back belongs to their account, not to a group.
   participant holding a live link counts as somebody left in the group, so
   the group is kept, with no owner, rather than deleted with its expenses.
 
+### Cloud backup
+
+An owner can have the groups they own copied, on a schedule, to a cloud account
+of their own. The whole design is one promise — neither this server nor the
+cloud can read what is written — and these are the parts of it that hold it up.
+The long form, and what it does not protect against, is
+[docs/cloud-backup.md](docs/cloud-backup.md).
+
+- **The private half of the recovery key never reaches the server.** The browser
+  makes it and shows it once; the server stores the public half and refuses to
+  store anything else. There is no reset. Lose the key and the backups are
+  unreadable to everyone.
+- **A backup is `age`-encrypted before it leaves the worker**, so a stolen cloud
+  password, a leaked bucket or a copy of this server's database yields
+  ciphertext. The format is the standard one; a file opens with the `age`
+  command and no Balancia.
+- **A provider's credentials are sealed** with AES-256-GCM under a key derived
+  from `AUTH_SECRET`, never returned to a browser, and scrubbed from every error
+  and log line. Google, Dropbox and OneDrive are asked for the narrowest access
+  each offers (only the files Balancia creates, or its own app folder). Rotating
+  `AUTH_SECRET` makes them unreadable, which reads as "reconnect".
+- **`rclone` is run with a built environment**: it never sees `AUTH_SECRET` or
+  the database URL, passwords are never in its arguments, and nothing it is
+  given is written outside a scratch directory removed after the call.
+- **The address an owner types is the one outbound destination a person chooses
+  here.** It is resolved and refused if it lands on a private or link-local
+  address, unless the operator has set `BACKUP_ALLOW_PRIVATE_ENDPOINTS`. The
+  platform metadata address is refused regardless. A name that changes its answer
+  between the check and the connection (DNS rebinding) is not caught, and the
+  setting should stay off on an instance whose accounts are not trusted.
+- **Retention deletes files in somebody's cloud, so it is narrow**: only names
+  Balancia itself wrote, never the newest N, never a receipt.
+- **API keys reach none of it** (`/api/backup/*` is `account` in
+  `src/modules/api-tokens/scope.ts`).
+
 ### Authorization
 
 Every group-scoped read and mutation goes through one function,
@@ -279,7 +314,9 @@ Not conventionally "security", but it is what the application is for:
 ### Privacy
 
 - No telemetry, no analytics, no error reporting, no update check. Balancia
-  contacts no external service at runtime.
+  contacts no external service at runtime, except the ones somebody has asked
+  it to: the cloud account an owner connected for their [backups](docs/cloud-backup.md),
+  and the opt-in services an operator has configured.
 - Imported files are parsed in-process and never sent anywhere.
 - Logs redact secrets, tokens, passwords and connection strings by key,
   wherever they sit in a logged object.

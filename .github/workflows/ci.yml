@@ -74,6 +74,24 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+
+      # The cloud-backup transport tests run the real rclone against WebDAV and
+      # S3 servers it serves from localhost, and the restore tests open our files
+      # with the real `age` command. Without the two binaries those suites skip,
+      # quietly, and a regression in the one place that talks to somebody's cloud
+      # would pass. rclone comes out of the image the app's own image copies it
+      # from, at the version the Dockerfile pins, so what is tested is what ships;
+      # `age` is the distribution's.
+      - name: Install rclone and age
+        run: |
+          version=$(sed -n 's/^ARG RCLONE_VERSION=//p' Dockerfile)
+          container=$(docker create "rclone/rclone:${version}")
+          sudo docker cp "${container}:/usr/local/bin/rclone" /usr/local/bin/rclone
+          docker rm "${container}"
+          sudo apt-get update
+          sudo apt-get install --yes age
+          rclone version
+
       - run: pnpm test
 
   integration:

@@ -53,6 +53,12 @@ interface RowContent {
    * un-truncated, because a ring around a tile is what `truncate` would clip.
    */
   readonly trailing?: ReactNode;
+  /**
+   * A sentence under the label, wrapped over as many lines as it needs. For the
+   * one row that explains itself; a *value* belongs in `summary`, which stays
+   * on the label's line and is not meant to wrap.
+   */
+  readonly description?: string;
   /** A badge after the label — "Admin" on the administration row. */
   readonly badge?: ReactNode;
   /** Tints the icon tile with the accent. The payouts row, and only it. */
@@ -63,6 +69,7 @@ function RowBody({
   icon,
   label,
   summary,
+  description,
   trailing,
   badge,
   accent,
@@ -95,6 +102,11 @@ function RowBody({
         {!trailing && summary && (
           <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground">
             {summary}
+          </span>
+        )}
+        {description && (
+          <span className="basis-full text-xs text-pretty text-muted-foreground">
+            {description}
           </span>
         )}
       </span>

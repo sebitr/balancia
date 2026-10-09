@@ -81,6 +81,20 @@ x-dev-environment: &dev-environment
   APPLE_TEAM_ID: ${DEV_APPLE_TEAM_ID:-}
   APPLE_KEY_ID: ${DEV_APPLE_KEY_ID:-}
   APPLE_PRIVATE_KEY: ${DEV_APPLE_PRIVATE_KEY:-}
+  # Encrypted cloud backup. A development stack can reach the services running
+  # beside it (a MinIO, a Nextcloud, `rclone serve webdav`), so local addresses
+  # are allowed here; production leaves them off. The OAuth values are unset:
+  # registering a Google, Dropbox or Microsoft app is the one part of this
+  # feature that cannot be faked, and docs/cloud-backup.md says how to do it.
+  BACKUP_RCLONE_PATH: ${DEV_BACKUP_RCLONE_PATH:-}
+  BACKUP_ALLOW_PRIVATE_ENDPOINTS: ${DEV_BACKUP_ALLOW_PRIVATE_ENDPOINTS:-true}
+  BACKUP_EXPERIMENTAL_PROVIDERS: ${DEV_BACKUP_EXPERIMENTAL_PROVIDERS:-true}
+  BACKUP_GOOGLE_CLIENT_ID: ${DEV_BACKUP_GOOGLE_CLIENT_ID:-}
+  BACKUP_GOOGLE_CLIENT_SECRET: ${DEV_BACKUP_GOOGLE_CLIENT_SECRET:-}
+  BACKUP_DROPBOX_CLIENT_ID: ${DEV_BACKUP_DROPBOX_CLIENT_ID:-}
+  BACKUP_DROPBOX_CLIENT_SECRET: ${DEV_BACKUP_DROPBOX_CLIENT_SECRET:-}
+  BACKUP_MICROSOFT_CLIENT_ID: ${DEV_BACKUP_MICROSOFT_CLIENT_ID:-}
+  BACKUP_MICROSOFT_CLIENT_SECRET: ${DEV_BACKUP_MICROSOFT_CLIENT_SECRET:-}
   # Telemetry. "local" here rather than "opt-in": the endpoint is a compiled-in
   # constant pointing at the real collector, so a development stack must not be
   # in a mode that could reach it. Local mode still exercises every part of the

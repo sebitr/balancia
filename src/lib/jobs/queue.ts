@@ -36,6 +36,10 @@ export const QUEUES = {
    * raw payloads. Does nothing unless this deployment runs the receiver.
    */
   telemetryAggregate: "telemetry.aggregate",
+  /** Finds the cloud backups that are due and queues each one. */
+  backupSweep: "backup.sweep",
+  /** Writes one encrypted backup to one destination. */
+  backupRun: "backup.run",
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];
@@ -43,6 +47,13 @@ export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];
 export interface ImportCommitPayload {
   readonly importRunId: string;
   readonly groupId: string;
+}
+
+export interface BackupRunPayload {
+  readonly destinationId: string;
+  /** The `running` row the requester already wrote, so a screen can show it at once. */
+  readonly runId: string;
+  readonly trigger: "schedule" | "manual";
 }
 
 export interface NotificationsDeliverPayload {
