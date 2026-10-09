@@ -250,6 +250,29 @@ collector's routes answer 404 until `TELEMETRY_RECEIVER` is on there.
 The preview is visible whatever the switches say, including when telemetry is
 off. Being able to see what _would_ be sent before deciding is the point.
 
+### If the test report fails
+
+The toast says "The report could not be sent", and a second line says which of
+these it was. **Last sent** is the last _success_, so it still reads "never"
+after a failure. The failed attempt is stored, but the page does not show it;
+the log does.
+
+| The toast says                                                                            | What it means, and what to check                                                                                                                                                                                                                                                                                                                                                              |
+| ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The destination answered with an error and did not accept the report.                     | The collector replied with something other than success. A **404** means nothing is collecting at that address: the routes answer 404 until `TELEMETRY_RECEIVER` is on there, and a host that serves some other application has no such route at all. A 400 is a payload the collector refused, and a 429 is the collector's rate limit (§12). The page cannot say which — see the log below. |
+| This server could not reach the destination.                                              | No answer at all: DNS, a default-deny egress policy that does not allow `balancia.app` (§7), or a TLS failure. A **redirect** also lands here, because a redirect is refused rather than followed (§12).                                                                                                                                                                                      |
+| The destination did not answer in time.                                                   | The five-second limit passed. Nothing is retried; press it again.                                                                                                                                                                                                                                                                                                                             |
+| The report was held back before sending because it did not pass this server's own checks. | A bug on this side, not the network: the report failed its schema or the content scan that runs after it (§15). Nothing left the server. The log line is **Telemetry payload blocked before sending**, and it names the rule and the path in the payload, never the value.                                                                                                                    |
+| No second line                                                                            | The reason is not one an administrator can act on — telemetry was switched off in another tab between the page loading and the press, for instance.                                                                                                                                                                                                                                           |
+
+The reason is also in this server's log, which is where to look first. The line
+is **Anonymous usage report could not be sent**, with a `reason` of `rejected`,
+`network`, `timeout`, `invalid-payload`, `unsafe-payload` or `too-large`. If you
+run the collector yourself, its log has **Telemetry report rejected**, with the
+report kind and the exact refusal, which is what tells a 400 from a 429.
+
+Pressing the button repeatedly is itself rate limited, and says so in the toast.
+
 ---
 
 ## 7. Turning telemetry off
