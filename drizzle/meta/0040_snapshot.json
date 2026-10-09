@@ -1,5 +1,5 @@
 {
-  "id": "c405233c-7fbf-4377-8c87-a8576163bd4a",
+  "id": "ae028390-0a76-445d-a73a-5decc50b4344",
   "prevId": "b5d1e591-d866-422a-9d6a-4900e0ceb358",
   "version": "7",
   "dialect": "postgresql",
@@ -5954,228 +5954,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.agent_clients": {
-      "name": "agent_clients",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "redirect_uris": {
-          "name": "redirect_uris",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "last_used_at": {
-          "name": "last_used_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "agent_clients_created_idx": {
-          "name": "agent_clients_created_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.agent_codes": {
-      "name": "agent_codes",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "code_hash": {
-          "name": "code_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "client_id": {
-          "name": "client_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "redirect_uri": {
-          "name": "redirect_uri",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "code_challenge": {
-          "name": "code_challenge",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "scope": {
-          "name": "scope",
-          "type": "api_token_scope",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "group_id": {
-          "name": "group_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "used_at": {
-          "name": "used_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "grant_id": {
-          "name": "grant_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "agent_codes_code_hash_unique": {
-          "name": "agent_codes_code_hash_unique",
-          "columns": [
-            {
-              "expression": "code_hash",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "agent_codes_expires_idx": {
-          "name": "agent_codes_expires_idx",
-          "columns": [
-            {
-              "expression": "expires_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "agent_codes_client_id_agent_clients_id_fk": {
-          "name": "agent_codes_client_id_agent_clients_id_fk",
-          "tableFrom": "agent_codes",
-          "tableTo": "agent_clients",
-          "columnsFrom": [
-            "client_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "agent_codes_user_id_users_id_fk": {
-          "name": "agent_codes_user_id_users_id_fk",
-          "tableFrom": "agent_codes",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "agent_codes_group_id_groups_id_fk": {
-          "name": "agent_codes_group_id_groups_id_fk",
-          "tableFrom": "agent_codes",
-          "tableTo": "groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.agent_grants": {
-      "name": "agent_grants",
+    "public.backup_destinations": {
+      "name": "backup_destinations",
       "schema": "",
       "columns": {
         "id": {
@@ -6191,48 +5971,93 @@
           "primaryKey": false,
           "notNull": true
         },
-        "client_id": {
-          "name": "client_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "scope": {
-          "name": "scope",
-          "type": "api_token_scope",
+        "provider": {
+          "name": "provider",
+          "type": "backup_provider",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
-        "group_id": {
-          "name": "group_id",
-          "type": "uuid",
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "credentials": {
+          "name": "credentials",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "frequency": {
+          "name": "frequency",
+          "type": "backup_frequency",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'daily'"
+        },
+        "keep_last": {
+          "name": "keep_last",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 10
+        },
+        "excluded_group_ids": {
+          "name": "excluded_group_ids",
+          "type": "uuid[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::uuid[]"
+        },
+        "include_receipts": {
+          "name": "include_receipts",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "status": {
+          "name": "status",
+          "type": "backup_destination_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "next_run_at": {
+          "name": "next_run_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "last_run_at": {
+          "name": "last_run_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
-        "access_token_hash": {
-          "name": "access_token_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "access_expires_at": {
-          "name": "access_expires_at",
+        "last_success_at": {
+          "name": "last_success_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
-        "refresh_token_hash": {
-          "name": "refresh_token_hash",
+        "consecutive_failures": {
+          "name": "consecutive_failures",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "last_content_hash": {
+          "name": "last_content_hash",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
-        },
-        "refresh_expires_at": {
-          "name": "refresh_expires_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -6241,52 +6066,17 @@
           "notNull": true,
           "default": "now()"
         },
-        "last_used_at": {
-          "name": "last_used_at",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false
-        },
-        "revoked_at": {
-          "name": "revoked_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {
-        "agent_grants_access_hash_unique": {
-          "name": "agent_grants_access_hash_unique",
-          "columns": [
-            {
-              "expression": "access_token_hash",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "agent_grants_refresh_hash_unique": {
-          "name": "agent_grants_refresh_hash_unique",
-          "columns": [
-            {
-              "expression": "refresh_token_hash",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "agent_grants_user_idx": {
-          "name": "agent_grants_user_idx",
+        "backup_destinations_user_idx": {
+          "name": "backup_destinations_user_idx",
           "columns": [
             {
               "expression": "user_id",
@@ -6299,12 +6089,33 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "backup_destinations_due_idx": {
+          "name": "backup_destinations_due_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "next_run_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
-        "agent_grants_user_id_users_id_fk": {
-          "name": "agent_grants_user_id_users_id_fk",
-          "tableFrom": "agent_grants",
+        "backup_destinations_user_id_users_id_fk": {
+          "name": "backup_destinations_user_id_users_id_fk",
+          "tableFrom": "backup_destinations",
           "tableTo": "users",
           "columnsFrom": [
             "user_id"
@@ -6314,26 +6125,57 @@
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "backup_destinations_keep_last_range": {
+          "name": "backup_destinations_keep_last_range",
+          "value": "\"backup_destinations\".\"keep_last\" BETWEEN 1 AND 100"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.backup_keys": {
+      "name": "backup_keys",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
         },
-        "agent_grants_client_id_agent_clients_id_fk": {
-          "name": "agent_grants_client_id_agent_clients_id_fk",
-          "tableFrom": "agent_grants",
-          "tableTo": "agent_clients",
-          "columnsFrom": [
-            "client_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+        "recipient": {
+          "name": "recipient",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
         },
-        "agent_grants_group_id_groups_id_fk": {
-          "name": "agent_grants_group_id_groups_id_fk",
-          "tableFrom": "agent_grants",
-          "tableTo": "groups",
+        "fingerprint": {
+          "name": "fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "backup_keys_user_id_users_id_fk": {
+          "name": "backup_keys_user_id_users_id_fk",
+          "tableFrom": "backup_keys",
+          "tableTo": "users",
           "columnsFrom": [
-            "group_id"
+            "user_id"
           ],
           "columnsTo": [
             "id"
@@ -6348,56 +6190,110 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.agent_refresh_history": {
-      "name": "agent_refresh_history",
+    "public.backup_runs": {
+      "name": "backup_runs",
       "schema": "",
       "columns": {
-        "token_hash": {
-          "name": "token_hash",
-          "type": "text",
+        "id": {
+          "name": "id",
+          "type": "uuid",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
-        "grant_id": {
-          "name": "grant_id",
+        "destination_id": {
+          "name": "destination_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "replaced_at": {
-          "name": "replaced_at",
-          "type": "timestamp with time zone",
+        "trigger": {
+          "name": "trigger",
+          "type": "backup_trigger",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
-        "expires_at": {
-          "name": "expires_at",
+        "status": {
+          "name": "status",
+          "type": "backup_run_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'running'"
+        },
+        "started_at": {
+          "name": "started_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "now()"
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "group_count": {
+          "name": "group_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "bytes": {
+          "name": "bytes",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "object_name": {
+          "name": "object_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "receipts_written": {
+          "name": "receipts_written",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "receipts_pending": {
+          "name": "receipts_pending",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "error_code": {
+          "name": "error_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error_detail": {
+          "name": "error_detail",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
-        "agent_refresh_history_grant_idx": {
-          "name": "agent_refresh_history_grant_idx",
+        "backup_runs_destination_idx": {
+          "name": "backup_runs_destination_idx",
           "columns": [
             {
-              "expression": "grant_id",
+              "expression": "destination_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "agent_refresh_history_expires_idx": {
-          "name": "agent_refresh_history_expires_idx",
-          "columns": [
+            },
             {
-              "expression": "expires_at",
+              "expression": "started_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -6410,12 +6306,12 @@
         }
       },
       "foreignKeys": {
-        "agent_refresh_history_grant_id_agent_grants_id_fk": {
-          "name": "agent_refresh_history_grant_id_agent_grants_id_fk",
-          "tableFrom": "agent_refresh_history",
-          "tableTo": "agent_grants",
+        "backup_runs_destination_id_backup_destinations_id_fk": {
+          "name": "backup_runs_destination_id_backup_destinations_id_fk",
+          "tableFrom": "backup_runs",
+          "tableTo": "backup_destinations",
           "columnsFrom": [
-            "grant_id"
+            "destination_id"
           ],
           "columnsTo": [
             "id"
@@ -6651,6 +6547,55 @@
       "values": [
         "sent",
         "failed"
+      ]
+    },
+    "public.backup_destination_status": {
+      "name": "backup_destination_status",
+      "schema": "public",
+      "values": [
+        "setup",
+        "active",
+        "paused",
+        "needs_reconnect"
+      ]
+    },
+    "public.backup_frequency": {
+      "name": "backup_frequency",
+      "schema": "public",
+      "values": [
+        "daily",
+        "weekly"
+      ]
+    },
+    "public.backup_provider": {
+      "name": "backup_provider",
+      "schema": "public",
+      "values": [
+        "google_drive",
+        "dropbox",
+        "onedrive",
+        "s3",
+        "webdav",
+        "proton_drive",
+        "icloud_drive"
+      ]
+    },
+    "public.backup_run_status": {
+      "name": "backup_run_status",
+      "schema": "public",
+      "values": [
+        "running",
+        "succeeded",
+        "unchanged",
+        "failed"
+      ]
+    },
+    "public.backup_trigger": {
+      "name": "backup_trigger",
+      "schema": "public",
+      "values": [
+        "schedule",
+        "manual"
       ]
     }
   },

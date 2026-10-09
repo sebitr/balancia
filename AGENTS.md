@@ -309,3 +309,64 @@ changes with the code or not at all.
 other product's own pages and checked every row. It is printed on the page
 and is the pages' `lastmod`. Move it on a day you have done that, never to
 make a page look fresh.
+
+# A backup the server can read is not a backup this feature promises
+
+Cloud backup (`src/modules/backup/`, `docs/cloud-backup.md`) tells a group owner
+that neither this server nor their cloud can read what it writes. That is a
+claim about code paths, and it is kept by four rules that are easy to break
+with a change that looks like a convenience.
+
+**The private half of the recovery key never reaches the server.** The browser
+makes the `AGE-SECRET-KEY-1…` identity and sends the `age1…` recipient.
+`parseRecipient` refuses an identity outright, so a client that sends the wrong
+string by mistake is refused rather than stored. Do not add a "recover your
+key" path, a server-side key generator "for people without JavaScript", or a
+field that holds the identity even briefly: there is no copy to recover, and
+that is the feature. `src/modules/backup/age.test.ts` and `restore.test.ts`
+include the real `age` command opening our files, so the format stays one a
+person can open without Balancia.
+
+**`rclone-config.ts` is the only file that names an rclone option, and the
+child is given nothing else.** Every value comes from a schema in
+`providers.ts` first; no typed string is ever an option name, and `local`,
+`alias` and `crypt` are not types a person can reach. `rclone.ts` builds the
+child's environment from nothing — it never inherits `AUTH_SECRET` or
+`DATABASE_URL` — puts passwords on stdin or in that environment and never in
+argv, and scrubs every secret it was given out of anything it reports. A change
+that spreads `process.env` into the child, or interpolates a credential into a
+path, is the change this paragraph exists to refuse.
+
+**Deletion in somebody's cloud is as narrow as a name.** Retention considers a
+file only if `parseBundleName` accepts it, never touches the newest N, and never
+touches receipts. A README, a copy made by another tool, a renamed file: none
+match, none are deleted. Anything that would delete by modification time, by
+extension or by "everything older than" belongs to a different feature with its
+own consent screen.
+
+**A run never throws at the queue.** `runBackup` records every outcome — a row
+in `backup_runs`, a code, a retry time that backs off — and returns. pg-boss's
+own retry is immediate, which is exactly wrong for a revoked token and how an
+account gets flagged by its provider. A revoked destination
+(`needs_reconnect`) is not retried at all until its owner acts.
+
+**A connection keeps the app it was made through, and the server's app is never
+the only way in.** Google, Dropbox and OneDrive need a client ID and secret, and
+a refresh token works only for the client it was issued to. So an owner's own
+app (`credentials.app`, checked by `oauthAppSchema`) is sealed beside the token
+and used for every refresh; absent means the operator's `BACKUP_*_CLIENT_ID`.
+Do not make the operator's registration a requirement again: most servers have
+none, and one shared app is one quota and one point of failure for everybody on
+it. The pasted secret is posted once, rides the provider's round trip in the
+sealed cookie, and is never put in an address or returned to a browser;
+`getDestinationApp` reads it on the server for a reconnect and for nothing else.
+A provider refusing the app (`invalid_client`) is the `app` code, not
+`reconnect`: going round the same trip would be refused again, so it stops
+retrying and Reconnect goes back through the wizard for new details.
+
+Two things this feature cannot honestly claim, kept in `docs/cloud-backup.md`
+and not to be softened: the recovery key is made by JavaScript this server
+serves (a hostile operator could capture it; the answer is `age-keygen` on the
+owner's own machine), and the Google, Dropbox and OneDrive requests have been
+tested against the providers' documented answers, not a live account — the
+checklist at the end of that page is the list of what remains to be run by hand.

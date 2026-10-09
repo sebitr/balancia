@@ -4,6 +4,8 @@ import {
   ArrowLeftRight,
   Bell,
   Bot,
+  CircleAlert,
+  Cloud,
   CreditCard,
   Database,
   HelpCircle,
@@ -23,11 +25,59 @@ import { appVersion } from "@/lib/telemetry/environment";
 import { listConnections } from "@/modules/agent-access/grants";
 import { listPasskeys } from "@/modules/auth/webauthn";
 import { getUserPreferredCurrency } from "@/modules/auth/service";
+import { listDestinations } from "@/modules/backup/service";
+import { loadBackupSummary, type BackupSummary } from "@/modules/backup/view";
 import { listGroupsForUser } from "@/modules/groups/service";
 import { getPreferences } from "@/modules/notifications/service";
 import { listPayoutMethods } from "@/modules/payouts/service";
 import { getAvatarVersion } from "@/modules/profile/avatar";
 import { resolveFormatPreferences } from "@/i18n/preferences";
+
+/**
+ * What the Cloud backup row has to say, reduced to what it draws.
+ *
+ * `loadBackupSummary` answers "none", "on", "paused" or "attention", which is
+ * the row's four states. It names the provider for "on" but not for "paused",
+ * and "Paused · Google Drive" wants one, so that single case reads the
+ * destination for it — an extra read only for the people it applies to, on a
+ * screen that is drawn on every visit to settings.
+ */
+export type BackupFact =
+  | { readonly state: "none" }
+  | {
+      readonly state: "on";
+      readonly frequency: "daily" | "weekly";
+      readonly provider: string;
+    }
+  | { readonly state: "paused"; readonly provider: string }
+  | { readonly state: "attention" };
+
+/** A destination's label is "Google Drive · ada@example.com": the name is the first part. */
+function providerOf(label: string | undefined): string {
+  return (label ?? "").split(" · ")[0] ?? "";
+}
+
+async function loadBackupFact(userId: string): Promise<BackupFact> {
+  const summary: BackupSummary = await loadBackupSummary(userId);
+  switch (summary.state) {
+    case "none":
+      return { state: "none" };
+    case "attention":
+      return { state: "attention" };
+    case "on":
+      return {
+        state: "on",
+        frequency: summary.frequency,
+        provider: providerOf(summary.labels[0]),
+      };
+    case "paused": {
+      const [first] = (await listDestinations(userId)).filter(
+        (destination) => destination.status !== "setup",
+      );
+      return { state: "paused", provider: providerOf(first?.label) };
+    }
+  }
+}
 
 /**
  * The settings hub's rows, and every fact their summaries are written from.
@@ -74,6 +124,7 @@ export const loadSettingsHub = cache(async (userId: string) => {
     payouts,
     photo,
     assistants,
+    backup,
   ] = await Promise.all([
     isInstanceAdmin(userId),
     listPasskeys(userId),
@@ -86,6 +137,7 @@ export const loadSettingsHub = cache(async (userId: string) => {
     // Null, not zero, where the operator has switched agent access off: the row
     // is not drawn at all, and "None" would claim there was somewhere to go.
     getEnv().agentAccessEnabled ? listConnections(userId) : null,
+    loadBackupFact(userId),
   ]);
 
   const categories = Object.values(preferences);
@@ -101,6 +153,7 @@ export const loadSettingsHub = cache(async (userId: string) => {
     dateFormat: formats.dateFormat,
     payoutMethods: payouts.map((entry) => entry.method),
     photo,
+    backup,
   };
 });
 
@@ -118,6 +171,7 @@ export function SettingsHub({
   hub: SettingsHubFacts;
 }) {
   const t = useTranslations("userSettings");
+  const tBackup = useTranslations("cloudBackup");
 
   // The date notation by its name — "DD/MM/YYYY", or "Automatic" — rather than
   // a date written in it. A sample read as a fact: "EUR · Aug 13, 2026" on a
@@ -203,6 +257,38 @@ export function SettingsHub({
             href="/settings/data"
             icon={Database}
             label={t("data")}
+          />
+          <SettingsLinkRow
+            href="/settings/backup"
+            icon={Cloud}
+            label={tBackup("hub.label")}
+            summary={
+              hub.backup.state === "none"
+                ? tBackup("hub.none")
+                : hub.backup.state === "on"
+                  ? tBackup("hub.summary", {
+                      schedule: tBackup(`schedule.${hub.backup.frequency}`),
+                      provider: hub.backup.provider,
+                    })
+                  : hub.backup.state === "paused"
+                    ? tBackup("hub.paused", { provider: hub.backup.provider })
+                    : null
+            }
+            // A backup that has stopped is the one fact here worth a pill
+            // rather than a summary: an icon and the words, so it does not
+            // lean on the colour alone.
+            trailing={
+              hub.backup.state === "attention" ? (
+                <span className="inline-flex h-5 shrink-0 items-center gap-1 rounded-full bg-destructive/10 px-2 text-2xs font-semibold text-destructive">
+                  <CircleAlert
+                    aria-hidden="true"
+                    className="size-3"
+                    strokeWidth={2.25}
+                  />
+                  {tBackup("hub.attention")}
+                </span>
+              ) : undefined
+            }
           />
         </SettingsRows>
       </SettingsGroup>

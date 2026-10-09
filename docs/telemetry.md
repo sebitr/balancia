@@ -239,12 +239,39 @@ update this document.
 The screen also shows the configured endpoint, when a report was last sent, and
 a **Send test report** button. That button is the only path that transmits
 outside the weekly schedule; it does nothing unless somebody presses it, and it
-reports only "sent" or "failed" — never a response body, a hostname or an
-exception, because an administration page is not a place to learn what a
-server's internals look like.
+reports "sent", or "failed" with one of a short fixed list of reasons — the
+destination answered with an error, could not be reached, did not answer in
+time, or the report was held back by this server's own checks — never a
+response body, a hostname or an exception, because an administration page is
+not a place to learn what a server's internals look like. "Answered with an
+error" is also what a destination where nothing is collecting looks like: the
+collector's routes answer 404 until `TELEMETRY_RECEIVER` is on there.
 
 The preview is visible whatever the switches say, including when telemetry is
 off. Being able to see what _would_ be sent before deciding is the point.
+
+### If the test report fails
+
+The toast says "The report could not be sent", and a second line says which of
+these it was. **Last sent** is the last _success_, so it still reads "never"
+after a failure. The failed attempt is stored, but the page does not show it;
+the log does.
+
+| The toast says                                                                            | What it means, and what to check                                                                                                                                                                                                                                                                                                                                                              |
+| ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The destination answered with an error and did not accept the report.                     | The collector replied with something other than success. A **404** means nothing is collecting at that address: the routes answer 404 until `TELEMETRY_RECEIVER` is on there, and a host that serves some other application has no such route at all. A 400 is a payload the collector refused, and a 429 is the collector's rate limit (§12). The page cannot say which — see the log below. |
+| This server could not reach the destination.                                              | No answer at all: DNS, a default-deny egress policy that does not allow `balancia.app` (§7), or a TLS failure. A **redirect** also lands here, because a redirect is refused rather than followed (§12).                                                                                                                                                                                      |
+| The destination did not answer in time.                                                   | The five-second limit passed. Nothing is retried; press it again.                                                                                                                                                                                                                                                                                                                             |
+| The report was held back before sending because it did not pass this server's own checks. | A bug on this side, not the network: the report failed its schema or the content scan that runs after it (§15). Nothing left the server. The log line is **Telemetry payload blocked before sending**, and it names the rule and the path in the payload, never the value.                                                                                                                    |
+| No second line                                                                            | The reason is not one an administrator can act on — telemetry was switched off in another tab between the page loading and the press, for instance.                                                                                                                                                                                                                                           |
+
+The reason is also in this server's log, which is where to look first. The line
+is **Anonymous usage report could not be sent**, with a `reason` of `rejected`,
+`network`, `timeout`, `invalid-payload`, `unsafe-payload` or `too-large`. If you
+run the collector yourself, its log has **Telemetry report rejected**, with the
+report kind and the exact refusal, which is what tells a 400 from a 429.
+
+Pressing the button repeatedly is itself rate limited, and says so in the toast.
 
 ---
 
@@ -267,12 +294,14 @@ a deployment setting `TELEMETRY_DEFAULT=true` (§8). Either way:
   refusing to move.
 
 - **At the network**, if you trust nothing in this repository: Balancia's only
-  outbound connections are to `telemetry.balancia.app` (never, unless opted
-  in), your SMTP server, the browser vendors' push services, an exchange-rate
-  provider, and a receipt-OCR provider if you configured one — each of them
-  switched on by you. A default-deny egress policy leaves the application
-  working, and blocking that one host is enough to be certain about telemetry
-  whatever the settings say.
+  outbound connections are to `balancia.app` (never, unless opted in), your
+  SMTP server, the browser vendors' push services, an exchange-rate provider,
+  and a receipt-OCR provider if you configured one — each of them switched on
+  by you. A default-deny egress policy leaves the application working, and
+  blocking that one host is enough to be certain about what this server sends
+  whatever the settings say. The only other address is the page counter's,
+  `telemetry.balancia.app` (§17), which is contacted by a reader's browser and
+  never by the server.
 
 ---
 
@@ -290,7 +319,7 @@ TELEMETRY_RECEIVER=false         # run the collector
 ```
 
 **There is no endpoint setting.** The destination is the constant
-`https://telemetry.balancia.app` in `src/lib/telemetry/endpoint.ts`.
+`https://balancia.app` in `src/lib/telemetry/endpoint.ts`.
 Configuration decides whether anything is sent, never to whom — an address
 that could be set from a form or an environment file would be a
 request-forgery lever pointed at your own network, and it would make every
@@ -479,14 +508,16 @@ that could would have made this document's first paragraph harder to say.
 
 An opted-in instance makes exactly these requests, and no others:
 
-| When                                             | Request                                         |
-| ------------------------------------------------ | ----------------------------------------------- |
-| Weekly, if usage statistics are on               | `POST https://telemetry.balancia.app/v1/report` |
-| On an error, if crash reports are on, throttled  | `POST https://telemetry.balancia.app/v1/crash`  |
-| When an administrator presses "send test report" | `POST https://telemetry.balancia.app/v1/report` |
+| When                                             | Request                               |
+| ------------------------------------------------ | ------------------------------------- |
+| Weekly, if usage statistics are on               | `POST https://balancia.app/v1/report` |
+| On an error, if crash reports are on, throttled  | `POST https://balancia.app/v1/crash`  |
+| When an administrator presses "send test report" | `POST https://balancia.app/v1/report` |
 
 One host, compiled in, no setting that changes it — so this table is the whole
-of what an opted-in instance can reach, and it stays true without a caveat.
+of what an opted-in _server_ can reach, and it stays true without a caveat.
+(Page counts, §17, are the one other thing an opted-in instance does, and it is
+the reader's browser that makes that request, to a different address.)
 
 `Content-Type: application/json`. Five-second timeout. **No retries** — a
 failed weekly report is simply not sent, and the next one is a week away; a
@@ -726,7 +757,7 @@ all. The trade is stated here rather than smoothed over.
 ## 17. Page counts on the public pages
 
 Alongside the weekly report, an opted-in instance counts views of its public
-pages with [Umami](https://umami.is) at the same address: which were opened,
+pages with [Umami](https://umami.is), at `telemetry.balancia.app`: which were opened,
 where the reader came from, which of the page's own buttons they pressed, and
 how long the page took to draw. The public pages are the ones a stranger
 reads before there is an account — the homepage, the comparison pages and the
@@ -759,12 +790,16 @@ deployment answering yes to the wizard's telemetry question.
 `https://telemetry.balancia.app/script.js`, compiled into
 `src/lib/analytics/umami.ts`. Not a setting, for the reason the report's
 endpoint is not one (§8): an address that can be set is a lever, and it would
-make every statement here conditional on nobody having changed it. Because it
-is the same host the weekly report already uses, the network-level check stays
-one hostname —
+make every statement here conditional on nobody having changed it.
 
-> blocking that one host is enough to be certain about everything Balancia
-> would send, page counts included.
+It is not the host the weekly report goes to, and cannot be: Umami answers at
+`telemetry.balancia.app`, and the report's collector is the application itself,
+at `balancia.app`. The weekly report goes only to the second, from the server;
+the counts go only to the first, from the reader's browser. So the network-level
+check is two hostnames, each tied to one thing —
+
+> blocking `balancia.app` stops everything this server would send, and
+> blocking `telemetry.balancia.app` stops the page counts.
 
 The website ID sits on the next line — `022fe040-…`, which is not a secret:
 Umami puts it in a `data-website-id` attribute, so it is in the page source of

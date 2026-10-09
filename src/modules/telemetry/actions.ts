@@ -102,6 +102,9 @@ export async function sendTestReportAction(): Promise<
     }
 
     const outcome = await providerFor(settings).sendPeriodicReport();
+    // "Last sent" is on this page, and a send that has just gone out should not
+    // leave it saying "never" until somebody reloads.
+    revalidatePath(TELEMETRY_PATH);
     return { status: outcome.status, reason: outcome.reason };
   });
 }

@@ -90,6 +90,22 @@ x-app-environment: &app-environment
   APPLE_TEAM_ID: ${APPLE_TEAM_ID:-}
   APPLE_KEY_ID: ${APPLE_KEY_ID:-}
   APPLE_PRIVATE_KEY: ${APPLE_PRIVATE_KEY:-}
+  # Encrypted cloud backup, which a group owner switches on for themselves.
+  # rclone ships in the image, so S3 and WebDAV work with none of this set; the
+  # six OAuth values are the operator's app registrations for Google Drive,
+  # Dropbox and OneDrive (a provider is offered when both halves are set).
+  # BACKUP_ALLOW_PRIVATE_ENDPOINTS lets a backup go to a NAS on the local
+  # network; it also lets any account point this server at internal addresses.
+  # See docs/cloud-backup.md.
+  BACKUP_RCLONE_PATH: ${BACKUP_RCLONE_PATH:-}
+  BACKUP_ALLOW_PRIVATE_ENDPOINTS: ${BACKUP_ALLOW_PRIVATE_ENDPOINTS:-false}
+  BACKUP_EXPERIMENTAL_PROVIDERS: ${BACKUP_EXPERIMENTAL_PROVIDERS:-false}
+  BACKUP_GOOGLE_CLIENT_ID: ${BACKUP_GOOGLE_CLIENT_ID:-}
+  BACKUP_GOOGLE_CLIENT_SECRET: ${BACKUP_GOOGLE_CLIENT_SECRET:-}
+  BACKUP_DROPBOX_CLIENT_ID: ${BACKUP_DROPBOX_CLIENT_ID:-}
+  BACKUP_DROPBOX_CLIENT_SECRET: ${BACKUP_DROPBOX_CLIENT_SECRET:-}
+  BACKUP_MICROSOFT_CLIENT_ID: ${BACKUP_MICROSOFT_CLIENT_ID:-}
+  BACKUP_MICROSOFT_CLIENT_SECRET: ${BACKUP_MICROSOFT_CLIENT_SECRET:-}
   ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
   SIGNUP_PROOF_OF_WORK: ${SIGNUP_PROOF_OF_WORK:-false}
   # AI assistants (Claude, ChatGPT, editors) connecting at /mcp. Each person
@@ -111,7 +127,7 @@ x-app-environment: &app-environment
   # Labels reports with how this instance is deployed. It is this file.
   TELEMETRY_DEPLOYMENT: ${TELEMETRY_DEPLOYMENT:-docker-compose}
   # Run the collector — accept reports from other installations. This is what
-  # telemetry.balancia.app switches on, and what a fork switches on to collect
+  # balancia.app switches on, and what a fork switches on to collect
   # its own. Off here, and the routes answer 404 while it is.
   TELEMETRY_RECEIVER: ${TELEMETRY_RECEIVER:-false}
   # Prometheus metrics at /api/metrics, for your own monitoring. Local always:

@@ -11,8 +11,15 @@
 
 ARG NODE_VERSION=24-alpine
 
+# Cloud backups run rclone (docs/cloud-backup.md). Same version as the
+# production image, copied the same way, so the two cannot disagree about it.
+ARG RCLONE_VERSION=1.75.2
+FROM rclone/rclone:${RCLONE_VERSION} AS rclone
+
 FROM node:${NODE_VERSION}
 WORKDIR /app
+
+COPY --from=rclone /usr/local/bin/rclone /usr/local/bin/rclone
 
 # libc6-compat: glibc-linked prebuilt binaries on musl.
 # curl: container healthchecks. git: some tools shell out to it.

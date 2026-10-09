@@ -115,7 +115,7 @@ resolve_paths() {
 # a list as well as in the code so the prompts can say "3 of 7" — a wizard that
 # will not say how long it is stays longer than it should. One name per
 # question block; adding a block means adding a name.
-question_keys='APP_URL ALLOW_REGISTRATION DEMO_URL EXCHANGE_RATE_PROVIDER RECEIPT_SCANNING SEMANTIC_CATEGORIZATION PUSH_VAPID_PUBLIC_KEY SMTP_HOST TELEMETRY_MODE METRICS_ENABLED AGENT_ACCESS'
+question_keys='APP_URL ALLOW_REGISTRATION DEMO_URL EXCHANGE_RATE_PROVIDER RECEIPT_SCANNING SEMANTIC_CATEGORIZATION PUSH_VAPID_PUBLIC_KEY SMTP_HOST TELEMETRY_MODE METRICS_ENABLED AGENT_ACCESS BACKUP_ALLOW_PRIVATE_ENDPOINTS'
 
 # ── Presentation ────────────────────────────────────────────────────────────
 
@@ -1561,7 +1561,7 @@ happened in ranges rather than counts.
 Amounts, names, group names, receipts, identifiers and this instance's
 address are never in it, and there is nothing that identifies this
 installation across reports. It can only ever reach
-telemetry.balancia.app, which is compiled in rather than configurable.
+balancia.app, which is compiled in rather than configurable.
 
 The first question decides whether it is permitted at all — answer no to
 remove the choice from the administration page for good. The second
@@ -1643,6 +1643,34 @@ TEXT
     else
       write_setting AGENT_ACCESS false \
         'No AI assistant access: /mcp and /oauth answer 404. Set to true to allow it.'
+    fi
+  fi
+
+  # ── Cloud backup ──────────────────────────────────────────────────────────
+  if ! has_value BACKUP_ALLOW_PRIVATE_ENDPOINTS; then
+    question 'Cloud backup'
+    prose <<'TEXT'
+The owner of a group can back it up to a cloud of their own choosing, encrypted
+before it leaves this server so that neither this server nor the cloud can read
+it. Nothing has to be registered by you: a bucket or a WebDAV server such as
+Nextcloud needs nothing, and Google Drive, Dropbox and OneDrive work with an
+app each person registers in their own account. (You may register one app for
+everyone to get a single button instead; docs/cloud-backup.md says what that
+costs.)
+
+The one question is whether a backup may go to a server on this machine's own
+network, such as a NAS at home. It is off by default because it also lets any
+account on this instance make this server open connections to internal
+addresses. On a household instance where everyone is family, it is usually
+what you want.
+
+TEXT
+    if ask_yes_no 'Allow backups to servers on your local network?' n; then
+      write_setting BACKUP_ALLOW_PRIVATE_ENDPOINTS true \
+        'Cloud backups may go to addresses on the local network, such as a NAS.'
+    else
+      write_setting BACKUP_ALLOW_PRIVATE_ENDPOINTS false \
+        'Cloud backups go to the internet only. Set to true to allow a NAS or LAN Nextcloud.'
     fi
   fi
 fi
@@ -2173,6 +2201,11 @@ summary() {
     row 'AI assistants' 'off'
   else
     row 'AI assistants' 'people may connect their own'
+  fi
+  if is_enabled BACKUP_ALLOW_PRIVATE_ENDPOINTS; then
+    row 'Cloud backup' 'encrypted; local-network destinations allowed'
+  else
+    row 'Cloud backup' 'encrypted; internet destinations only'
   fi
   # Only when on, like demo mode: the ordinary state is a refusal nobody sees
   # until the day it matters.

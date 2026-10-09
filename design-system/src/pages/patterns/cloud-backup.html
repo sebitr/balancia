@@ -1,0 +1,251 @@
+<!-- @dsCard group="Patterns" name="Cloud backup" subtitle="A key you hold, a place you choose, and a status that never goes quiet" -->
+<div class="page">
+  <header class="page-head">
+    <div class="page-eyebrow">Patterns</div>
+    <h1>Cloud backup</h1>
+    <p class="lede">
+      An owner copies the groups they own to a cloud of their own, encrypted so
+      that neither Balancia's server nor the cloud can read them. The screens
+      carry two burdens the rest of settings does not: a decision that cannot be
+      undone (lose the key, lose the backups) and a process that runs while
+      nobody is looking, which is exactly the kind that fails silently. Both
+      shape what is drawn.
+    </p>
+  </header>
+
+  <section>
+    <h2>The recovery key comes first</h2>
+    <div class="spec" style="display: flex; justify-content: center">
+      <div class="frame frame--phone" style="width: 100%">
+        <div style="padding: 1rem">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Your recovery key</div>
+            </div>
+            <div class="card-content">
+              <!-- A placeholder shape, never a real key: the prefix on its own
+                   line, then groups of four, then a last group of six that is
+                   outlined so "type the last 6" is something you can see. -->
+              <p
+                class="mono"
+                style="margin: 0; line-height: 1.7; word-break: break-all"
+              >
+                AGE-SECRET-KEY-1<br />
+                xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx
+                xxxx
+                <span
+                  style="
+                    outline: 2px solid currentColor;
+                    outline-offset: 2px;
+                    border-radius: 4px;
+                    padding: 0 0.25rem;
+                  "
+                  >xxxxxx</span
+                >
+              </p>
+              <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem">
+                <button class="btn btn--outline btn--sm">Copy</button>
+                <button class="btn btn--outline btn--sm">
+                  Download as a file
+                </button>
+              </div>
+              <p class="note" style="margin: 0.75rem 0 0">
+                <strong>If you lose it.</strong> Nobody can open your backups
+                without this key: not you, not us, not your cloud service. There
+                is no reset, so keep it in a password manager.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      It is made in the browser and the server is sent only the public half, so
+      the loss warning belongs on this screen and nowhere else in the flow.
+      <strong>Continue</strong> stays off until a box is ticked and the last six
+      characters are typed back, and says which of the two is missing. The
+      outline and the words under the field both name the characters; neither
+      relies on colour.
+    </p>
+  </section>
+
+  <section>
+    <h2>Choosing where</h2>
+    <div class="spec">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>State</th>
+            <th>How it is drawn</th>
+            <th>What it says</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Available</strong></td>
+            <td>Row on a phone, tile from <code>lg</code>; radio semantics</td>
+            <td>The provider's name, one line of what it is for</td>
+          </tr>
+          <tr>
+            <td><strong>Switched off by the administrator</strong></td>
+            <td>Dashed and muted; cannot be picked</td>
+            <td>
+              “Not enabled on this server” over “Ask your administrator.” — the
+              words carry it, not the dimming
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Experimental</strong></td>
+            <td>A group of its own, under a plain disclosure</td>
+            <td>
+              Three short facts, no red and no warning triangle: no official
+              interface, the password is kept on this server, it can stop
+              working
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Providers are monograms on a neutral tile, not logos: a logo is somebody's
+      trademark and carries rules about colour and clear space, two letters say
+      which provider this is just as well.
+    </p>
+  </section>
+
+  <section>
+    <h2>Status is an icon and a word</h2>
+    <div class="spec">
+      <ul class="list">
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">Backed up</span>
+              <span class="list-sub">Today, 03:30 · 14 groups · 212 kB</span>
+            </span>
+            <span class="badge badge--secondary">✓ Backed up</span>
+          </div>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">No changes</span>
+              <span class="list-sub"
+                >Nothing changed since the last backup.</span
+              >
+            </span>
+            <span class="badge badge--outline">– No changes</span>
+          </div>
+        </li>
+        <li>
+          <div class="list-row">
+            <span class="list-main">
+              <span class="list-title">Failed</span>
+              <span class="list-sub">Not enough space in Dropbox.</span>
+            </span>
+            <span class="badge badge--destructive">! Failed</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Success is neutral ink. Failure uses the destructive token. The money
+      colours — green for owed to you, red for you owe, amber for the payer —
+      never appear here: they mean someone owes someone, and a backup that ran
+      is not that. The accent colours the button, the ring, the switch and a
+      selected chip, never a status.
+    </p>
+  </section>
+
+  <section>
+    <h2>A failure is never quiet</h2>
+    <div class="spec">
+      <div class="alert alert--destructive">
+        <div>
+          <div class="alert-title">Reconnect Google Drive</div>
+          <div class="alert-desc">
+            Access was revoked, so backups have stopped.
+          </div>
+          <div style="margin-top: 0.75rem">
+            <button class="btn btn--default btn--sm">Reconnect</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top: 0.75rem">
+      Four places say it, because a backup is the one feature whose failure the
+      owner will not see by using the app: a banner above the card (with the
+      action under the text, since an absolutely placed action would pinch a
+      362px column), a “Needs attention” pill on the settings row, every run
+      kept in History with the provider's own words in monospace, and the
+      schedule itself — a revoked connection is not retried until its owner
+      acts, because retrying a revoked token every hour is how an account gets
+      flagged.
+    </p>
+  </section>
+
+  <section>
+    <h2>What saves, and what asks first</h2>
+    <div class="spec">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Control</th>
+            <th>Behaviour</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              Automatic backups switch, Daily/Weekly, backups to keep, the group
+              ticks, receipts
+            </td>
+            <td>
+              Written the moment it is pressed, with no Save button and no
+              toast. Pressing again is the way back. A refusal flicks the
+              control back and says so in an error toast.
+            </td>
+          </tr>
+          <tr>
+            <td>Back up now</td>
+            <td>
+              The result stays in the card (progress, then “Backed up just
+              now”), not in a toast. A failed manual run is an error toast and a
+              row in History.
+            </td>
+          </tr>
+          <tr>
+            <td>Stop backing up · Create a new recovery key</td>
+            <td>
+              A <code>ConfirmSheet</code>, with the way out named in the
+              reader's words (“Keep backing up”, “Keep my current key”). The
+              only two things here that ask first.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Rules</h2>
+    <div class="do-dont">
+      <div class="do">
+        <strong>Do</strong>
+        <p class="note" style="margin: 0">
+          Put a number beside the cost. “About 38 MB of receipts across 3
+          groups” is a decision someone can weigh against a quota; “receipts may
+          use storage” is not.
+        </p>
+      </div>
+      <div class="dont">
+        <strong>Don't</strong>
+        <p class="note" style="margin: 0">
+          Promise what was not checked. Restoring a receipt is a manual step
+          today, and the receipts disclaimer says so beside the switch rather
+          than after it has been turned on.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>

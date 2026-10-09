@@ -4,6 +4,14 @@ Balancia holds financial history that cannot be reconstructed from anywhere
 else. Three things must be backed up together, and a backup missing any one of
 them is not a backup you can restore from.
 
+> **Looking for the owner's own backup?** This page is for whoever runs the
+> server: the whole installation, to local disk, by a script. A group owner who
+> wants their groups copied, encrypted, to a cloud of their own — on a server
+> that is not theirs, perhaps — has a screen for that, described in
+> [cloud-backup.md](cloud-backup.md). The two do not replace each other; this
+> one is what restores the server, that one is what lets a person leave with
+> their groups if the server is gone.
+
 | What         | Where                                         | Lose it and…                                                                                         |
 | ------------ | --------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | **Database** | `balancia-db-data` volume                     | Everything is gone: groups, expenses, balances, history.                                             |

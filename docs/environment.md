@@ -27,7 +27,7 @@ below. A standalone install has no source to build, so it is not asked and
 features and writes those answers too: `APP_URL`, `ALLOW_REGISTRATION`, `EXCHANGE_RATE_PROVIDER`,
 `RECEIPT_SCANNING`, `SEMANTIC_CATEGORIZATION`, the `PUSH_VAPID_*` trio, the
 `SMTP_*` group, `TELEMETRY_MODE` with `TELEMETRY_DEFAULT`,
-`METRICS_ENABLED`, and `AGENT_ACCESS`. Telemetry is asked as one question with two answers —
+`METRICS_ENABLED`, `AGENT_ACCESS`, and `BACKUP_ALLOW_PRIVATE_ENDPOINTS`. Telemetry is asked as one question with two answers —
 whether an administrator may turn it on, and whether it starts on — and writes
 both variables. Anything it writes can be edited here afterwards; nothing here
 has to go through it.
@@ -440,6 +440,61 @@ _Settings → Sign-in & security_. Without that rule, anyone able to register wi
 an address they do not own could wait to inherit the account of whoever later
 arrives through Apple. Note that an instance with no SMTP never verifies an
 address, so on one of those the deliberate path is always the one taken.
+
+---
+
+## Encrypted cloud backup (optional)
+
+Lets the owner of a group back it up, encrypted, to a cloud storage account of
+their own, on a schedule. The data is encrypted in the worker to a recovery key
+that only the owner holds, so neither this server nor the cloud can read what
+was written. How it works, the provider walk-throughs and the limits of each
+are in [cloud-backup.md](cloud-backup.md); this section is only the settings.
+
+**With none of these set the feature fully works.** The image carries `rclone`;
+anyone can bring a bucket (S3 and compatibles) or a WebDAV server (Nextcloud,
+ownCloud, kDrive); and Google Drive, Dropbox and OneDrive work too, because each
+owner registers an app of their own with the provider and pastes its client ID
+and secret into the wizard. What the settings below add is a single button for
+those three, from an app registered once for the whole instance, and two
+decisions that are the operator's to make.
+
+| Variable                         | Default  | Notes                                                                                                      |
+| -------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------- |
+| `BACKUP_ALLOW_PRIVATE_ENDPOINTS` | `false`  | Let a backup go to an address on this server's own network, such as a NAS. See below before turning it on. |
+| `BACKUP_EXPERIMENTAL_PROVIDERS`  | `false`  | Offer Proton Drive. It uses an interface the provider does not publish, and keeps a password on disk.      |
+| `BACKUP_GOOGLE_CLIENT_ID`        | unset    | Google Drive: one button for everyone, through your app. Both halves, or neither.                          |
+| `BACKUP_GOOGLE_CLIENT_SECRET`    | unset    |                                                                                                            |
+| `BACKUP_DROPBOX_CLIENT_ID`       | unset    | Dropbox: the app key. Both halves, or neither.                                                             |
+| `BACKUP_DROPBOX_CLIENT_SECRET`   | unset    | Dropbox: the app secret.                                                                                   |
+| `BACKUP_MICROSOFT_CLIENT_ID`     | unset    | OneDrive (personal accounts). Both halves, or neither.                                                     |
+| `BACKUP_MICROSOFT_CLIENT_SECRET` | unset    |                                                                                                            |
+| `BACKUP_RCLONE_PATH`             | `rclone` | Only if the binary is somewhere `PATH` does not reach. The image puts it on `PATH`.                        |
+
+A provider gets its one button exactly when both halves of its pair are set, and
+half a pair stops the app at startup, naming the missing one. Without the pair
+the provider is still offered, and the owner is asked for an app of their own.
+Setting a pair is a trade — every connection made through the button shares your
+app's quota, review status and secret — which
+[cloud-backup.md](cloud-backup.md#giving-everyone-one-button) spells out. Each
+registration needs the redirect URI
+`<APP_URL>/api/backup/oauth/<google|dropbox|microsoft>/callback` and nothing wider
+than the permissions listed under
+[Use your own app](cloud-backup.md#use-your-own-app).
+
+**`BACKUP_ALLOW_PRIVATE_ENDPOINTS` is a trade, not a convenience.** Backing up
+to a NAS is the commonest reason to self-host, and it needs this on. But the
+address is typed by whoever owns a group, and the worker connects to it every
+night; with it on, any account on this instance can make this server open
+connections to anything it can reach — the database, an admin page on the
+router. Turn it on for a household where everyone with an account is trusted.
+The platform metadata address (`169.254.169.254`) stays refused either way.
+
+**Rotating `AUTH_SECRET` disconnects every backup destination.** Their
+credentials are sealed under a key derived from it, and a rotated secret cannot
+open them: each destination shows "reconnect" and the owner re-enters or
+re-authorises it. The backups already in the cloud are unaffected, because they
+are encrypted to the owner's recovery key and not to anything on the server.
 
 ---
 
@@ -911,7 +966,7 @@ about.
 ### Where reports go — not a setting
 
 There is deliberately no variable for the destination. It is a constant,
-`https://telemetry.balancia.app`, in `src/lib/telemetry/endpoint.ts`.
+`https://balancia.app`, in `src/lib/telemetry/endpoint.ts`.
 
 Configuration answers whether anything is sent — `TELEMETRY_MODE`, and the
 administrator's switch, both of which default to sending nothing. It does not

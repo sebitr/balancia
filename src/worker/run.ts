@@ -13,9 +13,15 @@ import { logger } from "@/lib/logger";
 import {
   QUEUES,
   getBoss,
+  type BackupRunPayload,
   type ImportCommitPayload,
   type NotificationsDeliverPayload,
 } from "@/lib/jobs/queue";
+import {
+  pruneRuns,
+  runBackup,
+  sweepDueBackups,
+} from "@/modules/backup/service";
 import {
   deliverNotifications,
   pruneNotifications,
@@ -68,6 +74,9 @@ const CACHED_RATE_RETENTION_MS = 180 * 24 * 60 * 60 * 1000;
  * is never pruned.
  */
 const NOTIFICATION_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
+
+/** How long a cloud backup's run history is kept beyond its newest thirty. */
+const BACKUP_RUN_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
 
 /**
  * Floor on the gap between two anonymous usage reports.
@@ -221,6 +230,37 @@ export async function startWorker(): Promise<void> {
     jobLogger.info(report, "Folded received telemetry reports");
   });
 
+  /**
+   * Cloud backup, in two halves.
+   *
+   * The sweep runs often and does almost nothing: it asks which destinations
+   * are due and queues one job for each. The run does the work — build,
+   * encrypt, upload — one destination to a job, so a slow NAS delays only its
+   * own owner's backup and a crash loses only the run in hand.
+   *
+   * `runBackup` never rejects for an ordinary failure. It records one on the
+   * destination, with a retry time that backs off, because the queue's own
+   * immediate retry is exactly the wrong cadence for a revoked token.
+   */
+  await boss.work(QUEUES.backupSweep, async () => {
+    const jobLogger = logger.child({ queue: QUEUES.backupSweep });
+    const report = await instrumented(QUEUES.backupSweep, () =>
+      sweepDueBackups(),
+    );
+    if (report.queued > 0) jobLogger.info(report, "Queued cloud backups");
+  });
+
+  await boss.work<BackupRunPayload>(QUEUES.backupRun, async (jobs) => {
+    for (const job of jobs) {
+      await instrumented(QUEUES.backupRun, () =>
+        runBackup(job.data.destinationId, {
+          trigger: job.data.trigger,
+          runId: job.data.runId,
+        }),
+      );
+    }
+  });
+
   await boss.work(QUEUES.maintenance, async () => {
     const jobLogger = logger.child({ queue: QUEUES.maintenance });
     const now = new Date();
@@ -237,6 +277,7 @@ export async function startWorker(): Promise<void> {
       telemetryCounterRows,
       agentAccess,
       agentClientRows,
+      backupRunRows,
     ] = await Promise.all([
       sweepOrphanedAttachments(
         new Date(now.getTime() - ORPHAN_UPLOAD_GRACE_MS),
@@ -259,6 +300,9 @@ export async function startWorker(): Promise<void> {
       // ended a month ago; then the registrations nobody ever allowed.
       pruneAgentAccess({ now }),
       pruneUnusedClients({ now }),
+      // A history, not a record: the newest thirty runs of each destination
+      // are always kept, and older ones go after ninety days.
+      pruneRuns(new Date(now.getTime() - BACKUP_RUN_RETENTION_MS)),
     ]);
     maintenanceLastSuccess().set(Math.floor(Date.now() / 1000));
     jobLogger.info(
@@ -276,6 +320,7 @@ export async function startWorker(): Promise<void> {
         agentCodes: agentAccess.codes,
         agentGrants: agentAccess.grants,
         agentClientRows,
+        backupRunRows,
       },
       "Maintenance sweep complete",
     );
@@ -300,6 +345,10 @@ export async function startWorker(): Promise<void> {
   await boss.schedule(QUEUES.telemetryReport, "17 4 * * 0");
   // Collector housekeeping, daily. Does nothing where the receiver is off.
   await boss.schedule(QUEUES.telemetryAggregate, "40 3 * * *");
+  // Every ten minutes, so a backup is at most that late. It finds nothing to
+  // queue on almost every tick: the schedule itself lives in each
+  // destination's `next_run_at`, not here.
+  await boss.schedule(QUEUES.backupSweep, "*/10 * * * *");
 
   logger.info(
     { queues: Object.values(QUEUES), nodeEnv: getEnv().NODE_ENV },

@@ -15,6 +15,16 @@
 
 ARG NODE_VERSION=24-alpine
 
+# The transport for cloud backups (docs/cloud-backup.md). One static binary,
+# MIT-licensed, that speaks to every provider Balancia offers; copied out of the
+# project's own image so that nothing is downloaded by a RUN line and the
+# version below is the whole of what changes it. Multi-arch, like the rest of
+# this file. Raising it is a deliberate act: read rclone's changelog for the
+# backends in src/modules/backup/providers.ts first, because two of them
+# (Proton Drive and iCloud Drive) track undocumented interfaces.
+ARG RCLONE_VERSION=1.75.2
+FROM rclone/rclone:${RCLONE_VERSION} AS rclone
+
 # ── Stage: dependencies ──────────────────────────────────────────────────────
 FROM node:${NODE_VERSION} AS deps
 WORKDIR /app
@@ -158,6 +168,10 @@ COPY --from=proddeps --chown=balancia:balancia /app/node_modules ./node_modules
 
 # Applies pending migrations before handing over to the command below.
 COPY --chmod=755 scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
+
+# Runs as the unprivileged user above and is handed only the settings for the
+# one remote it is talking to; see src/modules/backup/rclone.ts.
+COPY --from=rclone /usr/local/bin/rclone /usr/local/bin/rclone
 
 RUN mkdir -p /data/uploads && chown -R balancia:balancia /data
 

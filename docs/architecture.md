@@ -49,7 +49,7 @@ do not both subscribe. See [environment.md](environment.md#background-jobs).
   Runs on the Node.js runtime for every request: strict CSP with a per-request
   nonce, and origin validation.
 - `src/modules/<domain>` — business logic per domain (`activity`,
-  `attachments`, `auth`, `balances`, `categorization`, `currencies`, `demo`,
+  `attachments`, `auth`, `backup`, `balances`, `categorization`, `currencies`, `demo`,
   `expenses`, `exports`, `groups`, `guests`, `imports`, `join`,
   `notifications`, `payouts`, `profile`, `receipts`, `recurring`, `reminders`,
   `settlements`, `telemetry`). Each module owns its schemas (zod), services
@@ -57,6 +57,9 @@ do not both subscribe. See [environment.md](environment.md#background-jobs).
 - `src/lib/db` — Drizzle schema, client, migration helpers.
 - `src/lib/jobs` — pg-boss wiring shared by web and worker processes.
 - `src/lib/storage` — receipt storage adapters (local disk, S3-compatible).
+- `src/modules/backup` — encrypted cloud backup: the `age` encryption, `rclone`
+  as the transport, the schedule and the run, restore. Its own page is
+  [cloud-backup.md](cloud-backup.md).
 - `src/lib/push` — Web Push: VAPID signing and RFC 8291 payload encryption.
 - `src/lib/security` — authorization context, guest sessions, rate limiting,
   token hashing, headers.

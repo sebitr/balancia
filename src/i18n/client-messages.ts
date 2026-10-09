@@ -122,6 +122,9 @@ export const AREA_NAMESPACES = {
     "transactionDetail.delete",
     "transactionDetail.gone",
   ],
+  // The cloud backup screens, which are the only readers of the namespace: the
+  // hub row and the administration cards render theirs on the server.
+  backup: ["cloudBackup"],
 } as const satisfies Record<string, readonly string[]>;
 
 export type MessageArea = keyof typeof AREA_NAMESPACES;

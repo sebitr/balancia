@@ -534,9 +534,17 @@ const LISTS: Lists = {
 };
 
 describe("client messages", () => {
-  it("gives every Client Component the namespaces it asks for, and carries nothing else", () => {
-    expect(check(repositorySources(), LISTS)).toEqual([]);
-  });
+  it(
+    "gives every Client Component the namespaces it asks for, and carries nothing else",
+    // Reads every source file in the repository and follows each import. It
+    // takes under a second alone and grows with the tree, so on a busy runner
+    // — with the jsdom project beside it — the default five seconds was one
+    // new screen away from failing a build that has nothing wrong with it.
+    { timeout: 30_000 },
+    () => {
+      expect(check(repositorySources(), LISTS)).toEqual([]);
+    },
+  );
 
   it("lists only paths the catalogue has", () => {
     const catalogue = en as unknown as Record<string, unknown>;
