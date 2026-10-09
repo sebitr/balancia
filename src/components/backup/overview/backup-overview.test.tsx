@@ -142,6 +142,69 @@ describe("a revoked connection", () => {
   );
 });
 
+describe("a connection whose app the provider turned away", () => {
+  const refused = (provider: BackupProvider = "google_drive") => ({
+    destination: revoked(provider),
+    runs: [
+      run({
+        id: "f1",
+        status: "failed",
+        groupCount: 0,
+        errorCode: "app",
+        errorDetail: "invalid_client",
+      }),
+    ],
+  });
+
+  it("says the app is the problem, not that access was taken back", () => {
+    renderOverview(refused());
+
+    const banner = screen.getByRole("alert");
+    expect(
+      within(banner).getByText(
+        /Google Drive does not accept the app this connection was made with\./,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(banner).getByText(/with the right client ID and secret/),
+    ).toBeInTheDocument();
+    expect(
+      within(banner).queryByText(
+        "Access was revoked, so backups have stopped.",
+      ),
+    ).toBeNull();
+  });
+
+  it.each([
+    ["google_drive", "google_drive"],
+    ["dropbox", "dropbox"],
+    ["onedrive", "onedrive"],
+  ] as const)(
+    "sends %s back through the wizard to enter new details, not round the same trip",
+    (provider, route) => {
+      renderOverview(refused(provider));
+
+      // Reconnecting through the same app would be refused the same way.
+      expect(screen.getByRole("link", { name: "Reconnect" })).toHaveAttribute(
+        "href",
+        `/settings/backup/setup?step=connect&provider=${route}&replace=d1`,
+      );
+    },
+  );
+
+  it("still sends a plainly revoked connection round the trip it was made through", () => {
+    renderOverview({
+      destination: revoked("google_drive"),
+      runs: [run({ id: "f2", status: "failed", errorCode: "reconnect" })],
+    });
+
+    expect(screen.getByRole("link", { name: "Reconnect" })).toHaveAttribute(
+      "href",
+      "/api/backup/oauth/google/start?reconnect=d1",
+    );
+  });
+});
+
 describe("a run of failures", () => {
   const failing = () => {
     const latest = run({

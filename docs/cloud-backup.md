@@ -5,8 +5,9 @@ schedule, **encrypted so that only they can read it**. Not this server, not the
 person who runs it, and not the cloud provider.
 
 This page is the whole story: what it does, how it is built, what it does and
-does not protect against, and — for whoever runs the instance — how to switch on
-the providers that need an app registered. The settings themselves are in
+does not protect against, how an owner connects Google Drive, Dropbox or OneDrive
+through an app of their own, and — for whoever runs the instance — how to give
+everyone a single button instead. The settings themselves are in
 [environment.md](environment.md#encrypted-cloud-backup-optional).
 
 It is a different thing from [backing up the server](backup-and-restore.md),
@@ -24,12 +25,15 @@ and wants a copy in a place the server cannot lose.
    _public_ half is sent to the server. Someone who would rather not trust a key
    made by JavaScript this server serves can make one with `age-keygen` and paste
    only its public `age1…` line (_Use a key I already have_).
-2. **Where to back up.** Google Drive, Dropbox or OneDrive are connected with a
-   button that goes to the provider and back. A bucket (any S3-compatible
-   service), a WebDAV server (Nextcloud, ownCloud, Infomaniak kDrive) or Proton
-   Drive is connected by typing its details, and a **Test connection** button
-   proves it can write before anything is kept. A provider this server has not
-   enabled is shown and says so ("Ask your administrator").
+2. **Where to back up.** Google Drive, Dropbox or OneDrive are connected through
+   the provider's own sign-in page, with an _app_ (a client ID and secret) that
+   is the owner's own, or, if whoever runs the server registered one for
+   everybody, a single button ([below](#use-your-own-app)). A bucket (any
+   S3-compatible service), a WebDAV server (Nextcloud, ownCloud, Infomaniak
+   kDrive) or Proton Drive is connected by typing its details, and a **Test
+   connection** button proves it can write before anything is kept. A provider
+   this server has not enabled (Proton Drive, by default) is shown and says so
+   ("Ask your administrator").
 3. **What and how often.** Which of the groups they own (all, to start), daily or
    weekly, and how many backups to keep (ten). **Receipts** are a separate,
    quieter choice, off by default, with the cost stated beside the switch and a
@@ -173,9 +177,9 @@ reconnected, and nothing already in the cloud is affected.
 
 | Provider      | How you connect it              | Notes                                                                                                                       |
 | ------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Google Drive  | Button (OAuth)                  | Balancia can see only the files it creates (`drive.file`); it cannot list or read anything else in the Drive.               |
-| Dropbox       | Button (OAuth)                  | The app is registered as an _app folder_ app, so it is confined to `Apps/<name>/`.                                          |
-| OneDrive      | Button (OAuth)                  | **Personal Microsoft accounts only.** Microsoft's app folder exists only there. Work and school accounts: use WebDAV or S3. |
+| Google Drive  | Your own app, or a button       | Balancia can see only the files it creates (`drive.file`); it cannot list or read anything else in the Drive.               |
+| Dropbox       | Your own app, or a button       | The app is registered as an _app folder_ app, so it is confined to `Apps/<name>/`.                                          |
+| OneDrive      | Your own app, or a button       | **Personal Microsoft accounts only.** Microsoft's app folder exists only there. Work and school accounts: use WebDAV or S3. |
 | S3-compatible | Address, bucket, key            | AWS, Backblaze B2, Wasabi, Cloudflare R2, MinIO, Hetzner, Scaleway, Infomaniak Swiss Backup, and the rest of rclone's list. |
 | WebDAV        | Address, folder, user, password | Nextcloud, ownCloud, Synology, Infomaniak kDrive, any WebDAV. Use an **app password**, not the account's main one.          |
 | Proton Drive  | Username, password, 2FA secret  | _Experimental._ See below.                                                                                                  |
@@ -190,6 +194,71 @@ third-party tools, so a problem is diagnosed from this side first.
 **A bucket or WebDAV folder you make just for this is the best choice.** Give the
 key permission to write and delete in that one place and nothing else; the
 connection test then tells you before the first night whether it can.
+
+### Use your own app
+
+Google Drive, Dropbox and OneDrive will not let any program write to someone's
+files without being registered with them first: a registration is a **client ID**
+and a **client secret**, and it is what the person is shown on the provider's
+consent page ("Balancia wants to…"). Someone has to make it. There are two ways
+to settle who, and Balancia supports both:
+
+- **Your own app (works everywhere).** You make the registration in your own
+  account at the provider, once, in a few minutes, and paste its client ID and
+  secret into the wizard. Nothing is needed from whoever runs the server, and
+  nobody else's backups depend on your app: if its secret is reset or the app is
+  deleted, only your connection stops. The server keeps the secret sealed with
+  the rest of your connection's details (AES-256-GCM, like a bucket's key), never
+  sends it back to a browser, and uses it for your connection alone.
+- **The server's app (one button).** If whoever runs the server has registered an
+  app for everyone ([below](#giving-everyone-one-button)), the wizard shows a
+  button, and your own app is still there, folded under it, if you would rather
+  not depend on theirs.
+
+Either way the refresh token is yours, in your connection, and Balancia can see
+only what the narrowest permission each provider offers lets it see.
+
+What to do at each, with the address the wizard shows you as the redirect (it is
+`<this server's address>/api/backup/oauth/<google|dropbox|microsoft>/callback`,
+and must match exactly). The consoles move their menus around; the names below
+are what to look for.
+
+**Google Drive.**
+Google Cloud Console → a project → _APIs & Services_ → enable the **Google Drive
+API** → _OAuth consent screen_ (External) → add the scope
+`https://www.googleapis.com/auth/drive.file` → _Credentials_ → _OAuth client ID_,
+type **Web application**, with the redirect address. Paste the **Client ID** and
+**Client secret**.
+**Publish the consent screen** ("In production"). An app left in _Testing_ is
+issued refresh tokens that expire after seven days, and every backup would break
+weekly. `drive.file` is one of Google's non-sensitive scopes, which is what keeps
+this from needing a verification review; Google may show "this app isn't
+verified" on the consent page, which for your own app is expected.
+
+**Dropbox.**
+Dropbox App Console → _Create app_ → **Scoped access** → **App folder** → a name.
+_Permissions_: `files.metadata.read`, `files.metadata.write`, `files.content.read`,
+`files.content.write`, `account_info.read`. _Settings_: add the redirect address.
+Paste the **App key** and **App secret**. A new app is in _development_ status,
+which allows the account that made it and a few others; for your own backups
+that is enough.
+
+**OneDrive.**
+Microsoft Entra admin center → _App registrations_ → _New registration_ →
+supported account types **Personal Microsoft accounts only** → redirect address,
+platform **Web**. _Certificates & secrets_ → a new client secret (**it expires**;
+put the date in your calendar). _API permissions_ → Microsoft Graph, delegated:
+`Files.ReadWrite.AppFolder`, `User.Read`, `offline_access`. Paste the
+_Application (client) ID_ and the secret's **value**, not its ID.
+
+**When the provider turns the app away.** A reset secret, a deleted app or a
+mistyped value is answered with `invalid_client`. That is not a revoked
+connection and is not retried (an hour later it would be refused the same way,
+and repeated refusals are how accounts get flagged): the card says
+"{provider} does not accept the app this connection was made with", and
+_Reconnect_ takes you back through the wizard to enter the new details. The
+destination's schedule and choices carry over; the earlier backups stay where
+they are.
 
 ### Experimental: Proton Drive
 
@@ -270,41 +339,38 @@ with:
 A native install without Docker needs `rclone` on `PATH` (or `BACKUP_RCLONE_PATH`).
 Without it the feature says it is unavailable rather than failing at night.
 
-### Registering the apps
+### Giving everyone one button
 
-Needed only for Google Drive, Dropbox and OneDrive. People connect their own
-account to **your** app; the registration is yours to make once. Each wants the
-redirect URI `<APP_URL>/api/backup/oauth/<google|dropbox|microsoft>/callback`, and
-APP_URL must be the address people use. The consoles move their menus around;
-the names below are what to look for.
+**Optional.** Google Drive, Dropbox and OneDrive work on every server without
+this: each owner brings an app of their own ([above](#use-your-own-app)), and
+nothing here has to be set. Registering one for the whole server only turns that
+into a single button, and it trades something away, so decide it knowingly:
 
-**Google Drive.**
-Google Cloud Console → a project → _APIs & Services_ → enable the **Google Drive
-API** → _OAuth consent screen_ (External) → add the scope
-`https://www.googleapis.com/auth/drive.file` → _Credentials_ → _OAuth client ID_,
-type **Web application**, with the redirect URI above.
-**Publish the consent screen** ("In production"). An app left in _Testing_ is
-issued refresh tokens that expire after seven days, and every backup would break
-weekly. `drive.file` is one of Google's non-sensitive scopes, which is what keeps
-this from needing a verification review.
-`BACKUP_GOOGLE_CLIENT_ID` and `BACKUP_GOOGLE_CLIENT_SECRET`.
+- every person's connection then runs through **your** app, so its quota, its
+  review status and its secret are shared by all of them. A reset secret, a
+  consent screen left in _Testing_ or a lapsed Microsoft secret stops everybody's
+  backups at once;
+- Dropbox keeps a new app in _development_ status, which limits how many
+  accounts can link it, until you apply for production;
+- the secret lives in this server's environment, which is one more thing to keep.
 
-**Dropbox.**
-Dropbox App Console → _Create app_ → **Scoped access** → **App folder** → a name.
-_Permissions_: `files.metadata.read`, `files.metadata.write`, `files.content.read`,
-`files.content.write`, `account_info.read`. _Settings_: add the redirect URI.
-The app key and secret are `BACKUP_DROPBOX_CLIENT_ID` and
-`BACKUP_DROPBOX_CLIENT_SECRET`. A new app is in _development_ status, which limits
-how many accounts can link it; apply for production if you need more.
+If that suits you, make the registration with the steps above (the redirect
+address is `<APP_URL>/api/backup/oauth/<google|dropbox|microsoft>/callback`, and
+`APP_URL` must be the address people use) and set both halves for each provider
+you want a button for:
 
-**OneDrive.**
-Microsoft Entra admin center → _App registrations_ → _New registration_ →
-supported account types **Personal Microsoft accounts only** → redirect URI,
-platform **Web**. _Certificates & secrets_ → a new client secret (**it expires**;
-put the date in your calendar). _API permissions_ → Microsoft Graph, delegated:
-`Files.ReadWrite.AppFolder`, `User.Read`, `offline_access`.
-`BACKUP_MICROSOFT_CLIENT_ID` is the _Application (client) ID_;
-`BACKUP_MICROSOFT_CLIENT_SECRET` is the secret's **value**, not its ID.
+| Provider | Client ID                    | Client secret                    |
+| -------- | ---------------------------- | -------------------------------- |
+| Google   | `BACKUP_GOOGLE_CLIENT_ID`    | `BACKUP_GOOGLE_CLIENT_SECRET`    |
+| Dropbox  | `BACKUP_DROPBOX_CLIENT_ID`   | `BACKUP_DROPBOX_CLIENT_SECRET`   |
+| OneDrive | `BACKUP_MICROSOFT_CLIENT_ID` | `BACKUP_MICROSOFT_CLIENT_SECRET` |
+
+Dropbox's _app key_ is the client ID; Microsoft's is the _Application (client)
+ID_, and its secret is the secret's **value**. Both halves or neither: one alone
+is ignored. A connection made through the button keeps using this app, so
+changing or removing it later stops those connections, not the ones made with
+somebody's own app. Administration → Cloud backup providers shows which of the
+three has a button.
 
 ### Local-network destinations
 
@@ -328,17 +394,18 @@ Each failed run records a code and the provider's own words, scrubbed and cut to
 a few hundred characters, in the card's history. The worker logs the code and the
 destination, never a credential. The codes:
 
-| Code               | Meaning                                                   | What happens next                         |
-| ------------------ | --------------------------------------------------------- | ----------------------------------------- |
-| `reconnect`        | The provider no longer accepts the credentials.           | Retries stop until the owner reconnects.  |
-| `forbidden`        | Signed in, but not allowed to write or delete there.      | Retried: an hour, two, four, up to a day. |
-| `quota`            | The account or bucket is full.                            | Retried the same way.                     |
-| `not_found`        | The bucket or folder does not exist.                      | Retried the same way.                     |
-| `unreachable`      | No route, refused, timed out, bad certificate.            | Retried the same way.                     |
-| `rate_limited`     | The provider asked us to slow down.                       | Retried the same way.                     |
-| `endpoint_blocked` | This server refuses that address.                         | Retried; fix the setting or the address.  |
-| `unavailable`      | `rclone` is missing, or the provider is not enabled here. | Retried.                                  |
-| `no_key`           | There is no recovery key to encrypt to.                   | Retried.                                  |
+| Code               | Meaning                                                                                         | What happens next                                |
+| ------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `reconnect`        | The provider no longer accepts the credentials.                                                 | Retries stop until the owner reconnects.         |
+| `app`              | The provider does not recognise the app (client ID and secret) the connection was made through. | Retries stop until the owner enters new details. |
+| `forbidden`        | Signed in, but not allowed to write or delete there.                                            | Retried: an hour, two, four, up to a day.        |
+| `quota`            | The account or bucket is full.                                                                  | Retried the same way.                            |
+| `not_found`        | The bucket or folder does not exist.                                                            | Retried the same way.                            |
+| `unreachable`      | No route, refused, timed out, bad certificate.                                                  | Retried the same way.                            |
+| `rate_limited`     | The provider asked us to slow down.                                                             | Retried the same way.                            |
+| `endpoint_blocked` | This server refuses that address.                                                               | Retried; fix the setting or the address.         |
+| `unavailable`      | `rclone` is missing, or the provider is not enabled here.                                       | Retried.                                         |
+| `no_key`           | There is no recovery key to encrypt to.                                                         | Retried.                                         |
 
 After three failures in a row the card raises a banner. A run left "running" by a
 process that died is closed as failed after two hours.
@@ -366,6 +433,10 @@ a provider, do this once with an account you can spare:
 - [ ] Press _Back up now_ twice; keep-last-N deletes only the oldest.
 - [ ] Revoke the app in the provider's security page. The next run fails with
       "reconnect", and the card offers it.
+- [ ] Do the above once through an app of your own, and once through a server-wide
+      button if you registered one. Then reset the secret in the provider's
+      console: the next run fails with `app` (not `reconnect`), the card says the
+      provider does not accept the app, and _Reconnect_ opens the wizard.
 - [ ] **OneDrive only:** confirm the file is inside the _Apps/<your app>_ folder.
       rclone is pointed at that folder by its ID, which is the one thing here that
       could not be exercised without a Microsoft account.

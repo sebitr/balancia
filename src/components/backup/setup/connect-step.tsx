@@ -1,6 +1,7 @@
 "use client";
 
 import { useId } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   Check,
@@ -10,6 +11,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import type { ProviderChoice } from "@/components/backup/provider-mark";
+import { Disclosure } from "@/components/settings/disclosure";
 import { SettingsCard } from "@/components/settings/settings-card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
@@ -24,6 +26,7 @@ import {
 } from "./draft";
 import { StepFooter, type FooterAction } from "./fields";
 import { providerName, useOutcomeText } from "./outcome";
+import { OwnAppForm } from "./own-app-form";
 import { OAUTH_KIND, oauthStartHref } from "./setup-url";
 import type { SetupPending } from "./types";
 
@@ -37,7 +40,8 @@ function isOAuthProvider(choice: ProviderChoice): choice is OAuthProvider {
  * Step 3: connecting to the place chosen, which takes one of four shapes.
  *
  *  - an account (Google Drive, Dropbox, OneDrive): a trip to the provider and
- *    back, with nothing to type;
+ *    back — one button where the server has an app of its own, and otherwise
+ *    the client ID and secret of one the person registered;
  *  - an S3-compatible bucket, or a WebDAV server: a form;
  *  - Proton Drive: a form that says it is experimental;
  *  - Infomaniak: first which of its two services, then that service's form.
@@ -50,6 +54,8 @@ export function ConnectStep({
   draft,
   connection,
   outcome,
+  account,
+  otherAccountHref,
   onInfomaniak,
   onForm,
   onTest,
@@ -63,6 +69,13 @@ export function ConnectStep({
   connection: SetupPending | null;
   /** What the trip said, if it said anything. */
   outcome: string | null;
+  /**
+   * What this server has for an account provider: whether an app was
+   * registered for everybody, and the address to register for one's own.
+   */
+  account: { instanceApp: boolean; redirectUri: string | null };
+  /** This step again, without the connection: where "another account" goes. */
+  otherAccountHref: string;
   onInfomaniak: (service: InfomaniakService) => void;
   onForm: (key: FormKey, patch: Record<string, unknown>) => void;
   onTest: () => void;
@@ -92,6 +105,9 @@ export function ConnectStep({
           provider={provider}
           connection={connection}
           outcome={outcome}
+          instanceApp={account.instanceApp}
+          redirectUri={account.redirectUri}
+          otherAccountHref={otherAccountHref}
         />
       ) : (
         <>
@@ -178,14 +194,28 @@ function accountOf(label: string): string {
   return at === -1 ? "" : label.slice(at + 3).trim();
 }
 
+/**
+ * An account provider, in its two states.
+ *
+ * Not connected: where the server has an app of its own, one button and, folded
+ * under it, the way to use an app of one's own; where it has none, the form for
+ * one's own app, with nothing folded because there is nothing else to do.
+ * Connected: who, and a way back to the same choice for another account.
+ */
 function OAuthPanel({
   provider,
   connection,
   outcome,
+  instanceApp,
+  redirectUri,
+  otherAccountHref,
 }: {
   provider: OAuthProvider;
   connection: SetupPending | null;
   outcome: string | null;
+  instanceApp: boolean;
+  redirectUri: string | null;
+  otherAccountHref: string;
 }) {
   const t = useTranslations("cloudBackup");
   const name = providerName(provider);
@@ -196,10 +226,17 @@ function OAuthPanel({
   const href = oauthStartHref(provider);
   const account = connection ? accountOf(connection.label) : "";
 
+  const notYet = (
+    <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <Circle aria-hidden="true" className="size-3.5 shrink-0" />
+      {t("connect.notYet")}
+    </p>
+  );
+
   return (
     <>
       {outcome && !connection && <OAuthNotice code={outcome} provider={name} />}
-      <SettingsCard>
+      <SettingsCard contentClassName={connection ? undefined : "p-0"}>
         {connection ? (
           <div className="space-y-3">
             <p className="flex items-start gap-2 text-sm font-medium text-pretty">
@@ -215,37 +252,54 @@ function OAuthPanel({
               <li>{t("connect.scope")}</li>
               <li>{t("connect.folder")}</li>
             </ul>
-            <a
-              href={href}
+            <Link
+              href={otherAccountHref}
               className={cn(
                 buttonVariants({ variant: "link" }),
                 "-mx-1 w-fit px-1",
               )}
             >
               {t("connect.otherAccount")}
-            </a>
+            </Link>
           </div>
+        ) : instanceApp ? (
+          <>
+            <div className="space-y-3.5 p-4">
+              <p className="text-sm text-pretty text-muted-foreground">
+                {t("connect.oauthIntro", { provider: name })}
+              </p>
+              <a
+                href={href}
+                className={cn(
+                  buttonVariants(),
+                  // A long name in a longer language wraps rather than spilling
+                  // out of a button the width of the phone.
+                  "h-auto min-h-11 w-full py-2 text-center whitespace-normal md:h-auto md:min-h-8 lg:w-auto",
+                )}
+              >
+                {t("connect.oauthButton", { provider: name })}
+                <ExternalLink aria-hidden="true" className="size-4" />
+              </a>
+              {notYet}
+            </div>
+            <Disclosure label={t("connect.ownAppTitle", { provider: name })}>
+              <OwnAppForm
+                provider={provider}
+                name={name}
+                redirectUri={redirectUri}
+                explain={false}
+              />
+            </Disclosure>
+          </>
         ) : (
-          <div className="space-y-3.5">
-            <p className="text-sm text-pretty text-muted-foreground">
-              {t("connect.oauthIntro", { provider: name })}
-            </p>
-            <a
-              href={href}
-              className={cn(
-                buttonVariants(),
-                // A long name in a longer language wraps rather than spilling
-                // out of a button the width of the phone.
-                "h-auto min-h-11 w-full py-2 text-center whitespace-normal md:h-auto md:min-h-8 lg:w-auto",
-              )}
-            >
-              {t("connect.oauthButton", { provider: name })}
-              <ExternalLink aria-hidden="true" className="size-4" />
-            </a>
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Circle aria-hidden="true" className="size-3.5 shrink-0" />
-              {t("connect.notYet")}
-            </p>
+          <div className="space-y-3.5 p-4">
+            <OwnAppForm
+              provider={provider}
+              name={name}
+              redirectUri={redirectUri}
+              explain
+            />
+            {notYet}
           </div>
         )}
       </SettingsCard>

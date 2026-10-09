@@ -26,7 +26,7 @@ import {
 /** The name the one remote goes by. Arbitrary; it appears in `BACKUP:path`. */
 export const REMOTE = "BACKUP";
 
-/** An OAuth app's registration, as the operator configured it. */
+/** An OAuth app's registration: the owner's own, or the one the operator configured. */
 export interface OAuthApp {
   readonly clientId: string;
   readonly clientSecret: string;
@@ -47,7 +47,7 @@ export interface BuildContext {
    * stays free of process spawning and can be tested without rclone.
    */
   readonly obscure: (value: string) => Promise<string>;
-  /** The operator's registration, for the three OAuth providers. */
+  /** The app the connection was made through, for the three OAuth providers. */
   readonly oauthApp?: OAuthApp;
   /** A fresh token, for the three OAuth providers. */
   readonly token?: OAuthToken;
@@ -103,7 +103,7 @@ function requireOAuth(context: BuildContext): {
   token: OAuthToken;
 } {
   if (!context.oauthApp || !context.token) {
-    throw new Error("An OAuth provider needs the operator's app and a token.");
+    throw new Error("An OAuth provider needs an app and a token.");
   }
   return { app: context.oauthApp, token: context.token };
 }

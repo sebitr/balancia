@@ -17,6 +17,7 @@
 
 type SentenceKey =
   | "error.reconnect"
+  | "error.app"
   | "error.forbidden"
   | "error.quota"
   | "error.notFound"
@@ -32,6 +33,7 @@ type SentenceKey =
 
 type HintKey =
   | "error.reconnectHint"
+  | "error.appHint"
   | "error.forbiddenHint"
   | "error.quotaHint"
   | "error.notFoundHint"
@@ -46,6 +48,7 @@ export type Translate = (
 
 const SENTENCES: Readonly<Record<string, SentenceKey>> = {
   reconnect: "error.reconnect",
+  app: "error.app",
   forbidden: "error.forbidden",
   quota: "error.quota",
   not_found: "error.notFound",
@@ -65,6 +68,7 @@ const SENTENCES: Readonly<Record<string, SentenceKey>> = {
 /** The sentences that come with one line of what to do about it. */
 const HINTS: Readonly<Record<string, HintKey>> = {
   reconnect: "error.reconnectHint",
+  app: "error.appHint",
   forbidden: "error.forbiddenHint",
   quota: "error.quotaHint",
   not_found: "error.notFoundHint",

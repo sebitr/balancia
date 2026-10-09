@@ -12,12 +12,13 @@ import { AdminState } from "./state-mark";
  * Administration → which services people on this server can back up to.
  *
  * Read-only. Every row is a statement read from this server's configuration,
- * because that is where the answer lives: an OAuth provider is offered exactly
- * when both halves of its client ID and secret are set, and Proton Drive when
- * `BACKUP_EXPERIMENTAL_PROVIDERS` is. A screen cannot write an environment
- * variable, so there is no switch to put beside them — a switch that did
- * nothing, or a stored setting that disagreed with the file, would be worse
- * than a sentence naming the variable.
+ * because that is where the answer lives. An account provider always works:
+ * with both halves of its client ID and secret set, everyone gets one button;
+ * without them, each person brings an app of their own. Proton Drive is offered
+ * when `BACKUP_EXPERIMENTAL_PROVIDERS` is set. A screen cannot write an
+ * environment variable, so there is no switch to put beside them — a switch
+ * that did nothing, or a stored setting that disagreed with the file, would be
+ * worse than a sentence naming the variable.
  *
  * The same page of Settings already 404s for everybody who is not the instance
  * administrator, so nothing here re-checks.
@@ -32,7 +33,10 @@ const EXPERIMENTAL_VARIABLE = "BACKUP_EXPERIMENTAL_PROVIDERS";
 type Entry = {
   readonly choice: ProviderChoice;
   readonly name: string;
-  readonly state: "ready" | "needsClient" | "off";
+  /** `sharedApp`: one button for everyone. `ownApp`: each person brings theirs. */
+  readonly state: "ready" | "sharedApp" | "ownApp" | "off";
+  /** For an account provider on `ownApp`: the two settings that would give it a button. */
+  readonly variables?: { readonly id: string; readonly secret: string };
 };
 
 export async function BackupProvidersCard() {
@@ -41,21 +45,43 @@ export async function BackupProvidersCard() {
 
   const stateOf = (id: BackupProvider): Entry["state"] => {
     const tile = tiles.get(id);
-    if (!tile || tile.availability === "available") return "ready";
-    return tile.availability === "needs_operator" ? "needsClient" : "off";
+    if (!tile) return "ready";
+    return tile.availability === "available" ? "ready" : "off";
+  };
+
+  /** An account provider: always usable, and the question is only whose app. */
+  const accountOf = (
+    id: "google_drive" | "dropbox" | "onedrive",
+    prefix: string,
+  ): Pick<Entry, "state" | "variables"> => {
+    const tile = tiles.get(id);
+    if (tile && tile.availability !== "available") return { state: "off" };
+    return tile?.instanceApp
+      ? { state: "sharedApp" }
+      : {
+          state: "ownApp",
+          variables: {
+            id: `${prefix}_CLIENT_ID`,
+            secret: `${prefix}_CLIENT_SECRET`,
+          },
+        };
   };
 
   const accounts: Entry[] = [
     {
       choice: "google_drive",
       name: t("where.googleDrive"),
-      state: stateOf("google_drive"),
+      ...accountOf("google_drive", "BACKUP_GOOGLE"),
     },
-    { choice: "dropbox", name: t("where.dropbox"), state: stateOf("dropbox") },
+    {
+      choice: "dropbox",
+      name: t("where.dropbox"),
+      ...accountOf("dropbox", "BACKUP_DROPBOX"),
+    },
     {
       choice: "onedrive",
       name: t("where.oneDrive"),
-      state: stateOf("onedrive"),
+      ...accountOf("onedrive", "BACKUP_MICROSOFT"),
     },
   ];
   const own: Entry[] = [
@@ -104,21 +130,20 @@ export async function BackupProvidersCard() {
                       </span>
                     )}
                   </p>
-                  <AdminState
-                    kind={
-                      entry.state === "ready"
-                        ? "ready"
-                        : entry.state === "needsClient"
-                          ? "attention"
-                          : "off"
-                    }
-                  >
+                  <AdminState kind={entry.state === "off" ? "off" : "ready"}>
                     {entry.state === "ready"
                       ? t("admin.ready")
-                      : entry.state === "needsClient"
-                        ? t("admin.needsClient")
-                        : t("admin.off")}
+                      : entry.state === "sharedApp"
+                        ? t("admin.sharedApp")
+                        : entry.state === "ownApp"
+                          ? t("admin.ownApp")
+                          : t("admin.off")}
                   </AdminState>
+                  {entry.variables && (
+                    <p className="text-xs text-pretty text-muted-foreground">
+                      {t("admin.appHint", entry.variables)}
+                    </p>
+                  )}
                   {entry.choice === "proton_drive" && entry.state === "off" && (
                     <p className="text-xs text-pretty text-muted-foreground">
                       {t("admin.envHint", { name: EXPERIMENTAL_VARIABLE })}

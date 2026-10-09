@@ -6,11 +6,15 @@ import { z } from "zod";
  * Two kinds, and the split decides how a screen behaves:
  *
  *  - **`oauth`** providers (Google Drive, Dropbox, OneDrive) are connected by
- *    sending the person to the provider and back. They type nothing, and what
- *    Balancia keeps is a refresh token. They only work once the *operator* of
- *    this instance has registered an app with the provider and set its client
- *    ID and secret (`BACKUP_*_CLIENT_ID`), which is why a tile can be present
- *    and disabled.
+ *    sending the person to the provider and back, and what Balancia keeps is a
+ *    refresh token. They need an *app* registered with the provider (a client
+ *    ID and secret), and whose it is is the owner's choice: they register
+ *    their own and paste it in, so nobody else's quota, review or revocation
+ *    stands between them and their own Drive; or, where the operator of this
+ *    instance has registered one for everybody (`BACKUP_*_CLIENT_ID`), they
+ *    press one button. Either way the tokens are theirs and belong to their
+ *    destination, and the app they used is sealed beside the token so a run
+ *    keeps using the app the connection was made through.
  *  - **`credentials`** providers are connected with details the person types:
  *    a server address and a key, a username and a password. Nothing to
  *    register; they work on any instance.
@@ -177,19 +181,47 @@ const httpUrl = z
     }
   }, "no credentials in the address");
 
+/**
+ * An app the owner registered with the provider, as they paste it.
+ *
+ * Values go to the provider's token endpoint and into rclone's environment, so
+ * they are held to what those places can carry: no whitespace inside, no
+ * control characters, no NUL. The lengths are generous (a Google secret is 35
+ * characters, a Microsoft one about 40, a client ID under 100), not exact —
+ * the provider is the judge of whether it is real.
+ */
+const appValue = (max: number) =>
+  z
+    .string()
+    .trim()
+    .min(1)
+    .max(max)
+    .refine((value) => !/[\s\u0000-\u001f\u007f]/.test(value), "no spaces");
+
+export const oauthAppSchema = z.object({
+  clientId: appValue(300),
+  clientSecret: appValue(600),
+});
+
+export type OwnOAuthApp = z.infer<typeof oauthAppSchema>;
+
 /** What is sealed for each provider. Tokens are minted by the OAuth callback, not typed. */
 export const credentialSchemas = {
   google_drive: z.object({
     refreshToken: z.string().min(1),
     account: z.string().max(320).optional(),
+    /** The owner's own app. Absent means the one the operator registered. */
+    app: oauthAppSchema.optional(),
   }),
   dropbox: z.object({
     refreshToken: z.string().min(1),
     account: z.string().max(320).optional(),
+    app: oauthAppSchema.optional(),
   }),
   onedrive: z.object({
     refreshToken: z.string().min(1),
     account: z.string().max(320).optional(),
+    app: oauthAppSchema.optional(),
     driveId: z.string().min(1).max(200),
     driveType: z.enum(["personal", "business", "documentLibrary"]),
     /** The app folder's item id: the one place the narrow scope can write. */

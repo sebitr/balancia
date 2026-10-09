@@ -9,9 +9,9 @@ import { BackupProvidersCard } from "./providers-card";
  * Administration → which services this server offers.
  *
  * Read from the server's configuration and drawn as statements: each provider
- * is "Ready", "Needs a client ID and secret" or "Off", as an icon and a word,
- * and nothing on the card can be switched, because the settings are environment
- * variables a screen cannot write.
+ * is "Ready" (and, for an account provider, whose app) or "Off", as an icon and
+ * a word, and nothing on the card can be switched, because the settings are
+ * environment variables a screen cannot write.
  */
 
 const { tiles } = vi.hoisted(() => ({
@@ -29,6 +29,7 @@ vi.mock("@/modules/backup/view", () => ({
 function tile(
   id: ProviderTile["id"],
   availability: ProviderTile["availability"],
+  instanceApp = false,
 ): ProviderTile {
   return {
     id,
@@ -37,15 +38,17 @@ function tile(
       ? "oauth"
       : "credentials",
     experimental: id === "proton_drive",
+    instanceApp,
+    redirectUri: null,
   };
 }
 
 /** A fully configured instance: every app registered, experimental on. */
 function everythingOn(): ProviderTile[] {
   return [
-    tile("google_drive", "available"),
-    tile("dropbox", "available"),
-    tile("onedrive", "available"),
+    tile("google_drive", "available", true),
+    tile("dropbox", "available", true),
+    tile("onedrive", "available", true),
     tile("s3", "available"),
     tile("webdav", "available"),
     tile("proton_drive", "available"),
@@ -87,9 +90,6 @@ describe("the providers card", () => {
     await renderCard();
 
     for (const name of [
-      "Google Drive",
-      "Dropbox",
-      "Microsoft OneDrive",
       "S3-compatible",
       "Nextcloud or other WebDAV",
       "Infomaniak",
@@ -97,14 +97,18 @@ describe("the providers card", () => {
     ]) {
       expect(stateOf(name)).toBe("Ready");
     }
+    for (const name of ["Google Drive", "Dropbox", "Microsoft OneDrive"]) {
+      expect(stateOf(name)).toBe("Ready · everyone connects with one button");
+    }
     expect(screen.queryByText(/Turn on with/)).toBeNull();
+    expect(screen.queryByText(/For one button/)).toBeNull();
   });
 
-  it("says which account provider has no app registered, and only that one", async () => {
+  it("says which account provider has no app of the server's own, and only that one", async () => {
     tiles.current = [
-      tile("google_drive", "needs_operator"),
-      tile("dropbox", "available"),
-      tile("onedrive", "needs_operator"),
+      tile("google_drive", "available"),
+      tile("dropbox", "available", true),
+      tile("onedrive", "available"),
       tile("s3", "available"),
       tile("webdav", "available"),
       tile("proton_drive", "experimental_off"),
@@ -112,16 +116,45 @@ describe("the providers card", () => {
 
     await renderCard();
 
-    expect(stateOf("Google Drive")).toBe("Needs a client ID and secret");
-    expect(stateOf("Dropbox")).toBe("Ready");
-    expect(stateOf("Microsoft OneDrive")).toBe("Needs a client ID and secret");
+    // Not a fault and not "off": people bring their own app, and it works.
+    expect(stateOf("Google Drive")).toBe(
+      "Ready · each person brings their own app",
+    );
+    expect(stateOf("Dropbox")).toBe(
+      "Ready · everyone connects with one button",
+    );
+    expect(stateOf("Microsoft OneDrive")).toBe(
+      "Ready · each person brings their own app",
+    );
+  });
+
+  it("names the settings that would give a provider its one button, only where it lacks one", async () => {
+    tiles.current = [
+      tile("google_drive", "available"),
+      tile("dropbox", "available", true),
+      tile("onedrive", "available"),
+    ];
+
+    await renderCard();
+
+    expect(
+      screen.getByText(
+        "For one button, set BACKUP_GOOGLE_CLIENT_ID and BACKUP_GOOGLE_CLIENT_SECRET.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "For one button, set BACKUP_MICROSOFT_CLIENT_ID and BACKUP_MICROSOFT_CLIENT_SECRET.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/BACKUP_DROPBOX/)).toBeNull();
   });
 
   it("keeps the own-server group ready whatever is registered", async () => {
     tiles.current = [
-      tile("google_drive", "needs_operator"),
-      tile("dropbox", "needs_operator"),
-      tile("onedrive", "needs_operator"),
+      tile("google_drive", "available"),
+      tile("dropbox", "available"),
+      tile("onedrive", "available"),
       tile("proton_drive", "experimental_off"),
     ];
 
@@ -160,14 +193,20 @@ describe("the providers card", () => {
 
   it("draws every state as an icon and a word", async () => {
     tiles.current = [
-      tile("google_drive", "needs_operator"),
-      tile("dropbox", "available"),
+      tile("google_drive", "available"),
+      tile("dropbox", "available", true),
+      tile("s3", "available"),
       tile("proton_drive", "experimental_off"),
     ];
 
     await renderCard();
 
-    for (const word of ["Ready", "Needs a client ID and secret", "Off"]) {
+    for (const word of [
+      "Ready",
+      "Ready · each person brings their own app",
+      "Ready · everyone connects with one button",
+      "Off",
+    ]) {
       const marks = screen.getAllByText(word, {
         selector: "[data-slot=admin-state]",
       });

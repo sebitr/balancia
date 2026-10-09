@@ -67,28 +67,54 @@ afterEach(() => {
 });
 
 describe("which providers are offered", () => {
-  it("draws the three OAuth providers as 'ask your administrator' until an app is registered", () => {
+  it("offers the three account providers on a server that registered no app, for people to bring their own", () => {
     const tiles = Object.fromEntries(
-      providerTiles().map((tile) => [tile.id, tile.availability]),
+      providerTiles().map((tile) => [
+        tile.id,
+        [tile.availability, tile.instanceApp],
+      ]),
     );
 
     expect(tiles).toMatchObject({
-      google_drive: "needs_operator",
-      dropbox: "needs_operator",
-      onedrive: "needs_operator",
-      s3: "available",
-      webdav: "available",
+      google_drive: ["available", false],
+      dropbox: ["available", false],
+      onedrive: ["available", false],
+      s3: ["available", false],
+      webdav: ["available", false],
     });
   });
 
-  it("offers Google once the operator has registered it", () => {
+  it("gives Google a single button once the operator has registered an app for it, and only Google", () => {
     process.env.BACKUP_GOOGLE_CLIENT_ID = "id";
     process.env.BACKUP_GOOGLE_CLIENT_SECRET = "secret";
     resetEnvCache();
 
-    expect(
-      providerTiles().find((tile) => tile.id === "google_drive")?.availability,
-    ).toBe("available");
+    const tiles = providerTiles();
+    expect(tiles.find((tile) => tile.id === "google_drive")).toMatchObject({
+      availability: "available",
+      instanceApp: true,
+    });
+    expect(tiles.find((tile) => tile.id === "dropbox")?.instanceApp).toBe(
+      false,
+    );
+  });
+
+  it("names this server's redirect address for each account provider, and none for the others", () => {
+    const addresses = Object.fromEntries(
+      providerTiles().map((tile) => [tile.id, tile.redirectUri]),
+    );
+
+    expect(addresses.google_drive).toMatch(
+      /^https?:\/\/[^/]+\/api\/backup\/oauth\/google\/callback$/,
+    );
+    expect(addresses.dropbox).toMatch(
+      /\/api\/backup\/oauth\/dropbox\/callback$/,
+    );
+    expect(addresses.onedrive).toMatch(
+      /\/api\/backup\/oauth\/microsoft\/callback$/,
+    );
+    expect(addresses.s3).toBeNull();
+    expect(addresses.webdav).toBeNull();
   });
 
   it("draws Proton Drive disabled until the operator opts in", () => {

@@ -15,6 +15,7 @@ Status: built, on `feat/encrypted-cloud-backup`. The boards and this spec are wh
 - **Receipts "88 uploaded · 140 to go" reads "{n} still to go"** (F6): the backend stores how many are pending, not how many are done, and a number nothing stores should not be on a screen.
 - **The progress bar of a running backup is indeterminate** (F2): a run records no done/total, so "6 of 14 groups" has nothing to say.
 - **The connection test's copy no longer says the test file is encrypted** (D5, D6): it is a plain file, written, found again and deleted.
+- **Google Drive, Dropbox and OneDrive can be connected through an app of the person's own** (added after the build, not on any board). The boards draw one button, which needs the server's operator to have registered an app and put its secret in the environment; on a server that has not, those three were switched off, and for everyone on a shared server they meant one app's quota and one point of failure. Step 3 now shows the button where the server has an app, with a folded "Use your own _provider_ app" under it, and on a server without one it shows that form alone: the redirect address to register (with Copy), a line in the provider's own words about the one setting that matters (Google "In production", Dropbox "App folder", Microsoft personal accounts), the client ID and secret, and "Continue to _provider_". It is made of the wizard's existing fields, disclosure and alert, so it follows the drawn rules in §4, but it has not been drawn. A refused app (`invalid_client`) is its own failure, `app`, and its banner sends Reconnect through the wizard rather than round the same trip. Administration shows "Ready · everyone connects with one button" or "Ready · each person brings their own app", never a fault.
 - Provider monograms, the recovery key block, the status marks and the rules in §4 are as drawn.
 
 Written while the backend was being built beside it: `docs/cloud-backup.md` and `src/modules/backup` were found in the working tree and read. Where they decide something, the boards follow them (§9); where they differ from the brief, that is flagged (§10).
@@ -230,7 +231,7 @@ Route `/settings/backup/restore`, reachable from the overview. Reuses `Chip`, `I
 
 Two cards on the existing screen, below the telemetry cards, which are unchanged. Reuses `SettingsCard`, `SettingsControlRow`, `Switch size="lg"`, `Button variant="link"`.
 
-- **Providers** (J1, J2). One row per provider with its state in words, read from the server's configuration: "Ready", or "Needs a client ID and secret" with a setup-guide link (an OAuth provider is offered only when both halves of its pair are set). The experimental pair says "Off" and names the variable that turns both on. There is no per-provider switch: the brief's "switch-like status" is read as a status.
+- **Providers** (J1, J2). One row per provider with its state in words, read from the server's configuration: "Ready", or "Needs a client ID and secret" with a setup-guide link (as drawn; as built an account provider is always ready and says whether it has one button or each person brings an app, see the departures above). The experimental pair says "Off" and names the variable that turns both on. There is no per-provider switch: the brief's "switch-like status" is read as a status.
 - **Local network** (J1, J2). One switch, off by default, the plain sentence about what it allows and the plain warning about what turning it on means, as briefed.
 - **The alternative** (J3). The backend reads `BACKUP_ALLOW_PRIVATE_ENDPOINTS` from the environment, which a screen cannot write. J3 draws the same card as a statement with the variable named. Choose between J1 and J3 (question 3).
 
@@ -617,7 +618,9 @@ Namespace `cloudBackup`. ICU message syntax, as the rest of `messages/en.json`. 
 | `cloudBackup.admin.experimental` | Experimental                                                                  |
 | `cloudBackup.admin.ready`        | Ready                                                                         |
 | `cloudBackup.admin.off`          | Off                                                                           |
-| `cloudBackup.admin.needsClient`  | Needs a client ID and secret                                                  |
+| `cloudBackup.admin.sharedApp`    | Ready · everyone connects with one button (replaced "Needs a client ID…")     |
+| `cloudBackup.admin.ownApp`       | Ready · each person brings their own app                                      |
+| `cloudBackup.admin.appHint`      | For one button, set {id} and {secret}.                                        |
 | `cloudBackup.admin.guide`        | Setup guide                                                                   |
 | `cloudBackup.admin.envHint`      | Turn on with {name}.                                                          |
 | `cloudBackup.admin.lanTitle`     | Local network                                                                 |

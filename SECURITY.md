@@ -219,7 +219,13 @@ The long form, and what it does not protect against, is
   from `AUTH_SECRET`, never returned to a browser, and scrubbed from every error
   and log line. Google, Dropbox and OneDrive are asked for the narrowest access
   each offers (only the files Balancia creates, or its own app folder). Rotating
-  `AUTH_SECRET` makes them unreadable, which reads as "reconnect".
+  `AUTH_SECRET` makes them unreadable, which reads as "reconnect". Those three
+  need an app (a client ID and secret), and an owner may bring their own: it is
+  sealed with the connection it was made for, travels across the provider's
+  sign-in in a sealed cookie that is burned on use, and is posted once and never
+  put in an address or returned. A server that registers one app for everybody
+  puts its secret in the environment instead, and then every connection made
+  through that button shares its fate (docs/cloud-backup.md).
 - **`rclone` is run with a built environment**: it never sees `AUTH_SECRET` or
   the database URL, passwords are never in its arguments, and nothing it is
   given is written outside a scratch directory removed after the call.

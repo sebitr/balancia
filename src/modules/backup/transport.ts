@@ -2,7 +2,7 @@ import "server-only";
 import { getEnv } from "@/lib/env";
 import { assertEndpointAllowed } from "./endpoint-guard";
 import { BackupError } from "./errors";
-import { KIND_OF, oauthApp, refreshAccessToken } from "./oauth";
+import { KIND_OF, oauthApp, refreshAccessToken, resolveApp } from "./oauth";
 import {
   credentialSchemas,
   PROVIDERS,
@@ -46,21 +46,29 @@ export interface OpenOptions {
   readonly onRefreshToken?: (refreshToken: string) => Promise<void>;
 }
 
-/** Whether this instance can offer a provider at all, and if not, why. */
+/**
+ * Whether this instance can offer a provider at all, and if not, why.
+ *
+ * Google Drive, Dropbox and OneDrive are always available: when the operator
+ * has registered no app for them, the owner brings their own. Whether there is
+ * an app for everybody is a separate fact — `instanceApp` — because it decides
+ * only whether a screen offers one button or asks for a client ID.
+ */
 export function providerAvailability(
   provider: BackupProvider,
-): "available" | "needs_operator" | "experimental_off" | "not_offered" {
-  const env = getEnv();
+): "available" | "experimental_off" | "not_offered" {
   const info = PROVIDERS[provider];
   if (!info.offered) return "not_offered";
-  if (info.experimental && !env.BACKUP_EXPERIMENTAL_PROVIDERS) {
+  if (info.experimental && !getEnv().BACKUP_EXPERIMENTAL_PROVIDERS) {
     return "experimental_off";
   }
-  if (info.kind === "oauth") {
-    const kind = KIND_OF[provider as keyof typeof KIND_OF];
-    return env.backupOAuthApps[kind] ? "available" : "needs_operator";
-  }
   return "available";
+}
+
+/** Whether the operator registered an app that anyone on this server can connect through. */
+export function instanceApp(provider: BackupProvider): boolean {
+  if (PROVIDERS[provider].kind !== "oauth") return false;
+  return oauthApp(KIND_OF[provider as keyof typeof KIND_OF]) !== undefined;
 }
 
 /** The address a credentials provider will connect to, if it has one that a person chose. */
@@ -100,7 +108,7 @@ export async function openTransport(
         ? "This server has not switched on experimental providers."
         : availability === "not_offered"
           ? "That provider is not offered yet."
-          : "This server has no app registered for that provider.",
+          : "That provider is not available.",
     );
   }
 
@@ -123,9 +131,22 @@ export async function openTransport(
   let token: OAuthToken | undefined;
   if (PROVIDERS[provider].kind === "oauth") {
     const kind = KIND_OF[provider as keyof typeof KIND_OF];
-    app = oauthApp(kind);
-    const stored = (parsed.data as { refreshToken: string }).refreshToken;
-    const fresh = await refreshAccessToken(kind, stored);
+    const sealed = parsed.data as {
+      refreshToken: string;
+      app?: { clientId: string; clientSecret: string };
+    };
+    // The app the connection was made through, because a refresh token only
+    // works for the client it was issued to. A connection made through the
+    // operator's app carries none and uses whatever the operator has now.
+    app = resolveApp(kind, sealed.app);
+    if (!app) {
+      throw new BackupError(
+        "app",
+        "This connection has no app to sign in through.",
+      );
+    }
+    const stored = sealed.refreshToken;
+    const fresh = await refreshAccessToken(kind, stored, new Date(), app);
     const refreshToken = fresh.refreshToken ?? stored;
     if (refreshToken !== stored) await options.onRefreshToken?.(refreshToken);
     token = {

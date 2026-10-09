@@ -3,6 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 import { getEnv } from "@/lib/env";
 import { open, seal } from "@/lib/security/secret-box";
 import { isOAuthKind, type OAuthKind } from "./oauth";
+import { oauthAppSchema } from "./providers";
 
 /**
  * What the browser carries to the provider and back.
@@ -32,6 +33,13 @@ export interface PendingConnection {
   readonly userId: string;
   /** Set when reconnecting an existing destination rather than adding one. */
   readonly reconnectId?: string;
+  /**
+   * The person's own app, when they are connecting through one. The callback
+   * needs the secret to trade the code for tokens, and the page that typed it
+   * is gone by then, so it rides here — sealed with everything else, readable
+   * by nobody who holds the cookie, and burned when read.
+   */
+  readonly app?: { readonly clientId: string; readonly clientSecret: string };
   /** Epoch milliseconds. */
   readonly expiresAt: number;
 }
@@ -59,6 +67,8 @@ export function decodePending(
     ) {
       return null;
     }
+    // Both halves or neither: one without the other cannot sign anything.
+    const app = oauthAppSchema.safeParse(parsed.app);
     return {
       kind: parsed.kind,
       state: parsed.state,
@@ -66,6 +76,7 @@ export function decodePending(
       userId: parsed.userId,
       reconnectId:
         typeof parsed.reconnectId === "string" ? parsed.reconnectId : undefined,
+      app: app.success ? app.data : undefined,
       expiresAt: parsed.expiresAt,
     };
   } catch {
