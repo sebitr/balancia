@@ -1,6 +1,6 @@
 # The activity history says what actually happened
 
-Branch: `fix/accurate-history`
+Merged: 2026-10-07 in #459
 
 Turning an expense into a repayment showed as an unrelated deletion and an
 unrelated repayment; an edit never said what it changed; deletions of a

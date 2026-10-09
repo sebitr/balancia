@@ -1,6 +1,6 @@
 # One word for each thing, French that agrees with any name, and no code words on screen
 
-Branch: `fix/one-word-per-thing`
+Merged: 2026-10-07 in #458
 
 From the UX audit of 2026-10-05 (COPY-1, COPY-3, COPY-4, COPY-5, MOB-1): the
 people in a group are people, a repeating expense is a recurring one and money
