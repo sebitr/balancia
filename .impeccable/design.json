@@ -1,0 +1,816 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-09T15:24:51.965Z",
+  "title": "Design System: Balancia",
+  "extensions": {
+    "colorMeta": {
+      "aubergine-ink": {
+        "role": "neutral",
+        "displayName": "Aubergine Ink",
+        "canonical": "oklch(0.226 0.072 319)",
+        "tonalRamp": [
+          "oklch(0.2 0.038 319)",
+          "oklch(0.32 0.053 319)",
+          "oklch(0.44 0.069 319)",
+          "oklch(0.56 0.072 319)",
+          "oklch(0.68 0.072 319)",
+          "oklch(0.8 0.064 319)",
+          "oklch(0.9 0.051 319)",
+          "oklch(0.96 0.043 319)"
+        ]
+      },
+      "cream-paper": {
+        "role": "neutral",
+        "displayName": "Cream Paper",
+        "canonical": "oklch(0.977 0.007 85)",
+        "tonalRamp": [
+          "oklch(0.2 0.004 85)",
+          "oklch(0.32 0.005 85)",
+          "oklch(0.44 0.007 85)",
+          "oklch(0.56 0.007 85)",
+          "oklch(0.68 0.007 85)",
+          "oklch(0.8 0.006 85)",
+          "oklch(0.9 0.005 85)",
+          "oklch(0.96 0.004 85)"
+        ]
+      },
+      "white-card": {
+        "role": "neutral",
+        "displayName": "White Card",
+        "canonical": "oklch(1 0 0)",
+        "tonalRamp": [
+          "oklch(0.2 0 0)",
+          "oklch(0.32 0 0)",
+          "oklch(0.44 0 0)",
+          "oklch(0.56 0 0)",
+          "oklch(0.68 0 0)",
+          "oklch(0.8 0 0)",
+          "oklch(0.9 0 0)",
+          "oklch(0.96 0 0)"
+        ]
+      },
+      "linen-muted": {
+        "role": "neutral",
+        "displayName": "Linen Muted",
+        "canonical": "oklch(0.937 0.016 82)",
+        "tonalRamp": [
+          "oklch(0.2 0.008 82)",
+          "oklch(0.32 0.012 82)",
+          "oklch(0.44 0.015 82)",
+          "oklch(0.56 0.016 82)",
+          "oklch(0.68 0.016 82)",
+          "oklch(0.8 0.014 82)",
+          "oklch(0.9 0.011 82)",
+          "oklch(0.96 0.01 82)"
+        ]
+      },
+      "lilac-secondary": {
+        "role": "neutral",
+        "displayName": "Lilac Secondary",
+        "canonical": "oklch(0.9 0.018 319)",
+        "tonalRamp": [
+          "oklch(0.2 0.009 319)",
+          "oklch(0.32 0.013 319)",
+          "oklch(0.44 0.017 319)",
+          "oklch(0.56 0.018 319)",
+          "oklch(0.68 0.018 319)",
+          "oklch(0.8 0.016 319)",
+          "oklch(0.9 0.013 319)",
+          "oklch(0.96 0.011 319)"
+        ]
+      },
+      "lilac-secondary-ink": {
+        "role": "neutral",
+        "displayName": "Lilac Secondary Ink",
+        "canonical": "oklch(0.33 0.088 319)",
+        "tonalRamp": [
+          "oklch(0.2 0.046 319)",
+          "oklch(0.32 0.065 319)",
+          "oklch(0.44 0.084 319)",
+          "oklch(0.56 0.088 319)",
+          "oklch(0.68 0.088 319)",
+          "oklch(0.8 0.078 319)",
+          "oklch(0.9 0.062 319)",
+          "oklch(0.96 0.052 319)"
+        ]
+      },
+      "quiet-plum-text": {
+        "role": "neutral",
+        "displayName": "Quiet Plum Text",
+        "canonical": "oklch(0.5 0.03 319)",
+        "tonalRamp": [
+          "oklch(0.2 0.016 319)",
+          "oklch(0.32 0.022 319)",
+          "oklch(0.44 0.029 319)",
+          "oklch(0.56 0.03 319)",
+          "oklch(0.68 0.03 319)",
+          "oklch(0.8 0.027 319)",
+          "oklch(0.9 0.021 319)",
+          "oklch(0.96 0.018 319)"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "oklch(0.9 0.012 82)",
+        "tonalRamp": [
+          "oklch(0.2 0.006 82)",
+          "oklch(0.32 0.009 82)",
+          "oklch(0.44 0.012 82)",
+          "oklch(0.56 0.012 82)",
+          "oklch(0.68 0.012 82)",
+          "oklch(0.8 0.011 82)",
+          "oklch(0.9 0.008 82)",
+          "oklch(0.96 0.007 82)"
+        ]
+      },
+      "field-line": {
+        "role": "neutral",
+        "displayName": "Field Line",
+        "canonical": "oklch(0.88 0.016 82)",
+        "tonalRamp": [
+          "oklch(0.2 0.008 82)",
+          "oklch(0.32 0.012 82)",
+          "oklch(0.44 0.015 82)",
+          "oklch(0.56 0.016 82)",
+          "oklch(0.68 0.016 82)",
+          "oklch(0.8 0.014 82)",
+          "oklch(0.9 0.011 82)",
+          "oklch(0.96 0.01 82)"
+        ]
+      },
+      "plum-night-raised": {
+        "role": "neutral",
+        "displayName": "Plum Night Raised",
+        "canonical": "oklch(0.27 0.068 319)",
+        "tonalRamp": [
+          "oklch(0.2 0.036 319)",
+          "oklch(0.32 0.05 319)",
+          "oklch(0.44 0.065 319)",
+          "oklch(0.56 0.068 319)",
+          "oklch(0.68 0.068 319)",
+          "oklch(0.8 0.06 319)",
+          "oklch(0.9 0.048 319)",
+          "oklch(0.96 0.04 319)"
+        ]
+      },
+      "midnight": {
+        "role": "neutral",
+        "displayName": "Midnight",
+        "canonical": "oklch(0.15 0.03 319)",
+        "tonalRamp": [
+          "oklch(0.2 0.016 319)",
+          "oklch(0.32 0.022 319)",
+          "oklch(0.44 0.029 319)",
+          "oklch(0.56 0.03 319)",
+          "oklch(0.68 0.03 319)",
+          "oklch(0.8 0.027 319)",
+          "oklch(0.9 0.021 319)",
+          "oklch(0.96 0.018 319)"
+        ]
+      },
+      "midnight-raised": {
+        "role": "neutral",
+        "displayName": "Midnight Raised",
+        "canonical": "oklch(0.2 0.035 319)",
+        "tonalRamp": [
+          "oklch(0.2 0.018 319)",
+          "oklch(0.32 0.026 319)",
+          "oklch(0.44 0.034 319)",
+          "oklch(0.56 0.035 319)",
+          "oklch(0.68 0.035 319)",
+          "oklch(0.8 0.031 319)",
+          "oklch(0.9 0.025 319)",
+          "oklch(0.96 0.021 319)"
+        ]
+      },
+      "plum-accent": {
+        "role": "primary",
+        "displayName": "Plum Accent",
+        "canonical": "oklch(0.71 0.048 319)",
+        "tonalRamp": [
+          "oklch(0.2 0.025 319)",
+          "oklch(0.32 0.036 319)",
+          "oklch(0.44 0.046 319)",
+          "oklch(0.56 0.048 319)",
+          "oklch(0.68 0.048 319)",
+          "oklch(0.8 0.043 319)",
+          "oklch(0.9 0.034 319)",
+          "oklch(0.96 0.029 319)"
+        ]
+      },
+      "plum-accent-ink": {
+        "role": "primary",
+        "displayName": "Plum Accent Ink",
+        "canonical": "oklch(0.535 0.048 319)",
+        "tonalRamp": [
+          "oklch(0.2 0.025 319)",
+          "oklch(0.32 0.036 319)",
+          "oklch(0.44 0.046 319)",
+          "oklch(0.56 0.048 319)",
+          "oklch(0.68 0.048 319)",
+          "oklch(0.8 0.043 319)",
+          "oklch(0.9 0.034 319)",
+          "oklch(0.96 0.029 319)"
+        ]
+      },
+      "plum-accent-ink-dark": {
+        "role": "primary",
+        "displayName": "Plum Accent Ink (dark theme)",
+        "canonical": "oklch(0.725 0.048 319)",
+        "tonalRamp": [
+          "oklch(0.2 0.025 319)",
+          "oklch(0.32 0.036 319)",
+          "oklch(0.44 0.046 319)",
+          "oklch(0.56 0.048 319)",
+          "oklch(0.68 0.048 319)",
+          "oklch(0.8 0.043 319)",
+          "oklch(0.9 0.034 319)",
+          "oklch(0.96 0.029 319)"
+        ]
+      },
+      "accent-coral": {
+        "role": "primary",
+        "displayName": "Coral Accent",
+        "canonical": "oklch(0.712 0.168 30)",
+        "tonalRamp": [
+          "oklch(0.2 0.088 30)",
+          "oklch(0.32 0.124 30)",
+          "oklch(0.44 0.161 30)",
+          "oklch(0.56 0.168 30)",
+          "oklch(0.68 0.168 30)",
+          "oklch(0.8 0.149 30)",
+          "oklch(0.9 0.118 30)",
+          "oklch(0.96 0.1 30)"
+        ]
+      },
+      "accent-amber": {
+        "role": "primary",
+        "displayName": "Amber Accent",
+        "canonical": "oklch(0.78 0.13 70)",
+        "tonalRamp": [
+          "oklch(0.2 0.068 70)",
+          "oklch(0.32 0.096 70)",
+          "oklch(0.44 0.125 70)",
+          "oklch(0.56 0.13 70)",
+          "oklch(0.68 0.13 70)",
+          "oklch(0.8 0.115 70)",
+          "oklch(0.9 0.092 70)",
+          "oklch(0.96 0.077 70)"
+        ]
+      },
+      "accent-mint": {
+        "role": "primary",
+        "displayName": "Mint Accent",
+        "canonical": "oklch(0.75 0.13 167)",
+        "tonalRamp": [
+          "oklch(0.2 0.068 167)",
+          "oklch(0.32 0.096 167)",
+          "oklch(0.44 0.125 167)",
+          "oklch(0.56 0.13 167)",
+          "oklch(0.68 0.13 167)",
+          "oklch(0.8 0.115 167)",
+          "oklch(0.9 0.092 167)",
+          "oklch(0.96 0.077 167)"
+        ]
+      },
+      "accent-ocean": {
+        "role": "primary",
+        "displayName": "Ocean Accent",
+        "canonical": "oklch(0.71 0.12 235)",
+        "tonalRamp": [
+          "oklch(0.2 0.063 235)",
+          "oklch(0.32 0.089 235)",
+          "oklch(0.44 0.115 235)",
+          "oklch(0.56 0.12 235)",
+          "oklch(0.68 0.12 235)",
+          "oklch(0.8 0.106 235)",
+          "oklch(0.9 0.085 235)",
+          "oklch(0.96 0.071 235)"
+        ]
+      },
+      "accent-lavender": {
+        "role": "primary",
+        "displayName": "Lavender Accent",
+        "canonical": "oklch(0.72 0.13 300)",
+        "tonalRamp": [
+          "oklch(0.2 0.068 300)",
+          "oklch(0.32 0.096 300)",
+          "oklch(0.44 0.125 300)",
+          "oklch(0.56 0.13 300)",
+          "oklch(0.68 0.13 300)",
+          "oklch(0.8 0.115 300)",
+          "oklch(0.9 0.092 300)",
+          "oklch(0.96 0.077 300)"
+        ]
+      },
+      "accent-raspberry": {
+        "role": "primary",
+        "displayName": "Raspberry Accent",
+        "canonical": "oklch(0.7 0.17 350)",
+        "tonalRamp": [
+          "oklch(0.2 0.089 350)",
+          "oklch(0.32 0.126 350)",
+          "oklch(0.44 0.163 350)",
+          "oklch(0.56 0.17 350)",
+          "oklch(0.68 0.17 350)",
+          "oklch(0.8 0.151 350)",
+          "oklch(0.9 0.12 350)",
+          "oklch(0.96 0.101 350)"
+        ]
+      },
+      "settled-up-green": {
+        "role": "secondary",
+        "displayName": "Settled-Up Green",
+        "canonical": "oklch(0.654 0.13 167)",
+        "tonalRamp": [
+          "oklch(0.2 0.068 167)",
+          "oklch(0.32 0.096 167)",
+          "oklch(0.44 0.125 167)",
+          "oklch(0.56 0.13 167)",
+          "oklch(0.68 0.13 167)",
+          "oklch(0.8 0.115 167)",
+          "oklch(0.9 0.092 167)",
+          "oklch(0.96 0.077 167)"
+        ]
+      },
+      "settled-up-green-ink": {
+        "role": "secondary",
+        "displayName": "Settled-Up Green Ink",
+        "canonical": "oklch(0.496 0.13 167)",
+        "tonalRamp": [
+          "oklch(0.2 0.068 167)",
+          "oklch(0.32 0.096 167)",
+          "oklch(0.44 0.125 167)",
+          "oklch(0.56 0.13 167)",
+          "oklch(0.68 0.13 167)",
+          "oklch(0.8 0.115 167)",
+          "oklch(0.9 0.092 167)",
+          "oklch(0.96 0.077 167)"
+        ]
+      },
+      "settled-up-green-dark": {
+        "role": "secondary",
+        "displayName": "Settled-Up Green (dark theme)",
+        "canonical": "oklch(0.75 0.13 167)",
+        "tonalRamp": [
+          "oklch(0.2 0.068 167)",
+          "oklch(0.32 0.096 167)",
+          "oklch(0.44 0.125 167)",
+          "oklch(0.56 0.13 167)",
+          "oklch(0.68 0.13 167)",
+          "oklch(0.8 0.115 167)",
+          "oklch(0.9 0.092 167)",
+          "oklch(0.96 0.077 167)"
+        ]
+      },
+      "owed-red": {
+        "role": "secondary",
+        "displayName": "Owed Red",
+        "canonical": "oklch(0.6 0.2 25)",
+        "tonalRamp": [
+          "oklch(0.2 0.105 25)",
+          "oklch(0.32 0.148 25)",
+          "oklch(0.44 0.192 25)",
+          "oklch(0.56 0.2 25)",
+          "oklch(0.68 0.2 25)",
+          "oklch(0.8 0.177 25)",
+          "oklch(0.9 0.141 25)",
+          "oklch(0.96 0.119 25)"
+        ]
+      },
+      "owed-red-ink": {
+        "role": "secondary",
+        "displayName": "Owed Red Ink",
+        "canonical": "oklch(0.53 0.2 25)",
+        "tonalRamp": [
+          "oklch(0.2 0.105 25)",
+          "oklch(0.32 0.148 25)",
+          "oklch(0.44 0.192 25)",
+          "oklch(0.56 0.2 25)",
+          "oklch(0.68 0.2 25)",
+          "oklch(0.8 0.177 25)",
+          "oklch(0.9 0.141 25)",
+          "oklch(0.96 0.119 25)"
+        ]
+      },
+      "owed-red-dark": {
+        "role": "secondary",
+        "displayName": "Owed Red (dark theme)",
+        "canonical": "oklch(0.72 0.18 25)",
+        "tonalRamp": [
+          "oklch(0.2 0.094 25)",
+          "oklch(0.32 0.133 25)",
+          "oklch(0.44 0.173 25)",
+          "oklch(0.56 0.18 25)",
+          "oklch(0.68 0.18 25)",
+          "oklch(0.8 0.16 25)",
+          "oklch(0.9 0.127 25)",
+          "oklch(0.96 0.107 25)"
+        ]
+      },
+      "owed-red-ink-dark": {
+        "role": "secondary",
+        "displayName": "Owed Red Ink (dark theme)",
+        "canonical": "oklch(0.735 0.162 25)",
+        "tonalRamp": [
+          "oklch(0.2 0.085 25)",
+          "oklch(0.32 0.12 25)",
+          "oklch(0.44 0.155 25)",
+          "oklch(0.56 0.162 25)",
+          "oklch(0.68 0.162 25)",
+          "oklch(0.8 0.144 25)",
+          "oklch(0.9 0.114 25)",
+          "oklch(0.96 0.096 25)"
+        ]
+      },
+      "paid-by-amber": {
+        "role": "secondary",
+        "displayName": "Paid-By Amber",
+        "canonical": "oklch(0.72 0.145 70)",
+        "tonalRamp": [
+          "oklch(0.2 0.076 70)",
+          "oklch(0.32 0.107 70)",
+          "oklch(0.44 0.139 70)",
+          "oklch(0.56 0.145 70)",
+          "oklch(0.68 0.145 70)",
+          "oklch(0.8 0.129 70)",
+          "oklch(0.9 0.102 70)",
+          "oklch(0.96 0.086 70)"
+        ]
+      },
+      "paid-by-amber-ink": {
+        "role": "secondary",
+        "displayName": "Paid-By Amber Ink",
+        "canonical": "oklch(0.534 0.145 70)",
+        "tonalRamp": [
+          "oklch(0.2 0.076 70)",
+          "oklch(0.32 0.107 70)",
+          "oklch(0.44 0.139 70)",
+          "oklch(0.56 0.145 70)",
+          "oklch(0.68 0.145 70)",
+          "oklch(0.8 0.129 70)",
+          "oklch(0.9 0.102 70)",
+          "oklch(0.96 0.086 70)"
+        ]
+      },
+      "paid-by-amber-dark": {
+        "role": "secondary",
+        "displayName": "Paid-By Amber (dark theme)",
+        "canonical": "oklch(0.82 0.14 78)",
+        "tonalRamp": [
+          "oklch(0.2 0.073 78)",
+          "oklch(0.32 0.104 78)",
+          "oklch(0.44 0.134 78)",
+          "oklch(0.56 0.14 78)",
+          "oklch(0.68 0.14 78)",
+          "oklch(0.8 0.124 78)",
+          "oklch(0.9 0.099 78)",
+          "oklch(0.96 0.083 78)"
+        ]
+      },
+      "settled-grey": {
+        "role": "secondary",
+        "displayName": "Settled Grey",
+        "canonical": "oklch(0.62 0.035 319)",
+        "tonalRamp": [
+          "oklch(0.2 0.018 319)",
+          "oklch(0.32 0.026 319)",
+          "oklch(0.44 0.034 319)",
+          "oklch(0.56 0.035 319)",
+          "oklch(0.68 0.035 319)",
+          "oklch(0.8 0.031 319)",
+          "oklch(0.9 0.025 319)",
+          "oklch(0.96 0.021 319)"
+        ]
+      },
+      "settled-grey-ink": {
+        "role": "secondary",
+        "displayName": "Settled Grey Ink",
+        "canonical": "oklch(0.525 0.035 319)",
+        "tonalRamp": [
+          "oklch(0.2 0.018 319)",
+          "oklch(0.32 0.026 319)",
+          "oklch(0.44 0.034 319)",
+          "oklch(0.56 0.035 319)",
+          "oklch(0.68 0.035 319)",
+          "oklch(0.8 0.031 319)",
+          "oklch(0.9 0.025 319)",
+          "oklch(0.96 0.021 319)"
+        ]
+      },
+      "settled-grey-dark": {
+        "role": "secondary",
+        "displayName": "Settled Grey (dark theme)",
+        "canonical": "oklch(0.7 0.03 319)",
+        "tonalRamp": [
+          "oklch(0.2 0.016 319)",
+          "oklch(0.32 0.022 319)",
+          "oklch(0.44 0.029 319)",
+          "oklch(0.56 0.03 319)",
+          "oklch(0.68 0.03 319)",
+          "oklch(0.8 0.027 319)",
+          "oklch(0.9 0.021 319)",
+          "oklch(0.96 0.018 319)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "balance-hero": {
+        "displayName": "Balance Hero",
+        "purpose": "The one figure a group's overview opens with; a deliberate one-off display size (also 2.125rem and 1.625rem on settle-up)."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "The page title: one per page, always an h1."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "A card title; sheet titles step up to text-xl semibold."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "The workhorse and every control label."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Row metadata, dates and names, set in the muted text colour."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "An uppercase sub-group heading inside a card."
+      },
+      "micro": {
+        "displayName": "Micro",
+        "purpose": "Avatar initials, the bell count, a category pill, a chart tick. The floor, for labels only."
+      },
+      "identifier": {
+        "displayName": "Identifier",
+        "purpose": "Geist Mono for ids, currency codes and tokens."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card",
+        "value": "0 1px 2px 0 oklch(0.226 0.072 319 / 0.05), 0 1px 3px 0 oklch(0.226 0.072 319 / 0.08)",
+        "purpose": "The lightest: the switch thumb and an active tab segment."
+      },
+      {
+        "name": "raised",
+        "value": "0 4px 12px -2px oklch(0.226 0.072 319 / 0.1), 0 2px 6px -2px oklch(0.226 0.072 319 / 0.06)",
+        "purpose": "Dialogs, popovers and menus: surfaces genuinely above the page."
+      },
+      {
+        "name": "toast",
+        "value": "0 16px 40px -12px oklch(0.226 0.072 319 / 0.3), 0 6px 14px -8px oklch(0.226 0.072 319 / 0.18)",
+        "purpose": "The only two-stage shadow; a toast has nothing of ours behind it."
+      },
+      {
+        "name": "hairline",
+        "value": "0 0 0 1px var(--border)",
+        "purpose": "A line drawn as a shadow where a border would cost a pixel of layout."
+      },
+      {
+        "name": "swipe-edge",
+        "value": "-12px 0 28px -8px oklch(0 0 0 / 0.3)",
+        "purpose": "The leading edge of a screen being swiped back."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-screen",
+        "value": "cubic-bezier(0.32, 0.72, 0, 1)",
+        "purpose": "A page push: leaves fast, settles slow, as UIKit does."
+      },
+      {
+        "name": "ease-fade",
+        "value": "cubic-bezier(0.2, 0, 0, 1)",
+        "purpose": "A fade has no distance to decelerate over."
+      },
+      {
+        "name": "duration-screen",
+        "value": "360ms",
+        "purpose": "The phone's edge push and the swipe-back that mirrors it."
+      },
+      {
+        "name": "duration-depth",
+        "value": "240ms",
+        "purpose": "The same move where there is no edge to come from (wide screens)."
+      },
+      {
+        "name": "duration-section",
+        "value": "90ms out, 190ms in",
+        "purpose": "A section: the old view leaves before the new one arrives, with a 10px nudge."
+      },
+      {
+        "name": "duration-state",
+        "value": "150ms",
+        "purpose": "Colour, border and shadow transitions on every interactive element."
+      },
+      {
+        "name": "press",
+        "value": "translateY(1px), instant",
+        "purpose": "A mechanical press; menu triggers are excluded."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "md",
+        "value": "48rem"
+      },
+      {
+        "name": "lg",
+        "value": "64rem"
+      },
+      {
+        "name": "xl",
+        "value": "80rem"
+      },
+      {
+        "name": "2xl",
+        "value": "96rem"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one action to take next. Accent fill, plum-ink label, 44px high on a phone (32px from md).",
+      "html": "<button class=\"ds-btn-primary\">Add expense</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; height: 2.75rem; padding: 0 0.875rem; border: 1px solid transparent; border-radius: 0.75rem; font-family: var(--font-sans, 'Instrument Sans', ui-sans-serif, system-ui, sans-serif); font-size: 0.9375rem; font-weight: 500; line-height: 1; white-space: nowrap; cursor: pointer; transition: background-color 150ms, border-color 150ms, color 150ms, box-shadow 150ms; background: var(--primary, oklch(0.71 0.048 319)); color: var(--foreground, oklch(0.226 0.072 319)); } .ds-btn-primary:hover { background: color-mix(in oklch, var(--primary, oklch(0.71 0.048 319)) 80%, transparent); } .ds-btn-primary:focus-visible { outline: none; border-color: var(--ring, oklch(0.71 0.048 319)); box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring, oklch(0.71 0.048 319)) 50%, transparent); } .ds-btn-primary:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "A quieter action beside the primary one: hairline stroke on the page ground, a muted wash on hover.",
+      "html": "<button class=\"ds-btn-outline\">Settle up</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; height: 2.75rem; padding: 0 0.875rem; border: 1px solid transparent; border-radius: 0.75rem; font-family: var(--font-sans, 'Instrument Sans', ui-sans-serif, system-ui, sans-serif); font-size: 0.9375rem; font-weight: 500; line-height: 1; white-space: nowrap; cursor: pointer; transition: background-color 150ms, border-color 150ms, color 150ms, box-shadow 150ms; background: var(--background, oklch(0.977 0.007 85)); color: var(--foreground, oklch(0.226 0.072 319)); border-color: var(--border, oklch(0.9 0.012 82)); } .ds-btn-outline:hover { background: var(--muted, oklch(0.937 0.016 82)); } .ds-btn-outline:focus-visible { outline: none; border-color: var(--ring, oklch(0.71 0.048 319)); box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring, oklch(0.71 0.048 319)) 50%, transparent); } .ds-btn-outline:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Destructive Button",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "A tinted wash of the destructive colour with red text; never a solid red fill.",
+      "html": "<button class=\"ds-btn-destructive\">Delete entry</button>",
+      "css": ".ds-btn-destructive { display: inline-flex; align-items: center; justify-content: center; height: 2.75rem; padding: 0 0.875rem; border: 1px solid transparent; border-radius: 0.75rem; font-family: var(--font-sans, 'Instrument Sans', ui-sans-serif, system-ui, sans-serif); font-size: 0.9375rem; font-weight: 500; line-height: 1; white-space: nowrap; cursor: pointer; transition: background-color 150ms, border-color 150ms, color 150ms, box-shadow 150ms; background: color-mix(in oklch, var(--destructive, oklch(0.53 0.2 25)) 10%, transparent); color: var(--destructive-ink, oklch(0.515 0.2 25)); } .ds-btn-destructive:hover { background: color-mix(in oklch, var(--destructive, oklch(0.53 0.2 25)) 20%, transparent); } .ds-btn-destructive:focus-visible { outline: none; border-color: color-mix(in oklch, var(--destructive, oklch(0.53 0.2 25)) 40%, transparent); box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive, oklch(0.53 0.2 25)) 20%, transparent); } .ds-btn-destructive:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Hairline-stroked field on a transparent ground; 16px on a phone so iOS never zooms, 14px from md.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Dinner at Trattoria Il Ponte\" />",
+      "css": ".ds-input { box-sizing: border-box; width: 100%; max-width: 20rem; height: 2rem; padding: 0.25rem 0.625rem; border: 1px solid var(--input, oklch(0.88 0.016 82)); border-radius: 0.75rem; background: transparent; color: var(--foreground, oklch(0.226 0.072 319)); font-family: var(--font-sans, 'Instrument Sans', ui-sans-serif, system-ui, sans-serif); font-size: 1rem; transition: border-color 150ms, box-shadow 150ms; } .ds-input::placeholder { color: var(--muted-foreground, oklch(0.5 0.03 319)); } .ds-input:focus-visible { outline: none; border-color: var(--ring, oklch(0.71 0.048 319)); box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring, oklch(0.71 0.048 319)) 50%, transparent); } @media (min-width: 48rem) { .ds-input { font-size: 0.875rem; } }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "A surface held by a 10% foreground ring; no shadow. 1rem padding, 1.05rem corners.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-title\">Lisbon, March</div><div class=\"ds-card-meta\">6 people · 42 expenses · 2 – 12 August</div></div>",
+      "css": ".ds-card { box-sizing: border-box; display: flex; flex-direction: column; gap: 0.25rem; max-width: 20rem; padding: 1rem; border-radius: 1.05rem; background: var(--card, oklch(1 0 0)); color: var(--card-foreground, oklch(0.226 0.072 319)); box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground, oklch(0.226 0.072 319)) 10%, transparent); font-family: var(--font-sans, 'Instrument Sans', ui-sans-serif, system-ui, sans-serif); font-size: 0.875rem; } .ds-card-title { font-size: 1rem; font-weight: 500; line-height: 1.375; } .ds-card-meta { font-size: 0.75rem; color: var(--muted-foreground, oklch(0.5 0.03 319)); }"
+    },
+    {
+      "name": "Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "A 20px pill. Default is the accent fill; secondary and outline sit quieter.",
+      "html": "<span class=\"ds-badge\">You</span> <span class=\"ds-badge-outline\">EUR · CHF</span>",
+      "css": ".ds-badge, .ds-badge-outline { display: inline-flex; align-items: center; height: 1.25rem; padding: 0.125rem 0.5rem; border: 1px solid transparent; border-radius: 1.95rem; font-family: var(--font-sans, 'Instrument Sans', ui-sans-serif, system-ui, sans-serif); font-size: 0.75rem; font-weight: 500; white-space: nowrap; } .ds-badge { background: var(--primary, oklch(0.71 0.048 319)); color: var(--foreground, oklch(0.226 0.072 319)); } .ds-badge-outline { border-color: var(--border, oklch(0.9 0.012 82)); color: var(--foreground, oklch(0.226 0.072 319)); }"
+    },
+    {
+      "name": "Balance Chip",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Money tone: a 15% wash of the tone fill, the tone's ink on top, always a sign and a word. Never the accent.",
+      "html": "<span class=\"ds-chip ds-chip-pos\">+ €248.00 gets back</span> <span class=\"ds-chip ds-chip-neg\">− CHF 62.20 owes</span> <span class=\"ds-chip ds-chip-zero\">settled up</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; height: 1.25rem; padding: 0.125rem 0.5rem; border-radius: 1.95rem; font-family: var(--font-sans, 'Instrument Sans', ui-sans-serif, system-ui, sans-serif); font-size: 0.75rem; font-weight: 500; font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; } .ds-chip-pos { background: color-mix(in oklch, var(--positive, oklch(0.654 0.13 167)) 15%, transparent); color: var(--positive-ink, oklch(0.496 0.13 167)); } .ds-chip-neg { background: color-mix(in oklch, var(--negative, oklch(0.6 0.2 25)) 15%, transparent); color: var(--negative-ink, oklch(0.53 0.2 25)); } .ds-chip-zero { background: var(--muted, oklch(0.937 0.016 82)); color: var(--neutral-balance-ink, oklch(0.525 0.035 319)); }"
+    },
+    {
+      "name": "Group Tabs",
+      "kind": "nav",
+      "description": "A group's places as a segmented tray on a muted ground; the active segment lifts to a card with a hairline and the lightest shadow.",
+      "html": "<ul class=\"ds-tabs\"><li><a aria-current=\"page\">Overview</a></li><li><a>Transactions</a></li><li><a>People</a></li><li><a>Settings</a></li></ul>",
+      "css": ".ds-tabs { display: flex; align-items: center; gap: 2px; width: fit-content; margin: 0; padding: 3px; border-radius: 1.05rem; background: var(--muted, oklch(0.937 0.016 82)); list-style: none; font-family: var(--font-sans, 'Instrument Sans', ui-sans-serif, system-ui, sans-serif); } .ds-tabs a { display: inline-flex; align-items: center; height: 2.125rem; padding: 0 0.875rem; border-radius: 9px; color: var(--muted-foreground, oklch(0.5 0.03 319)); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: color 150ms, background-color 150ms; } .ds-tabs a:hover { color: var(--foreground, oklch(0.226 0.072 319)); } .ds-tabs a:focus-visible { outline: 2px solid var(--ring, oklch(0.71 0.048 319)); outline-offset: 2px; } .ds-tabs a[aria-current=\"page\"] { background: var(--card, oklch(1 0 0)); box-shadow: 0 0 0 1px var(--border, oklch(0.9 0.012 82)), 0 1px 2px 0 oklch(0.226 0.072 319 / 0.05), 0 1px 3px 0 oklch(0.226 0.072 319 / 0.08); color: var(--foreground, oklch(0.226 0.072 319)); }"
+    },
+    {
+      "name": "Balance Position",
+      "kind": "custom",
+      "description": "The figure a group opens with: a muted heading, the hero numeral with its sign, a tone-coloured word. The numeral is tabular and lining; the word carries the meaning when colour cannot.",
+      "html": "<div class=\"ds-position\"><div class=\"ds-position-label\">Your position</div><div class=\"ds-position-figure\">+ €248.00</div><div class=\"ds-position-word\">You are owed, across 2 people</div></div>",
+      "css": ".ds-position { display: flex; flex-direction: column; gap: 0.5rem; font-family: var(--font-sans, 'Instrument Sans', ui-sans-serif, system-ui, sans-serif); font-feature-settings: \"tnum\" 1, \"lnum\" 1; } .ds-position-label { font-size: 0.8125rem; color: var(--muted-foreground, oklch(0.5 0.03 319)); } .ds-position-figure { font-size: 1.875rem; font-weight: 600; line-height: 1; letter-spacing: -0.025em; color: var(--positive-ink, oklch(0.496 0.13 167)); } .ds-position-word { font-size: 0.8125rem; font-weight: 500; color: var(--positive-ink, oklch(0.496 0.13 167)); }"
+    },
+    {
+      "name": "Wordmark",
+      "kind": "custom",
+      "description": "A dot for what was spent, a rule that divides it, a pan that catches each share. The rule and pan take the text colour; the dot is always the accent.",
+      "html": "<span class=\"ds-wordmark\"><svg viewBox=\"8 7 32 32\" fill=\"none\" aria-hidden=\"true\"><circle cx=\"24\" cy=\"11.5\" r=\"4.4\" class=\"ds-wordmark-dot\"/><rect x=\"8\" y=\"21.75\" width=\"32\" height=\"4.5\" rx=\"2.25\" fill=\"currentColor\"/><path d=\"M17.5 32a6.5 6.5 0 0 0 13 0Z\" fill=\"currentColor\"/></svg><span>Balancia</span></span>",
+      "css": ".ds-wordmark { display: inline-flex; align-items: center; gap: 0.625rem; color: var(--foreground, oklch(0.226 0.072 319)); font-family: var(--font-sans, 'Instrument Sans', ui-sans-serif, system-ui, sans-serif); font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; } .ds-wordmark svg { width: 2.25rem; height: 2.25rem; } .ds-wordmark-dot { fill: var(--primary, oklch(0.71 0.048 319)); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Kitchen-Table Ledger",
+    "overview": "\n**Creative North Star: \"The Kitchen-Table Ledger\"**\n\nBalancia looks like a page left on the table between friends: cream paper, plum ink, and one pen colour kept back for the next thing to do. It is where a bill gets settled, so it is warm and unhurried, and it is also a ledger, so every figure is exact, aligned and said in words. The reader is a group member on a phone, often standing, often mid-meal. The system is drawn for that hand first and then given modest room on a desk.\n\nThe personality is **warm and unhurried, plain-spoken, precise like a ledger, and quietly playful**. Warm is the cream ground, the soft 0.75rem corners and a plum that is a colour rather than a corporate navy. Plain-spoken is \"you owe\" and \"gets back\" in words rather than finance jargon. Precise is lining, tabular figures and a sign on every amount. Quietly playful is the mark splitting a bill on hover, and nothing that ever makes anyone wait to see a balance.\n\nThe system rejects four looks. It is not **banking or fintech software**: no navy-and-teal trust palettes, no charts-first density, no padlocks. It is not a **gamified money app**: no confetti, streaks or celebratory sums. It is not **generic SaaS gloss**: no gradient blobs, glass cards, stock illustrations or icon-in-a-circle grids. And it does not compete on **Splitwise's loud green**: here green means exactly one thing, that somebody owes you.",
+    "keyCharacteristics": [
+      "Plum ink on cream by day, cream on plum by night, with the accent held back for the next action.",
+      "Three colours carry meaning (green, red, amber) and never move; the reader's accent never paints a money surface.",
+      "Flat by default: a 1px hairline holds a surface, and a shadow means a thing genuinely floats.",
+      "One Instrument Sans, seven type steps, tabular figures everywhere, and a phone scale one point larger than the desk's.",
+      "Motion borrowed from iOS because the hand already knows it: pages travel, sections fade, drawers rise.",
+      "Phone first. A desktop gets the same screens with the room used modestly."
+    ],
+    "rules": [
+      {
+        "name": "The Fixed Money Colours Rule",
+        "body": "Green, red and amber are literals in `globals.css`. They are never derived from the accent, never rotated away from it, never recoloured per account. A search of the whole feasible red band found nothing better than a pink, which is why the rule is \"fixed\" rather than \"tuned\".",
+        "section": "colors"
+      },
+      {
+        "name": "The Word-and-Sign Rule",
+        "body": "Colour never carries a balance alone. Every figure has a sign (+ or −) and a word beside it (\"gets back\", \"owes\", \"settled up\") from `TONE` in `src/components/money/balance-tone.ts`. This is what lets an accent sit next to a money colour at all.",
+        "section": "colors"
+      },
+      {
+        "name": "The Accent Never Paints Money Rule",
+        "body": "`--primary` is the button, the ring, the link, the \"you\" pill and the \"you\" series. An amount, a balance bar or the chip above a figure takes its tone from `TONE`, never from `--primary`.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ink-Is-Text Rule",
+        "body": "A token ending in `-ink` is text; the one without the suffix is a fill. Putting a fill on text is how a 2.6:1 figure gets back in.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Pen Rule",
+        "body": "The accent is held back for the one action to take next. If a screen has three accent-filled things, two of them are wrong.",
+        "section": "colors"
+      },
+      {
+        "name": "The Seven Steps Rule",
+        "body": "An arbitrary `text-[…]` inside the product is a bug. The balance heroes are the one exception. `type-scale.test.ts` fails the build on the rest.",
+        "section": "typography"
+      },
+      {
+        "name": "The Phone Point Rule",
+        "body": "Every step is a point larger below `md`, set once by redefining the tokens. Never move them into an `@theme inline` block; inline substitutes the value and the lever stops working.",
+        "section": "typography"
+      },
+      {
+        "name": "The 16px Field Rule",
+        "body": "A control that can take a caret or a picker (`input`, `textarea`, `select`) is never smaller than 16px on a phone, or iOS Safari zooms the page in and never zooms back out. Call sites say `text-base md:text-sm`; `globals.css` floors anything that states no size.",
+        "section": "typography"
+      },
+      {
+        "name": "The Floor Is For Labels Rule",
+        "body": "Nothing read as a sentence goes in `text-2xs`. A footnote or a caption starts at `text-xs`.",
+        "section": "typography"
+      },
+      {
+        "name": "The No Serif Inside Rule",
+        "body": "Instrument Serif is editorial. It does not appear in the signed-in product.",
+        "section": "typography"
+      },
+      {
+        "name": "The Ring-Before-Shadow Rule",
+        "body": "A hairline ring is the default way a surface is held. A shadow means the thing floats.",
+        "section": "elevation"
+      },
+      {
+        "name": "The No Nested Cards Rule",
+        "body": "Never nest a card in a card, and never give a card a shadow to imply importance.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Scrim Is Not A Surface Rule",
+        "body": "The page behind a two-step confirmation (signing out, deleting an account) is dimmed by `--scrim`, a darker plum at 72%, the same in both themes.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** put a sign and a word beside every balance figure, using `TONE`.",
+      "**Do** set money in lining, tabular figures so a column lines up.",
+      "**Do** read tone from `TONE` for an amount, a bar or the chip above a figure, and from `--primary` for the button, ring, link and \"you\".",
+      "**Do** use `-ink` tokens for text and the plain token for fills.",
+      "**Do** give every control a 44px target on a phone, growing the target underneath when the box cannot grow.",
+      "**Do** make a text-entry control `text-base md:text-sm` so iOS never zooms.",
+      "**Do** separate surfaces with the 1px ring and put the most important thing first on the page.",
+      "**Do** keep one vocabulary of motion: a page travels, a section fades, a drawer rises. Animate colour, opacity and transform only.",
+      "**Do** let a switch, chip or swatch save in silence, and speak only for a refusal, something removed, or a change that took more than a tap."
+    ],
+    "donts": [
+      "**Don't** derive, rotate or recolour green, red or amber from the accent, and don't use green for anything but \"somebody owes you\".",
+      "**Don't** let colour carry a balance alone.",
+      "**Don't** make it look like banking software, a gamified money app, generic SaaS gloss, or Splitwise's brand green.",
+      "**Don't** put a fill token on text; it is 2.6:1 on cream.",
+      "**Don't** nest a card in a card, or use a shadow to imply importance.",
+      "**Don't** write an arbitrary `text-[…]` size in the product, or use `text-2xs` for anything read as a sentence.",
+      "**Don't** animate the height, width or position of anything holding an amount; a number that slides while you read it is worse than none.",
+      "**Don't** use Instrument Serif inside the signed-in product.",
+      "**Don't** show a toast to confirm something the control already moved to show.",
+      "**Don't** put the marketing homepage's editorial scale into the product, or product rules into the marketing homepage."
+    ]
+  }
+}
