@@ -11,7 +11,7 @@ import {
 } from "./schema";
 
 /**
- * The collecting side: what runs at telemetry.balancia.app.
+ * The collecting side: what runs at balancia.app.
  *
  * It is the same application in a different role — `TELEMETRY_RECEIVER=true`
  * and nothing else — which is why a fork can point its own installations at

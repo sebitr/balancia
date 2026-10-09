@@ -932,7 +932,7 @@ about.
 ### Where reports go — not a setting
 
 There is deliberately no variable for the destination. It is a constant,
-`https://telemetry.balancia.app`, in `src/lib/telemetry/endpoint.ts`.
+`https://balancia.app`, in `src/lib/telemetry/endpoint.ts`.
 
 Configuration answers whether anything is sent — `TELEMETRY_MODE`, and the
 administrator's switch, both of which default to sending nothing. It does not

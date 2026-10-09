@@ -149,7 +149,7 @@ describe("the endpoint", () => {
 
   it("is reported even when nothing may be sent, so the page can show it", () => {
     const settings = resolveTelemetry(policy({ mode: "off" }), stored());
-    expect(settings.endpoint).toBe("https://telemetry.balancia.app");
+    expect(settings.endpoint).toBe("https://balancia.app");
   });
 });
 

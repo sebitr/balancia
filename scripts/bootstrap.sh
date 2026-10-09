@@ -1561,7 +1561,7 @@ happened in ranges rather than counts.
 Amounts, names, group names, receipts, identifiers and this instance's
 address are never in it, and there is nothing that identifies this
 installation across reports. It can only ever reach
-telemetry.balancia.app, which is compiled in rather than configurable.
+balancia.app, which is compiled in rather than configurable.
 
 The first question decides whether it is permitted at all — answer no to
 remove the choice from the administration page for good. The second

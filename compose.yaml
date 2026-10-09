@@ -123,7 +123,7 @@ x-app-environment: &app-environment
   # Labels reports with how this instance is deployed. It is this file.
   TELEMETRY_DEPLOYMENT: ${TELEMETRY_DEPLOYMENT:-docker-compose}
   # Run the collector — accept reports from other installations. This is what
-  # telemetry.balancia.app switches on, and what a fork switches on to collect
+  # balancia.app switches on, and what a fork switches on to collect
   # its own. Off here, and the routes answer 404 while it is.
   TELEMETRY_RECEIVER: ${TELEMETRY_RECEIVER:-false}
   # Prometheus metrics at /api/metrics, for your own monitoring. Local always:
