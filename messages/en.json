@@ -1340,6 +1340,26 @@
         }
       }
     },
+    "assistants": {
+      "eyebrow": "AI assistants",
+      "title": "Say what you paid. Let your assistant do the typing.",
+      "body": "Add Balancia to Claude, ChatGPT or any assistant that supports MCP, the open standard for connecting tools to AI. Then ask in your own words who owes whom, or have it record the dinner you just paid for. There is nothing to install and no key to copy: paste one address and press Allow.",
+      "control": {
+        "access": "You choose read only, or read and make changes. It starts on read only.",
+        "scope": "You choose every group, or only the one it is for.",
+        "disconnect": "Disconnect it from Settings whenever you like. It stops at once."
+      },
+      "link": "How to connect an assistant",
+      "chat": {
+        "you": "You",
+        "assistant": "Assistant",
+        "ask": "Who owes whom in Weekend in Lisbon?",
+        "answer": "Théo owes Sam €42.50 and Ada owes Mina €18.00. Those two payments settle the whole group.",
+        "add": "I paid €63.90 for dinner at Taberna, split with Mina.",
+        "added": "Done. Dinner at Taberna, €63.90 paid by you and split €31.95 each with Mina.",
+        "caption": "An example. Your assistant words things in its own way."
+      }
+    },
     "selfHosting": {
       "eyebrow": "Your instance, your data",
       "title": "Nobody sits between you and your money.",
@@ -1403,7 +1423,7 @@
         },
         "privacy": {
           "question": "Is anything about my spending sent anywhere?",
-          "answer": "No. Telemetry never carries personal data or amounts — it exists only to help improve the tool, and on a self-hosted instance it is off by default. Even the category guessing runs locally, with no AI service involved. Optional integrations only make network requests when an administrator enables them."
+          "answer": "No. Telemetry never carries personal data or amounts — it exists only to help improve the tool, and on a self-hosted instance it is off by default. Even the category guessing runs locally, with no AI service involved. Optional integrations only make network requests when an administrator enables them. The one thing you can start yourself is connecting an AI assistant to your groups, and it then sees only what you allow."
         },
         "splitwise": {
           "question": "Can I import my data from Splitwise?",
@@ -1420,6 +1440,10 @@
         "devices": {
           "question": "Does Balancia work on iPhone and Android?",
           "answer": "Yes. Balancia works in a modern browser on desktop, iPhone, iPad and Android. You can also add the progressive web app to your home screen so that it opens like a regular app. It is not distributed through the App Store or Play Store."
+        },
+        "assistants": {
+          "question": "Can I use Balancia with Claude, ChatGPT or another AI assistant?",
+          "answer": "Yes. Balancia is an MCP server, so Claude, ChatGPT and other assistants that accept custom connectors can add it by its address and send you to a Balancia screen to sign in and press Allow. There is nothing to install and no key to copy. You choose read only or read and make changes, and every group or just one, and you can disconnect it from Settings at any time. It acts as you, never sees payment details or email addresses, and Balancia itself calls no AI service. Which plans allow custom connectors is up to the assistant's maker."
         },
         "comparison": {
           "question": "How is Balancia different from Splitwise and Tricount?",
@@ -1451,6 +1475,7 @@
         "backup": "Backup and restore",
         "migration": "Data migration",
         "architecture": "Architecture",
+        "assistants": "AI assistants (MCP)",
         "development": "Development",
         "contributing": "Contributing",
         "status": "Implementation status",
@@ -1483,6 +1508,7 @@
         "import": "Import an existing Splitwise CSV export or JSON backup",
         "export": "Export any group as JSON, CSV or an Excel workbook",
         "receipts": "Attach receipts as photos or PDFs, kept behind authorization",
+        "assistants": "Connect Claude, ChatGPT or another AI assistant over MCP to ask about balances and record expenses",
         "selfHost": "Self-host with Docker Compose and PostgreSQL"
       }
     }

@@ -549,9 +549,10 @@ them whenever the account's password is reset or its address changes.
 
 Set `false` where financial data must never reach a third-party model, whatever
 the account holder would like. Every route above then answers `404`, the card
-disappears from Settings, and assistants that were already connected stop
-working at once; their rows are kept, and work again if the setting is turned
-back on. A demo instance (`DEMO_MODE`) never offers it.
+disappears from Settings, the homepage stops advertising it (its section, its
+question and its line in the structured data), and assistants that were already
+connected stop working at once; their rows are kept, and work again if the
+setting is turned back on. A demo instance (`DEMO_MODE`) never offers it.
 
 Two things to know before leaving it on:
 

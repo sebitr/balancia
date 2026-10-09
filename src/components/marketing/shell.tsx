@@ -105,6 +105,7 @@ export async function MarketingShell({
       heading: t("footer.buildIt"),
       links: [
         [t("footer.links.architecture"), `${GITHUB_BLOB}/docs/architecture.md`],
+        [t("footer.links.assistants"), `${GITHUB_BLOB}/docs/ai-agents.md`],
         [t("footer.links.development"), `${GITHUB_BLOB}/docs/development.md`],
         [t("footer.links.contributing"), `${GITHUB_BLOB}/CONTRIBUTING.md`],
         [

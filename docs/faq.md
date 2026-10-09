@@ -114,10 +114,42 @@ separately.
 This portability is intentional: you should be able to leave Balancia without
 losing access to the records you created or needing a paid export feature.
 
+## Can I use Balancia with Claude, ChatGPT or another AI assistant?
+
+Yes. Every Balancia instance is a remote
+[Model Context Protocol](https://modelcontextprotocol.io) (MCP) server at
+`/mcp`, and it is also the sign-in server the assistant sends you to. In Claude
+or ChatGPT you add a custom connector with your instance's address, sign in to
+Balancia when it asks, and press **Allow**. There is nothing to install and no
+key to copy. Editors that cannot do the sign-in, such as Cursor and VS Code,
+take an [API key](mobile-api.md#api-keys) instead.
+
+You can then ask who owes whom, what a trip has cost so far, or have the
+assistant record an expense — "I paid 63.90 for dinner at Taberna, split with
+Marta."
+
+You stay in control. The consent screen starts on **read only**, you choose
+whether the assistant may see every group or only one, and **Settings → AI
+assistants** lists each connection and ends it with one press. The assistant
+acts as you, with your permissions in each group. It cannot change your account,
+add or remove people, create invitations, export or delete a group, or see
+anybody's payment details or email address.
+
+Which plans of an assistant allow a custom connector is up to its maker. An
+administrator can switch the whole thing off with `AGENT_ACCESS=false`. See
+[AI assistants](ai-agents.md) for the steps for each assistant, how to use one
+safely and how to fix a connection that does not work.
+
 ## Does Balancia send expense data to an AI service?
 
-No. Automatic category suggestions and optional receipt scanning run locally
-on the Balancia instance. Imported files are also parsed on the instance.
+Not by itself. Automatic category suggestions and optional receipt scanning run
+locally on the Balancia instance, and imported files are also parsed on the
+instance. Balancia calls no AI service.
+
+The exception is one you start: when you connect an AI assistant, what it reads
+of the groups you allow goes to whoever runs that assistant — Anthropic, OpenAI
+or the maker of your editor — under their terms. See
+[AI assistants](ai-agents.md#using-one-safely).
 
 Optional services such as email, push delivery, S3-compatible storage, exchange
 rate suggestions or Sign in with Apple make network requests only when an

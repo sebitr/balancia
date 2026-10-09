@@ -156,6 +156,18 @@ describe("llms.txt", () => {
     expect(text).not.toMatch(/git clone/);
   });
 
+  it("says how to connect an AI assistant, with the address to use", () => {
+    // The sentence an assistant quotes when asked whether Balancia works with
+    // it. The address is read from the same constant the route is mounted at.
+    const text = llmsIndex(OFFICIAL_ORIGIN);
+    expect(text).toContain("## Using Balancia from an AI assistant");
+    expect(text).toContain(`${OFFICIAL_ORIGIN}/mcp`);
+    expect(text).toContain(
+      `claude mcp add --transport http balancia ${OFFICIAL_ORIGIN}/mcp`,
+    );
+    expect(text).toMatch(/read only \(the\s+default\)/);
+  });
+
   it("is no longer also a static file, which would shadow the route", () => {
     expect(() =>
       readFileSync(path.join(process.cwd(), "public", "llms.txt")),

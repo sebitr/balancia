@@ -13,6 +13,7 @@ import {
   publicUrl,
   REPOSITORY,
 } from "@/lib/public-pages";
+import { MCP_PATH } from "@/modules/agent-access/constants";
 
 /**
  * Balancia described for a language model: `/llms.txt`, the short index, and
@@ -125,6 +126,33 @@ It is not a bank, payment processor, accounting ledger or legally binding debt
 service. It records informal expenses and suggested repayments but does not move
 money. It is an installable progressive web app, not a native App Store or Play
 Store application.
+
+## Using Balancia from an AI assistant
+
+Balancia is a remote Model Context Protocol (MCP) server and also the sign-in
+server an assistant sends the person to, so an assistant is added by its address:
+nothing is installed and no key is copied. On ${OFFICIAL_ORIGIN} the address is
+${OFFICIAL_ORIGIN}${MCP_PATH}; on a self-hosted instance it is the instance's address
+followed by ${MCP_PATH}.
+
+- Claude: Settings → Connectors → Add custom connector, paste the address, choose Connect.
+- ChatGPT: turn on Developer mode, add a connector with the address. Which plans
+  allow custom connectors is up to OpenAI.
+- Claude Code: \`claude mcp add --transport http balancia ${OFFICIAL_ORIGIN}${MCP_PATH}\`, then
+  \`/mcp\` and Authenticate.
+- Cursor, VS Code and other editors that cannot sign in: send an API key created
+  in Balancia's settings as an \`Authorization: Bearer\` header.
+
+Balancia then shows its own consent screen. The person chooses read only (the
+default) or read and make changes, and every group or one group. The assistant is
+listed under Settings → AI assistants and can be disconnected there at any time.
+
+An assistant can list groups and balances and search and read expenses; if allowed
+to make changes, it can also add and change expenses, record repayments, and delete
+and restore entries. It acts as the person who connected it, with their permissions
+in each group. It cannot change the account, add or remove people, create
+invitations, export or delete a group, or see payment details or email addresses.
+Details: ${DOCS}/docs/ai-agents.md
 
 ## Privacy
 

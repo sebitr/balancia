@@ -33,6 +33,7 @@ export type FaqQuestion =
   | "openSource"
   | "selfHost"
   | "devices"
+  | "assistants"
   | "comparison";
 
 export type PageEvent =

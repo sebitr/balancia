@@ -86,6 +86,14 @@ about, when it was last checked, where it sits and its questions. The
 publisher's `sameAs` names the repository, which is most of how an engine
 learns that the Balancia on this site and `sebitr/balancia` are one project.
 
+**The homepage speaks for the instance it is served from.** Its section on AI
+assistants, its question "Can I use Balancia with Claude, ChatGPT or another AI
+assistant?" and the matching line in the structured data's feature list are
+there only where `AGENT_ACCESS` is on. Where an administrator has switched it
+off, `/mcp` answers 404, and a page that said yes would be a page that was
+wrong about itself. `/llms.txt` and `/llms-full.txt` describe the software
+rather than the instance and keep all of it.
+
 ---
 
 ## 2. The comparison pages
@@ -143,6 +151,13 @@ a second copy of the disallow list waiting to fall out of step.
 described a three-step install months after it became two, and said nothing
 could be entered offline. It is generated now, from the install commands, the
 page table and the comparisons the pages themselves use.
+
+It also answers the question an assistant is now asked about Balancia itself —
+"does it work with you?" — in a section of its own: the address to add
+(`https://balancia.app/mcp`, or an instance's address followed by `/mcp`), the
+steps for Claude, ChatGPT and Claude Code, and what a connection may and may not
+do. The address is read from the constant the route is mounted at, so it cannot
+drift from the code. [ai-agents.md](ai-agents.md) is the long form it links to.
 
 ---
 
@@ -204,10 +219,23 @@ it, in the order they are worth doing, and every one is outside the repository:
    `r/opensource` communities, selfh.st, and — for French — the equivalent
    Framalibre entry. Each is a link, and each is a sentence about Balancia in
    a place a model reads.
-4. **Keep the comparisons true.** Re-read the other products' pages every
+4. **List the connector where assistants look for connectors.** The hosted
+   instance answers at `https://balancia.app/mcp`, which makes it something an
+   assistant's directory can list. The official MCP Registry takes a
+   `server.json` with a `remotes` entry of type `streamable-http` and is
+   published to with `mcp-publisher`; a name under `io.github.sebitr/` is proved
+   by signing in with GitHub, and one under the site's own domain by DNS or HTTP
+   verification. The registry has been in preview and its format has changed
+   before, so read the current publishing guide in `modelcontextprotocol/registry`
+   rather than this paragraph; aggregators that copy from it pick a listing up
+   by themselves. Claude and ChatGPT keep connector directories of their own,
+   with their own submission rules; check them when you list. Only the
+   hosted instance is worth listing: every self-hosted instance has an address
+   of its own, which no directory can know.
+5. **Keep the comparisons true.** Re-read the other products' pages every
    quarter, or when either changes its pricing, and move the date when you
    have.
-5. **Write the next pages.** The table in §1 takes a row per page. What people
+6. **Write the next pages.** The table in §1 takes a row per page. What people
    search for next is a situation rather than a product — splitting rent with
    flatmates, a trip in two currencies, a couple on unequal incomes — and each
    of the homepage's six use cases is a page waiting to be written.

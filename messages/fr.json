@@ -1340,6 +1340,26 @@
         }
       }
     },
+    "assistants": {
+      "eyebrow": "Assistants IA",
+      "title": "Dis ce que tu as payé. Ton assistant s’occupe de la saisie.",
+      "body": "Ajoute Balancia à Claude, à ChatGPT ou à tout assistant compatible MCP, le standard ouvert qui relie des outils à l’IA. Demande ensuite, avec tes mots, qui doit combien à qui, ou fais enregistrer le dîner que tu viens de payer. Rien à installer, aucune clé à copier : colle une adresse et appuie sur Autoriser.",
+      "control": {
+        "access": "Tu choisis la lecture seule, ou la lecture avec modifications. Tout commence en lecture seule.",
+        "scope": "Tu choisis tous tes groupes, ou seulement celui qui est concerné.",
+        "disconnect": "Déconnecte-le depuis les Paramètres quand tu veux. Il s’arrête aussitôt."
+      },
+      "link": "Comment connecter un assistant",
+      "chat": {
+        "you": "Toi",
+        "assistant": "Assistant",
+        "ask": "Qui doit combien à qui dans Week-end à Lisbonne ?",
+        "answer": "Théo doit 42,50 € à Sam et Ada doit 18,00 € à Mina. Ces deux remboursements soldent tout le groupe.",
+        "add": "J’ai payé 63,90 € pour le dîner chez Taberna, à partager avec Mina.",
+        "added": "C’est fait. Dîner chez Taberna, 63,90 € payés par toi, soit 31,95 € chacun avec Mina.",
+        "caption": "Un exemple. Ton assistant formule les choses à sa manière."
+      }
+    },
     "selfHosting": {
       "eyebrow": "Open source et auto-hébergement",
       "title": "Tes dépenses t’appartiennent. Tes données aussi.",
@@ -1403,7 +1423,7 @@
         },
         "privacy": {
           "question": "Des informations sur mes dépenses sont-elles envoyées ailleurs ?",
-          "answer": "La télémétrie est désactivée par défaut en auto-hébergement. Lorsqu’un administrateur l’active, elle n’envoie ni données personnelles, ni montants, ni contenu saisi, ni adresse IP, ni identifiant d’installation. Les intégrations facultatives n’accèdent au réseau que si elles sont configurées."
+          "answer": "La télémétrie est désactivée par défaut en auto-hébergement. Lorsqu’un administrateur l’active, elle n’envoie ni données personnelles, ni montants, ni contenu saisi, ni adresse IP, ni identifiant d’installation. Les intégrations facultatives n’accèdent au réseau que si elles sont configurées. La seule chose que tu peux démarrer toi-même est la connexion d’un assistant IA à tes groupes : il ne voit alors que ce que tu autorises."
         },
         "splitwise": {
           "question": "Peut-on importer ses données depuis Splitwise ?",
@@ -1420,6 +1440,10 @@
         "devices": {
           "question": "Balancia fonctionne-t-il sur iPhone et Android ?",
           "answer": "Oui. Balancia fonctionne dans un navigateur moderne sur ordinateur, iPhone, iPad et Android. L’application web progressive peut aussi être ajoutée à l’écran d’accueil pour s’ouvrir comme une application classique. Balancia n’est pas distribué sur l’App Store ni sur le Play Store."
+        },
+        "assistants": {
+          "question": "Puis-je utiliser Balancia avec Claude, ChatGPT ou un autre assistant IA ?",
+          "answer": "Oui. Balancia est un serveur MCP : Claude, ChatGPT et les autres assistants qui acceptent les connecteurs personnalisés peuvent l’ajouter avec son adresse, puis t’envoyer sur un écran Balancia pour te connecter et appuyer sur Autoriser. Rien à installer, aucune clé à copier. Tu choisis la lecture seule ou la lecture avec modifications, tous les groupes ou un seul, et tu peux le déconnecter à tout moment depuis les Paramètres. Il agit en ton nom, ne voit jamais les coordonnées de paiement ni les adresses e-mail, et Balancia n’appelle lui-même aucun service d’IA. Les formules qui acceptent un connecteur personnalisé dépendent de l’éditeur de l’assistant."
         },
         "comparison": {
           "question": "Quelle est la différence entre Balancia, Splitwise et Tricount ?",
@@ -1451,6 +1475,7 @@
         "backup": "Sauvegarde et restauration",
         "migration": "Migration des données",
         "architecture": "Architecture",
+        "assistants": "Assistants IA (MCP)",
         "development": "Développement",
         "contributing": "Contribution",
         "status": "État d’implémentation",
@@ -1483,6 +1508,7 @@
         "import": "Importer un export CSV ou une sauvegarde JSON de Splitwise",
         "export": "Exporter chaque groupe en JSON, CSV ou Excel",
         "receipts": "Joindre une photo ou un PDF à une dépense avec un accès contrôlé",
+        "assistants": "Connecter Claude, ChatGPT ou un autre assistant IA via MCP pour consulter les soldes et enregistrer des dépenses",
         "selfHost": "Auto-héberger Balancia avec Docker Compose et PostgreSQL"
       }
     }
