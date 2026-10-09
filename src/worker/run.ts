@@ -31,6 +31,8 @@ import { generateDueOccurrences } from "@/modules/recurring/service";
 import { commitImportRun } from "@/modules/imports/service";
 import { sweepOrphanedAttachments } from "@/modules/attachments/service";
 import { pruneRateLimits } from "@/lib/security/rate-limit";
+import { pruneUnusedClients } from "@/modules/agent-access/clients";
+import { pruneAgentAccess } from "@/modules/agent-access/grants";
 import {
   pruneRateQuotes,
   refreshActiveRates,
@@ -273,6 +275,8 @@ export async function startWorker(): Promise<void> {
       rateQuoteRows,
       notificationRows,
       telemetryCounterRows,
+      agentAccess,
+      agentClientRows,
       backupRunRows,
     ] = await Promise.all([
       sweepOrphanedAttachments(
@@ -292,6 +296,10 @@ export async function startWorker(): Promise<void> {
       // the rest is slack for a missed run. Keeping months of them would
       // rebuild exactly the history bucketing exists to avoid.
       pruneCounters(utcDayBefore(now, COUNTER_RETENTION_DAYS)),
+      // Authorization codes a day past their five minutes, and grants that
+      // ended a month ago; then the registrations nobody ever allowed.
+      pruneAgentAccess({ now }),
+      pruneUnusedClients({ now }),
       // A history, not a record: the newest thirty runs of each destination
       // are always kept, and older ones go after ninety days.
       pruneRuns(new Date(now.getTime() - BACKUP_RUN_RETENTION_MS)),
@@ -309,6 +317,9 @@ export async function startWorker(): Promise<void> {
         rateQuoteRows,
         notificationRows,
         telemetryCounterRows,
+        agentCodes: agentAccess.codes,
+        agentGrants: agentAccess.grants,
+        agentClientRows,
         backupRunRows,
       },
       "Maintenance sweep complete",

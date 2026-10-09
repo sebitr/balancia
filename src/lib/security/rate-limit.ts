@@ -46,6 +46,8 @@ export type RateLimitBucket =
   | "parseText"
   | "passkeyChallenge"
   | "apiToken"
+  | "agentRegister"
+  | "agentToken"
   | "pushSubscribe"
   | "pushTest"
   | "backupTest"
@@ -232,6 +234,30 @@ function policies(): Record<RateLimitBucket, RateLimitPolicy> {
      * stolen key.
      */
     apiToken: { limit: 600, windowSeconds: 600 },
+    /*
+     * Registering an AI agent as an OAuth client, which anybody who can reach
+     * the server may do and which writes a row. Every connector added from
+     * Claude or ChatGPT registers afresh, so the allowance has to clear a
+     * household connecting a few of them; thirty an hour per address is that,
+     * and nowhere near a loop filling the table.
+     *
+     * Keyed by address only for lack of anything better — there is no account
+     * yet, which is the point of the endpoint. There is deliberately no
+     * ceiling across the whole instance: it would be a way for anybody with a
+     * few addresses to stop every real person connecting anything. What bounds
+     * the table is `capUnusedClients`, which drops the oldest registration
+     * nobody has allowed, and refuses nobody.
+     */
+    agentRegister: { limit: 30, windowSeconds: 3600 },
+    /*
+     * The token endpoint, keyed by the client asking. Not by address: the
+     * hosted clients exchange and refresh from a handful of shared addresses,
+     * and a per-address ceiling would make one busy afternoon of Claude users
+     * everybody's problem. A client is one connection of one person, which is
+     * the unit worth bounding. A connection refreshes once an hour; this is
+     * room for a retry storm and not for a thief hammering a guessed token.
+     */
+    agentToken: { limit: 120, windowSeconds: 600 },
     // Subscribing happens once per device, plus the odd re-subscribe when a
     // browser rotates an endpoint.
     pushSubscribe: { limit: 30, windowSeconds: 600 },

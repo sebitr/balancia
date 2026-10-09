@@ -115,7 +115,7 @@ resolve_paths() {
 # a list as well as in the code so the prompts can say "3 of 7" — a wizard that
 # will not say how long it is stays longer than it should. One name per
 # question block; adding a block means adding a name.
-question_keys='APP_URL ALLOW_REGISTRATION DEMO_URL EXCHANGE_RATE_PROVIDER RECEIPT_SCANNING SEMANTIC_CATEGORIZATION PUSH_VAPID_PUBLIC_KEY SMTP_HOST TELEMETRY_MODE METRICS_ENABLED BACKUP_ALLOW_PRIVATE_ENDPOINTS'
+question_keys='APP_URL ALLOW_REGISTRATION DEMO_URL EXCHANGE_RATE_PROVIDER RECEIPT_SCANNING SEMANTIC_CATEGORIZATION PUSH_VAPID_PUBLIC_KEY SMTP_HOST TELEMETRY_MODE METRICS_ENABLED AGENT_ACCESS BACKUP_ALLOW_PRIVATE_ENDPOINTS'
 
 # ── Presentation ────────────────────────────────────────────────────────────
 
@@ -1616,6 +1616,36 @@ TEXT
     fi
   fi
 
+  # ── AI assistants ─────────────────────────────────────────────────────────
+  if ! has_value AGENT_ACCESS; then
+    question 'AI assistants'
+    prose <<'TEXT'
+People can connect Claude, ChatGPT or another AI assistant to their own
+account, so that it can answer questions about their groups and, if they
+allow it, add expenses for them. Balancia answers at /mcp and shows each
+person a screen to sign in and choose what the assistant may do: read only
+or read and write, every group or just one. They can disconnect it at any
+time.
+
+Nothing is sent anywhere until a signed-in person allows an assistant, and
+Balancia itself talks to no AI service. What an allowed assistant reads goes
+to whoever runs it. Claude and ChatGPT on the web can only reach an instance
+that is on the public internet over HTTPS; editors and Claude Code on your
+own machine can reach any address.
+
+Say no if financial data must never reach a third-party model, whatever
+the account holder wants.
+
+TEXT
+    if ask_yes_no 'Let people connect AI assistants?' y; then
+      write_setting AGENT_ACCESS true \
+        'AI assistants may be connected at /mcp, by each person, one at a time. Set to false to switch it off.'
+    else
+      write_setting AGENT_ACCESS false \
+        'No AI assistant access: /mcp and /oauth answer 404. Set to true to allow it.'
+    fi
+  fi
+
   # ── Cloud backup ──────────────────────────────────────────────────────────
   if ! has_value BACKUP_ALLOW_PRIVATE_ENDPOINTS; then
     question 'Cloud backup'
@@ -2164,6 +2194,13 @@ summary() {
     fi
   else
     row 'Metrics' 'off'
+  fi
+  # A default-on setting, so an .env written before it existed has no line for
+  # it; "unset" is `on`, which is what the application does with it too.
+  if [ "$(value_of AGENT_ACCESS)" = false ]; then
+    row 'AI assistants' 'off'
+  else
+    row 'AI assistants' 'people may connect their own'
   fi
   if is_enabled BACKUP_ALLOW_PRIVATE_ENDPOINTS; then
     row 'Cloud backup' 'encrypted; local-network destinations allowed'

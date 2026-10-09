@@ -49,6 +49,11 @@ const DOMAIN_TABLES = [
   "passkeys",
   "sessions",
   "api_tokens",
+  // Listed beside `users` although two of the three would be cleared by its
+  // cascade: `agent_clients` points at no user, and would survive it.
+  "agent_codes",
+  "agent_grants",
+  "agent_clients",
   "users",
 ];
 

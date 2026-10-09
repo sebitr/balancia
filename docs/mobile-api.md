@@ -1013,6 +1013,16 @@ to get wrong. The one place the refusal is live rather than structural is a
 method that shares a file with reachable ones, which today means
 `DELETE /api/groups/:id`.
 
+### Where else a key opens a door
+
+A key is also accepted at `/mcp`, Balancia's Model Context Protocol endpoint —
+the same `Authorization: Bearer blc_…` header, with the same scope and the same
+pin — for the AI assistants that take a header and cannot do the sign-in. See
+[AI assistants](ai-agents.md). The assistants that _can_ sign in are not given a
+key: they are given an OAuth access token that expires after an hour, which
+opens `/mcp` and **nothing in this document**. A route here that is handed one
+answers `401`, as it does for any bearer value it does not recognise.
+
 ### Which credential answered
 
 A request carries a key or a cookie, never both:

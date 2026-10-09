@@ -20,6 +20,9 @@ import type { BackupSummary } from "@/modules/backup/view";
  * the page shows the first screen beside it instead; jsdom has no widths, so
  * what is pinned there is which of the two each breakpoint hides.
  *
+ * The AI assistants row counts what is connected, and is not drawn at all where
+ * the operator has switched agent access off: there would be nowhere to go.
+ *
  * The page is a Server Component, called here and its output mounted. The
  * rows whose summaries are drawn by components of their own are stand-ins.
  */
@@ -28,6 +31,8 @@ const state = vi.hoisted(() => ({
   locale: "en" as "en" | "fr",
   dateFormat: "auto" as DateFormat,
   currency: "CHF" as string | null,
+  agentAccess: true,
+  assistants: 0,
   // What the Cloud backup row is written from: the one-line summary, and the
   // destinations behind it for the one state that names a provider by reading.
   backup: { state: "none" } as BackupSummary,
@@ -68,6 +73,15 @@ vi.mock("@/lib/security/actor", () => ({
   }),
 }));
 vi.mock("@/lib/security/admin", () => ({ isInstanceAdmin: async () => false }));
+vi.mock("@/lib/env", () => ({
+  getEnv: () => ({ agentAccessEnabled: state.agentAccess }),
+}));
+vi.mock("@/modules/agent-access/grants", () => ({
+  listConnections: async () =>
+    Array.from({ length: state.assistants }, (_, index) => ({
+      id: `c${index}`,
+    })),
+}));
 vi.mock("@/lib/telemetry/environment", () => ({ appVersion: () => "1.2.3" }));
 vi.mock("@/modules/auth/webauthn", () => ({ listPasskeys: async () => [] }));
 vi.mock("@/modules/auth/service", () => ({
@@ -138,6 +152,8 @@ beforeEach(() => {
   state.locale = "en";
   state.dateFormat = "auto";
   state.currency = "CHF";
+  state.agentAccess = true;
+  state.assistants = 0;
   state.backup = { state: "none" };
   state.backupDestinations = [];
   sessionStorage.clear();
@@ -239,6 +255,47 @@ describe("the Money & formats row", () => {
 
     // The same fallback currency the screen behind the row shows.
     expect(summaryOf("Devise et formats")).toBe("EUR · JJ/MM/AAAA");
+  });
+});
+
+describe("the AI assistants row", () => {
+  it("leads to the screen of its own", async () => {
+    await renderHub();
+
+    expect(screen.getByText("AI assistants").closest("a")).toHaveAttribute(
+      "href",
+      "/settings/assistants",
+    );
+  });
+
+  it("counts what is connected, and says None rather than 0", async () => {
+    const shown: string[] = [];
+    for (const count of [0, 1, 3]) {
+      state.assistants = count;
+      const { unmount } = await renderHub();
+      shown.push(summaryOf("AI assistants") ?? "");
+      unmount();
+    }
+
+    expect(shown).toEqual(["None", "1 connected", "3 connected"]);
+  });
+
+  it("is not drawn where agent access is switched off", async () => {
+    state.agentAccess = false;
+
+    await renderHub();
+
+    expect(screen.queryByText("AI assistants")).not.toBeInTheDocument();
+    expect(screen.getByText("Sign-in & security")).toBeInTheDocument();
+  });
+
+  it("is named in French in French", async () => {
+    state.locale = "fr";
+    state.assistants = 2;
+
+    await renderHub();
+
+    expect(summaryOf("Assistants IA")).toBe("2 connectés");
   });
 });
 

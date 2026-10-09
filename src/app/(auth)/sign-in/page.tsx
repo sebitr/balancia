@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { SignInForm } from "@/components/auth/sign-in-form";
 import { getCurrentUser } from "@/lib/security/actor";
 import { getEnv } from "@/lib/env";
+import { signInDestination } from "@/modules/agent-access/sign-in-return";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("auth.signIn");
@@ -61,12 +62,13 @@ function cameFromGroupPage(next: string | string[] | undefined): boolean {
 export default async function SignInPage({
   searchParams,
 }: PageProps<"/sign-in">) {
+  const { error, verified, emailChange, next } = await searchParams;
+  const destination = signInDestination(next);
   if (await getCurrentUser()) {
-    redirect("/dashboard");
+    redirect(destination);
   }
 
   const env = getEnv();
-  const { error, verified, emailChange, next } = await searchParams;
   const code = typeof error === "string" ? error : undefined;
   const changeOutcome =
     typeof emailChange === "string" ? emailChange : undefined;
@@ -103,6 +105,7 @@ export default async function SignInPage({
       initialNotice={initialNotice}
       privateGroup={cameFromGroupPage(next)}
       demoMode={env.DEMO_MODE}
+      afterSignIn={destination}
     />
   );
 }
