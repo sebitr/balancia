@@ -26,8 +26,8 @@ below. A standalone install has no source to build, so it is not asked and
 `COMPOSE_FILE` is written to pull. Then, either way, it asks about the optional
 features and writes those answers too: `APP_URL`, `ALLOW_REGISTRATION`, `EXCHANGE_RATE_PROVIDER`,
 `RECEIPT_SCANNING`, `SEMANTIC_CATEGORIZATION`, the `PUSH_VAPID_*` trio, the
-`SMTP_*` group, `TELEMETRY_MODE` with `TELEMETRY_DEFAULT`, and
-`METRICS_ENABLED`. Telemetry is asked as one question with two answers —
+`SMTP_*` group, `TELEMETRY_MODE` with `TELEMETRY_DEFAULT`,
+`METRICS_ENABLED`, and `AGENT_ACCESS`. Telemetry is asked as one question with two answers —
 whether an administrator may turn it on, and whether it starts on — and writes
 both variables. Anything it writes can be edited here afterwards; nothing here
 has to go through it.
@@ -477,6 +477,40 @@ where registration has to stay open to strangers.
 Nothing else changes when it is on. There is no third party involved, no
 account to open anywhere, and an instance with no route to the internet works
 exactly as one with a route does.
+
+### `AGENT_ACCESS`
+
+Default `true`. Whether people may connect an AI assistant — Claude, ChatGPT,
+an editor — to their own account.
+
+On, Balancia answers at `/mcp` (the Model Context Protocol) and is the OAuth
+server those assistants sign in through: `/oauth/authorize`, `/oauth/token`,
+`/oauth/register`, `/oauth/revoke`, and the two discovery documents under
+`/.well-known/oauth-*`. Nothing happens until a signed-in person allows a
+particular assistant on a screen of Balancia's own, where they choose whether it
+may only read or also make changes, and for every group or just one. They
+disconnect it from **Settings → AI assistants**, and it is disconnected for
+them whenever the account's password is reset or its address changes.
+
+Set `false` where financial data must never reach a third-party model, whatever
+the account holder would like. Every route above then answers `404`, the card
+disappears from Settings, and assistants that were already connected stop
+working at once; their rows are kept, and work again if the setting is turned
+back on. A demo instance (`DEMO_MODE`) never offers it.
+
+Two things to know before leaving it on:
+
+- **Claude and ChatGPT on the web are servers on the public internet.** They can
+  only add an instance they can reach: a public HTTPS `APP_URL`, with `/mcp`,
+  `/oauth/*` and `/.well-known/oauth-*` forwarded by your reverse proxy and not
+  put behind a login or a firewall that blocks them. Editors and Claude Code on
+  the same machine reach any address.
+- **What an allowed assistant reads leaves your server** and goes to whoever runs
+  that assistant. Balancia itself calls no AI service and sends nothing anywhere
+  because of this setting.
+
+See [AI assistants](ai-agents.md) for what an assistant can and cannot do, and
+how the sign-in works.
 
 ### `AUTH_RATE_LIMIT_MAX`
 

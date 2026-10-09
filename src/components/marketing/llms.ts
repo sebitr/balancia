@@ -98,6 +98,10 @@ Price: free; there is no paid tier, on the hosted instance or self-hosted
   records in reusable formats. Receipts can be downloaded separately.
 - Records new expenses and income with no network and sends them on reconnect.
   Editing and repayments need a connection.
+- Lets an AI assistant work with a person's groups: Balancia is a remote Model
+  Context Protocol (MCP) server at \`/mcp\` with OAuth sign-in, so Claude, ChatGPT
+  and other MCP clients can be added by its address. The person chooses read-only
+  or read-and-write, and one group or all, and can disconnect it at any time.
 
 ## Common use cases
 
@@ -128,7 +132,8 @@ No advertising, no paid tier, and no third-party service required at runtime.
 Optional integrations only make network requests when an administrator enables
 them. Telemetry exists only to improve the tool, never carries personal data or
 amounts, and is off by default on self-hosted instances. Expense category guessing
-runs locally, with no AI service involved.
+runs locally, with no AI service involved. An AI assistant only ever sees a group
+if a signed-in person connects it; Balancia itself sends nothing to an AI vendor.
 
 ## Self-hosting
 
@@ -154,6 +159,7 @@ ${pagesSection(appOrigin)}
 - [Backup and restore](${DOCS}/docs/backup-and-restore.md)
 - [Data migration (Splitwise import)](${DOCS}/docs/data-migration.md)
 - [Offline expense entry](${DOCS}/docs/offline.md)
+- [AI assistants (MCP)](${DOCS}/docs/ai-agents.md)
 - [Architecture](${DOCS}/docs/architecture.md)
 - [Implementation status](${DOCS}/docs/implementation-status.md)
 - [Security](${DOCS}/SECURITY.md)

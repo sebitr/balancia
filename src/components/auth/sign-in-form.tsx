@@ -145,6 +145,12 @@ export function SignInForm({
   privateGroup = false,
   /** This instance is a public demo: offer the way in, and say what it is. */
   demoMode = false,
+  /**
+   * Where a successful sign-in goes. The dashboard, unless the reader was sent
+   * here from the consent screen of an AI agent they were connecting — see
+   * `signInDestination`, which decides and is the only thing that may say so.
+   */
+  afterSignIn = "/dashboard",
 }: {
   mailEnabled: boolean;
   appleEnabled?: boolean;
@@ -152,6 +158,7 @@ export function SignInForm({
   initialNotice?: string | null;
   privateGroup?: boolean;
   demoMode?: boolean;
+  afterSignIn?: string;
 }) {
   const router = useRouter();
   const t = useTranslations("auth.signIn");
@@ -227,7 +234,7 @@ export function SignInForm({
     // Not awaited: it shows nothing and can be slow, and nobody signing in
     // should wait on housekeeping they did not ask for.
     void upgradeToPasskey();
-    router.push("/dashboard");
+    router.push(afterSignIn);
     router.refresh();
   });
 
@@ -284,7 +291,7 @@ export function SignInForm({
       // most needs the offer — the next device would otherwise start from the
       // inbox again.
       void upgradeToPasskey();
-      router.push("/dashboard");
+      router.push(afterSignIn);
       router.refresh();
     } finally {
       setCodePending(false);
@@ -322,7 +329,7 @@ export function SignInForm({
     setPasskeyPending(true);
     try {
       await signInWithPasskey();
-      router.push("/dashboard");
+      router.push(afterSignIn);
       router.refresh();
     } catch (error) {
       setFormError(passkeyErrorMessage(error));
@@ -339,7 +346,7 @@ export function SignInForm({
    * catalogue it answers to are the current ones.
    */
   const onAutofillSignedIn = useEffectEvent(() => {
-    router.push("/dashboard");
+    router.push(afterSignIn);
     router.refresh();
   });
 

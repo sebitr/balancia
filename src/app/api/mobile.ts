@@ -180,7 +180,7 @@ export async function apiUser(
  * own accord — is not a bearer attempt and is ignored, so it cannot turn every
  * cookie-authenticated request into a 401.
  */
-function bearerToken(request: Request): string | null {
+export function bearerToken(request: Request): string | null {
   const header = request.headers.get("Authorization")?.trim();
   if (!header) return null;
   // A bare `Bearer` with nothing after it matches, and yields "" — a bearer

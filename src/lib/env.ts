@@ -236,6 +236,24 @@ const envSchema = z
     SIGNUP_PROOF_OF_WORK: booleanish.default(false),
 
     /**
+     * Let people connect an AI agent — Claude, ChatGPT, an editor — to their
+     * own account.
+     *
+     * On, Balancia answers at `/mcp` (the Model Context Protocol) and acts as
+     * the OAuth server those clients sign in through: `/oauth/*` and the two
+     * `/.well-known/oauth-*` documents. Each person still decides, per
+     * application, whether to allow it and how much — read or read and write,
+     * every group or one — and can take it back from Settings → Security.
+     *
+     * On by default, because the feature is the point and nothing happens
+     * until a signed-in person says yes. Turn it off on an instance where
+     * financial data must not reach a third-party model, however willing the
+     * account holder: every one of those routes then answers 404. Always off
+     * on a demo, which has no accounts worth connecting. See docs/ai-agents.md.
+     */
+    AGENT_ACCESS: booleanish.default(true),
+
+    /**
      * Turns this whole process into a public demo.
      *
      * The instance stops using PostgreSQL entirely: `getDb()` returns an
@@ -835,6 +853,8 @@ export interface AppEnv extends RawEnv {
   readonly smtpEnabled: boolean;
   readonly pushEnabled: boolean;
   readonly appleSignInEnabled: boolean;
+  /** `AGENT_ACCESS`, and never on a demo. */
+  readonly agentAccessEnabled: boolean;
   readonly isProduction: boolean;
   readonly isTest: boolean;
 }
@@ -878,6 +898,7 @@ function buildEnv(source: NodeJS.ProcessEnv): AppEnv {
       value.APPLE_KEY_ID &&
       value.APPLE_PRIVATE_KEY,
     ),
+    agentAccessEnabled: value.AGENT_ACCESS && !value.DEMO_MODE,
     isProduction: value.NODE_ENV === "production",
     isTest: value.NODE_ENV === "test",
   };

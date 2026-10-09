@@ -45,6 +45,7 @@ import type { Messages } from "next-intl";
  */
 export const ROOT_NAMESPACES: readonly string[] = [
   "adminTelemetry",
+  "agentAccess",
   "apiTokens",
   "appleAccount",
   "auth.errors",

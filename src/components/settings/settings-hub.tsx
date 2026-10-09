@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import {
   ArrowLeftRight,
   Bell,
+  Bot,
   CreditCard,
   Database,
   HelpCircle,
@@ -16,8 +17,10 @@ import { IdentityCard } from "./identity-card";
 import { AppearanceSummary } from "./appearance-summary";
 import { PayoutsSummary } from "./payouts-summary";
 import { SignOutButton } from "./sign-out-button";
+import { getEnv } from "@/lib/env";
 import { isInstanceAdmin } from "@/lib/security/admin";
 import { appVersion } from "@/lib/telemetry/environment";
+import { listConnections } from "@/modules/agent-access/grants";
 import { listPasskeys } from "@/modules/auth/webauthn";
 import { getUserPreferredCurrency } from "@/modules/auth/service";
 import { listGroupsForUser } from "@/modules/groups/service";
@@ -70,6 +73,7 @@ export const loadSettingsHub = cache(async (userId: string) => {
     formats,
     payouts,
     photo,
+    assistants,
   ] = await Promise.all([
     isInstanceAdmin(userId),
     listPasskeys(userId),
@@ -79,6 +83,9 @@ export const loadSettingsHub = cache(async (userId: string) => {
     resolveFormatPreferences(),
     listPayoutMethods(userId),
     getAvatarVersion(userId),
+    // Null, not zero, where the operator has switched agent access off: the row
+    // is not drawn at all, and "None" would claim there was somewhere to go.
+    getEnv().agentAccessEnabled ? listConnections(userId) : null,
   ]);
 
   const categories = Object.values(preferences);
@@ -86,6 +93,7 @@ export const loadSettingsHub = cache(async (userId: string) => {
   return {
     admin,
     passkeyCount: passkeys.length,
+    assistantCount: assistants?.length ?? null,
     groupCount: groups.length,
     notificationsOn: categories.filter(Boolean).length,
     notificationsTotal: categories.length,
@@ -147,6 +155,14 @@ export function SettingsHub({
             label={t("security")}
             summary={t("passkeyCount", { count: hub.passkeyCount })}
           />
+          {hub.assistantCount !== null && (
+            <SettingsLinkRow
+              href="/settings/assistants"
+              icon={Bot}
+              label={t("assistants")}
+              summary={t("assistantCount", { count: hub.assistantCount })}
+            />
+          )}
         </SettingsRows>
       </SettingsGroup>
 

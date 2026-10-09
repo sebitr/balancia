@@ -58,6 +58,19 @@ Anything that lets someone:
     the link can be revoked and regenerated at any time.
   - Members can edit and delete each other's expenses. Groups are built on
     mutual trust; the append-only activity log is the accountability mechanism.
+  - **An AI assistant a person has connected acts with the authority they gave
+    it, and can be steered by text in a group.** It reads descriptions, notes
+    and names that other members typed, and a language model cannot reliably
+    tell data from instruction. Balancia limits what a connected assistant can
+    reach and can do (see _AI assistants_ below) and tells the model to treat
+    that text as data, but an assistant that follows an instruction hidden in
+    an expense description, within what its owner allowed it, is not a
+    vulnerability in Balancia. One that does something its owner did **not**
+    allow — writes on a read-only connection, reads a group it was not pinned
+    to, reaches anything an API key cannot — is. That includes a connection
+    that may write to every group being steered to copy one group's text into
+    another's; the answer is to pin it or leave it read only, as
+    [AI assistants](docs/ai-agents.md) says.
   - **A guest who owes someone sees how to pay them** — the IBAN or handle and
     the payment code — and a guest can create that debt by recording an
     expense "paid by X, split on me". Guests keep this so that a group whose
@@ -143,7 +156,9 @@ addresses never reaches:
   the response has gone, so an account's trip to the mail server does not make
   its answer slower than an unknown address's.
 - **Registration** is limited per client, per recipient and across the
-  instance; **six-digit codes** per address; **API keys** per key.
+  instance; **six-digit codes** per address; **API keys** per key; **AI
+  assistants** per connection, with the token endpoint per application and their
+  registration per address and across the instance.
 - **The client address** is read from the right of `X-Forwarded-For`, counting
   back `TRUSTED_PROXY_HOPS` proxies; everything left of that is the caller's to
   invent. An IPv6 client is counted by its /64, because a subscriber holds at
@@ -198,6 +213,60 @@ How somebody wants to be paid back belongs to their account, not to a group.
 - **Closing an account does not delete a group a guest is still using.** A
   participant holding a live link counts as somebody left in the group, so
   the group is kept, with no owner, rather than deleted with its expenses.
+
+### AI assistants
+
+Balancia is an MCP server and the OAuth server that signs assistants in (see
+[AI assistants](docs/ai-agents.md)). An assistant is a bearer credential held by
+software its owner does not run, so it is held to what an API key is held to,
+and the sign-in is built to the current MCP and OAuth security guidance.
+
+- **A signed-in person allows each assistant, once, on a screen of Balancia's
+  own** — read only or read and write, every group or one. It cannot be given
+  more than it asked for, is listed in Settings → AI assistants, and ends
+  at once when disconnected, and also when the password is reset, the email
+  address changes, the account is disabled or its pinned group is deleted. The
+  screen starts on read only, a form that does not name write gets read, and any
+  code issued but not yet exchanged is deleted when the account is taken back.
+- **It acts as the person and cannot exceed them.** Every tool call goes through
+  the same `authorizeGroup` and permission checks as the web app. A pinned
+  connection answers another group exactly as it answers one that does not
+  exist.
+- **It can never** change the account, add or remove people, create invitations
+  or join links, export or delete a group, or read anybody's payout details or
+  email address — the API-key allowlist in `src/modules/api-tokens/scope.ts`,
+  applied to every tool. Its tokens open `/mcp` and nothing else.
+- **PKCE (S256) on every authorization**; exact `redirect_uri` matching (a local
+  application's port may vary, per RFC 8252); a request with an unregistered
+  address never redirects — it ends on a page that says so. Codes are single
+  use, five minutes, bound to the client and address that asked, and a second
+  use ends the grant they made.
+- **Tokens are hashed at rest, short-lived and rotating.** Access tokens last an
+  hour. A refresh token works once; presenting _any_ replaced one more than ten
+  seconds after it was replaced is treated as theft and ends the connection. Every
+  replaced token is remembered until it would have lapsed, because remembering
+  only the latest is defeated by refreshing twice.
+- **The consent form is sealed** (HMAC, bound to the account that saw it, ten
+  minutes), so editing it in the browser cannot change where a code is sent. The
+  decision is answered with a page and not a redirect, because the site's
+  `form-action 'self'` policy would otherwise stop Chromium following it.
+- **Registration is open to anybody, and grants nothing.** It is rate limited
+  per address, the table keeps only the newest registrations nobody has allowed
+  (so a flood cannot lock real people out), the name it gives is sanitised and
+  shown with the address the answer goes to and a statement that Balancia has
+  not checked it, and registrations nobody allowed are swept after a week.
+- **A request Balancia cannot use is shown to the person, not redirected.** An
+  unregistered or mismatched address never redirects anywhere, and neither does a
+  malformed request to a registered one: with open registration that address is a
+  stranger's claim, and redirecting to it by itself would make Balancia an open
+  redirector.
+- **One call per request at `/mcp`.** Batches are refused, so the rate limit
+  counts what it says and identical writes cannot race the duplicate check.
+- **Writes are guarded and reversible.** Deleting is a soft delete with a
+  restore; an entry identical to one written in the last ten minutes is refused
+  once; write tools are annotated so clients can ask first.
+- **It can be switched off** with `AGENT_ACCESS=false`, which makes every route
+  answer `404`.
 
 ### Authorization
 

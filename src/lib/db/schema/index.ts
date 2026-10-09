@@ -17,3 +17,4 @@ export * from "./payouts";
 export * from "./notifications";
 export * from "./reminders";
 export * from "./telemetry";
+export * from "./agent-access";

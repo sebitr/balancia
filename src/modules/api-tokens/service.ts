@@ -7,6 +7,7 @@ import {
   hashToken,
   isWellFormedApiToken,
 } from "@/lib/security/tokens";
+import { disconnectAll } from "@/modules/agent-access/grants";
 import type { TokenScope } from "./scope";
 
 /**
@@ -205,7 +206,7 @@ export async function revokeApiToken(
 }
 
 /**
- * Revokes every key the account holds.
+ * Revokes every key the account holds — and every AI assistant connected to it.
  *
  * For the moments an account is taken back rather than tidied: a password
  * reset, an email change, and the first time an address is proved. Minting a
@@ -214,6 +215,11 @@ export async function revokeApiToken(
  * behind that outlasts every session the owner then ends. A key revoked here
  * breaks whatever script was holding it, which is the price of the owner
  * being able to say "nothing I did not do is still signed in" and mean it.
+ *
+ * A connected assistant is the same thing wearing a nicer coat. Allowing one
+ * needs only a live session too, and its refresh token carries on for ninety
+ * days, so it goes with the keys. Returns how many credentials of both kinds
+ * were ended; the callers only log it.
  */
 export async function revokeAllApiTokensForUser(
   userId: string,
@@ -226,7 +232,7 @@ export async function revokeAllApiTokensForUser(
     .set({ revokedAt: now })
     .where(and(eq(apiTokens.userId, userId), isNull(apiTokens.revokedAt)))
     .returning({ id: apiTokens.id });
-  return revoked.length;
+  return revoked.length + (await disconnectAll(userId, { db, now }));
 }
 
 /**

@@ -60,6 +60,7 @@ features to switch on:
 | Outgoing email        | `SMTP_*`                         |                                               |
 | Telemetry             | `TELEMETRY_MODE`                 | Switches nothing on — see below               |
 | Metrics               | `METRICS_ENABLED`                | Generates `METRICS_TOKEN`                     |
+| AI assistants         | `AGENT_ACCESS`                   |                                               |
 
 Every answer is written, including the no's, so the second run asks nothing.
 
@@ -307,6 +308,10 @@ APP_URL=https://balancia.example.com
 
 # Optional: close sign-ups on a private instance.
 # ALLOW_REGISTRATION=false
+
+# Optional: stop people connecting Claude, ChatGPT or an editor to their account.
+# On by default; see docs/ai-agents.md.
+# AGENT_ACCESS=false
 
 # Optional: Sign in with Apple. See the walkthrough below.
 # APPLE_CLIENT_ID=com.example.balancia.web

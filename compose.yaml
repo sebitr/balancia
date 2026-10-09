@@ -92,6 +92,10 @@ x-app-environment: &app-environment
   APPLE_PRIVATE_KEY: ${APPLE_PRIVATE_KEY:-}
   ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
   SIGNUP_PROOF_OF_WORK: ${SIGNUP_PROOF_OF_WORK:-false}
+  # AI assistants (Claude, ChatGPT, editors) connecting at /mcp. Each person
+  # decides per assistant; this only decides whether anyone may. See
+  # docs/ai-agents.md.
+  AGENT_ACCESS: ${AGENT_ACCESS:-true}
   AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-0}
   # Telemetry. Nothing is sent by default: "opt-in" means an administrator may
   # switch anonymous statistics on from Settings → Administration → Telemetry,

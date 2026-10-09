@@ -25,6 +25,8 @@ import { generateDueOccurrences } from "@/modules/recurring/service";
 import { commitImportRun } from "@/modules/imports/service";
 import { sweepOrphanedAttachments } from "@/modules/attachments/service";
 import { pruneRateLimits } from "@/lib/security/rate-limit";
+import { pruneUnusedClients } from "@/modules/agent-access/clients";
+import { pruneAgentAccess } from "@/modules/agent-access/grants";
 import {
   pruneRateQuotes,
   refreshActiveRates,
@@ -233,6 +235,8 @@ export async function startWorker(): Promise<void> {
       rateQuoteRows,
       notificationRows,
       telemetryCounterRows,
+      agentAccess,
+      agentClientRows,
     ] = await Promise.all([
       sweepOrphanedAttachments(
         new Date(now.getTime() - ORPHAN_UPLOAD_GRACE_MS),
@@ -251,6 +255,10 @@ export async function startWorker(): Promise<void> {
       // the rest is slack for a missed run. Keeping months of them would
       // rebuild exactly the history bucketing exists to avoid.
       pruneCounters(utcDayBefore(now, COUNTER_RETENTION_DAYS)),
+      // Authorization codes a day past their five minutes, and grants that
+      // ended a month ago; then the registrations nobody ever allowed.
+      pruneAgentAccess({ now }),
+      pruneUnusedClients({ now }),
     ]);
     maintenanceLastSuccess().set(Math.floor(Date.now() / 1000));
     jobLogger.info(
@@ -265,6 +273,9 @@ export async function startWorker(): Promise<void> {
         rateQuoteRows,
         notificationRows,
         telemetryCounterRows,
+        agentCodes: agentAccess.codes,
+        agentGrants: agentAccess.grants,
+        agentClientRows,
       },
       "Maintenance sweep complete",
     );

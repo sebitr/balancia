@@ -45,16 +45,17 @@ useful guide.
 
 ## Developing Balancia
 
-| Guide                                    | Best for                                                   |
-| ---------------------------------------- | ---------------------------------------------------------- |
-| [Development](development.md)            | Local setup, tests, project structure and stack notes      |
-| [Architecture](architecture.md)          | Boundaries, data flow and design decisions                 |
-| [Shortcuts and automation](shortcuts.md) | Wiring a phone, a crontab or a tablet to your own instance |
-| [The mobile API](mobile-api.md)          | The JSON routes, API keys and what a key may reach         |
-| [Translations](translations.md)          | Helping translate, adding a language, and the two Weblates |
-| [Contributing](../CONTRIBUTING.md)       | Proposing, implementing and verifying a change             |
-| [Code of conduct](../CODE_OF_CONDUCT.md) | Community expectations                                     |
-| [Support](../SUPPORT.md)                 | Where questions, bugs, ideas and security reports belong   |
+| Guide                                    | Best for                                                    |
+| ---------------------------------------- | ----------------------------------------------------------- |
+| [Development](development.md)            | Local setup, tests, project structure and stack notes       |
+| [Architecture](architecture.md)          | Boundaries, data flow and design decisions                  |
+| [Shortcuts and automation](shortcuts.md) | Wiring a phone, a crontab or a tablet to your own instance  |
+| [The mobile API](mobile-api.md)          | The JSON routes, API keys and what a key may reach          |
+| [AI assistants](ai-agents.md)            | Connecting Claude, ChatGPT or an editor, and what it may do |
+| [Translations](translations.md)          | Helping translate, adding a language, and the two Weblates  |
+| [Contributing](../CONTRIBUTING.md)       | Proposing, implementing and verifying a change              |
+| [Code of conduct](../CODE_OF_CONDUCT.md) | Community expectations                                      |
+| [Support](../SUPPORT.md)                 | Where questions, bugs, ideas and security reports belong    |
 
 ## Three useful starting points
 

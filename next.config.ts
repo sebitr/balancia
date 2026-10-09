@@ -81,6 +81,18 @@ const nextConfig: NextConfig = {
         source: "/.well-known/apple-app-site-association",
         destination: "/well-known/apple-app-site-association",
       },
+      // The two OAuth discovery documents AI agents read before they sign in.
+      // `:path*` takes the protected resource's document at its root and at
+      // `/mcp`, which is where RFC 9728 puts it for a resource with a path.
+      // See `src/app/well-known/oauth-*` and `docs/ai-agents.md`.
+      {
+        source: "/.well-known/oauth-protected-resource/:path*",
+        destination: "/well-known/oauth-protected-resource",
+      },
+      {
+        source: "/.well-known/oauth-authorization-server",
+        destination: "/well-known/oauth-authorization-server",
+      },
     ];
   },
 
