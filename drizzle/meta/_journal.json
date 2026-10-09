@@ -281,6 +281,13 @@
       "when": 1790793961651,
       "tag": "0039_first_account_is_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1791562043848,
+      "tag": "0040_encrypted_cloud_backup",
+      "breakpoints": true
     }
   ]
 }

@@ -148,6 +148,16 @@ instance also needs a domain,
 HTTPS, backups, updates and monitoring. The
 [self-hosting guide](self-hosting.md) includes Caddy, Traefik and nginx examples.
 
+## Can I back my groups up to my own cloud?
+
+Yes, if you own them. Under Settings → Data → Cloud backup, an owner connects a
+Google Drive, a Dropbox, a OneDrive (personal accounts), any S3-compatible
+bucket or any WebDAV server such as Nextcloud, and chooses how often. Each backup
+is encrypted before it leaves the server, to a recovery key that only you hold,
+so neither the server nor the cloud can read it. The cost of that is real: lose
+the key and the backups cannot be opened by anyone. See
+[cloud backup](cloud-backup.md).
+
 ## Does Balancia have a mobile app?
 
 Balancia is an installable progressive web app. On supported phones and

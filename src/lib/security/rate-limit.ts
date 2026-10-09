@@ -48,6 +48,9 @@ export type RateLimitBucket =
   | "apiToken"
   | "pushSubscribe"
   | "pushTest"
+  | "backupTest"
+  | "backupRun"
+  | "backupDownload"
   | "telemetryCrash"
   | "telemetryCrashTotal"
   | "telemetryTest"
@@ -235,6 +238,17 @@ function policies(): Record<RateLimitBucket, RateLimitPolicy> {
     // A test notification costs an outbound request to a push service, so it
     // is the one notification endpoint worth keeping on a short leash.
     pushTest: { limit: 5, windowSeconds: 600 },
+    // "Test connection" makes this server connect, with credentials a person
+    // just typed, to an address they just typed. A form field is the cheapest
+    // way there is to aim an outbound connection, so it is kept on a short
+    // leash — enough for a typo, a correction and a retry.
+    backupTest: { limit: 10, windowSeconds: 600 },
+    // "Back up now" queues real work: every group exported, encrypted and
+    // uploaded. A few an hour is plenty for someone checking it works.
+    backupRun: { limit: 6, windowSeconds: 3600 },
+    // Reading a backup back from the cloud, for the restore screen. Each is a
+    // download through this server of a file the size of the whole backup.
+    backupDownload: { limit: 20, windowSeconds: 3600 },
     // One report per error class per hour. The second occurrence of a failure
     // adds nothing the first did not say, and an instance in a crash loop must
     // not turn itself into a load generator.

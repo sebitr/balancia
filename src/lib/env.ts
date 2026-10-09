@@ -216,6 +216,47 @@ const envSchema = z
       .transform((value) => (value === "" ? undefined : value))
       .optional(),
 
+    /**
+     * Encrypted cloud backup, which a group owner switches on for themselves
+     * under Settings → Cloud backup. Everything below is the *operator's* half:
+     * what this server is able to offer. See docs/cloud-backup.md.
+     *
+     * The transport is the `rclone` binary, which the image carries. A native
+     * install without it simply has no backup screen to offer; this names a
+     * binary that is not on `PATH`.
+     */
+    BACKUP_RCLONE_PATH: optionalString,
+    /**
+     * Let people point a backup at an address on this server's own network — a
+     * NAS, a Nextcloud on the LAN, a MinIO next door. Off, because turning it on
+     * lets any account make this server open connections to internal
+     * addresses, which is the textbook way to reach what is meant to be
+     * private. On a household server where every account is family, it is
+     * usually exactly what you want.
+     */
+    BACKUP_ALLOW_PRIVATE_ENDPOINTS: booleanish.default(false),
+    /**
+     * Offer Proton Drive. It goes through an interface its provider neither
+     * publishes nor supports, and it needs the account's password kept on this
+     * server, so it is off until the operator says otherwise. (iCloud Drive
+     * would be the same, and is not offered at all yet; see
+     * docs/cloud-backup.md.)
+     */
+    BACKUP_EXPERIMENTAL_PROVIDERS: booleanish.default(false),
+    /**
+     * The OAuth apps behind Google Drive, Dropbox and OneDrive. A provider is
+     * offered exactly when both halves of its pair are set; people connect
+     * their own account to *your* app, so the registration is yours to make
+     * (docs/cloud-backup.md walks through each). Redirect URI for all three:
+     * `<APP_URL>/api/backup/oauth/<google|dropbox|microsoft>/callback`.
+     */
+    BACKUP_GOOGLE_CLIENT_ID: optionalString,
+    BACKUP_GOOGLE_CLIENT_SECRET: optionalString,
+    BACKUP_DROPBOX_CLIENT_ID: optionalString,
+    BACKUP_DROPBOX_CLIENT_SECRET: optionalString,
+    BACKUP_MICROSOFT_CLIENT_ID: optionalString,
+    BACKUP_MICROSOFT_CLIENT_SECRET: optionalString,
+
     /** Disable open registration on a private instance. */
     ALLOW_REGISTRATION: booleanish.default(true),
 
@@ -706,6 +747,39 @@ const envSchema = z
       });
     }
 
+    // A backup app registration is an ID and a secret together. One without
+    // the other offers a provider whose Connect button fails at the provider's
+    // own error page, which is a worse place to learn it than here.
+    for (const [name, id, secret] of [
+      [
+        "GOOGLE",
+        value.BACKUP_GOOGLE_CLIENT_ID,
+        value.BACKUP_GOOGLE_CLIENT_SECRET,
+      ],
+      [
+        "DROPBOX",
+        value.BACKUP_DROPBOX_CLIENT_ID,
+        value.BACKUP_DROPBOX_CLIENT_SECRET,
+      ],
+      [
+        "MICROSOFT",
+        value.BACKUP_MICROSOFT_CLIENT_ID,
+        value.BACKUP_MICROSOFT_CLIENT_SECRET,
+      ],
+    ] as const) {
+      if (Boolean(id) === Boolean(secret)) continue;
+      const missing = id
+        ? `BACKUP_${name}_CLIENT_SECRET`
+        : `BACKUP_${name}_CLIENT_ID`;
+      context.addIssue({
+        code: "custom",
+        path: [missing],
+        message:
+          `${missing} is required when the other half of the ${name.toLowerCase()} ` +
+          "backup app is set. Set both, or unset both to leave that provider off.",
+      });
+    }
+
     // Sign in with Apple needs all four values or none. Three of four is the
     // same mistake as half a VAPID pair, and it fails at the redirect rather
     // than at boot, so it is worth catching here.
@@ -835,6 +909,12 @@ export interface AppEnv extends RawEnv {
   readonly smtpEnabled: boolean;
   readonly pushEnabled: boolean;
   readonly appleSignInEnabled: boolean;
+  /** Which OAuth backup providers this instance has an app registered for. */
+  readonly backupOAuthApps: {
+    readonly google?: BackupOAuthApp;
+    readonly dropbox?: BackupOAuthApp;
+    readonly microsoft?: BackupOAuthApp;
+  };
   readonly isProduction: boolean;
   readonly isTest: boolean;
 }
@@ -878,9 +958,35 @@ function buildEnv(source: NodeJS.ProcessEnv): AppEnv {
       value.APPLE_KEY_ID &&
       value.APPLE_PRIVATE_KEY,
     ),
+    backupOAuthApps: {
+      google: oauthApp(
+        value.BACKUP_GOOGLE_CLIENT_ID,
+        value.BACKUP_GOOGLE_CLIENT_SECRET,
+      ),
+      dropbox: oauthApp(
+        value.BACKUP_DROPBOX_CLIENT_ID,
+        value.BACKUP_DROPBOX_CLIENT_SECRET,
+      ),
+      microsoft: oauthApp(
+        value.BACKUP_MICROSOFT_CLIENT_ID,
+        value.BACKUP_MICROSOFT_CLIENT_SECRET,
+      ),
+    },
     isProduction: value.NODE_ENV === "production",
     isTest: value.NODE_ENV === "test",
   };
+}
+
+export interface BackupOAuthApp {
+  readonly clientId: string;
+  readonly clientSecret: string;
+}
+
+function oauthApp(
+  clientId: string | undefined,
+  clientSecret: string | undefined,
+): BackupOAuthApp | undefined {
+  return clientId && clientSecret ? { clientId, clientSecret } : undefined;
 }
 
 let cached: AppEnv | undefined;

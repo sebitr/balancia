@@ -4,6 +4,8 @@ import { getTranslations } from "next-intl/server";
 import { SettingsScreen } from "@/components/settings/settings-screen";
 import { SettingsCard } from "@/components/settings/settings-card";
 import { Disclosure } from "@/components/settings/disclosure";
+import { BackupNetworkCard } from "@/components/backup/admin/network-card";
+import { BackupProvidersCard } from "@/components/backup/admin/providers-card";
 import { TelemetrySettingsForm } from "@/components/telemetry/telemetry-settings-form";
 import { TelemetryTestButton } from "@/components/telemetry/telemetry-test-button";
 import { TelemetryPreview } from "@/components/telemetry/telemetry-preview";
@@ -111,6 +113,12 @@ export default async function AdminSettingsPage() {
           </ul>
         </Disclosure>
       </SettingsCard>
+
+      {/* Cloud backup's half of the administrator's job: what this server
+          offers people to back up to. Statements, not switches — the settings
+          are environment variables, which a screen cannot write. */}
+      <BackupProvidersCard />
+      <BackupNetworkCard />
     </SettingsScreen>
   );
 }

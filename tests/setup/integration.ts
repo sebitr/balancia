@@ -37,6 +37,9 @@ const DOMAIN_TABLES = [
   // it on for the next one. Readers treat a missing row as "everything off",
   // which is the same answer the migration's seeded row gives.
   "instance_settings",
+  "backup_runs",
+  "backup_destinations",
+  "backup_keys",
   "group_members",
   "participants",
   "groups",

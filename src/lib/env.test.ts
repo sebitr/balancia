@@ -204,6 +204,70 @@ describe("environment validation", () => {
     });
   });
 
+  describe("encrypted cloud backup", () => {
+    it("offers no OAuth provider until the operator registered an app", () => {
+      const env = parseEnv({ ...base } as unknown as NodeJS.ProcessEnv);
+
+      expect(env.backupOAuthApps).toEqual({
+        google: undefined,
+        dropbox: undefined,
+        microsoft: undefined,
+      });
+      expect(env.BACKUP_ALLOW_PRIVATE_ENDPOINTS).toBe(false);
+      expect(env.BACKUP_EXPERIMENTAL_PROVIDERS).toBe(false);
+    });
+
+    it("offers a provider exactly when both halves of its pair are set", () => {
+      const env = parseEnv({
+        ...base,
+        BACKUP_GOOGLE_CLIENT_ID: "google-id",
+        BACKUP_GOOGLE_CLIENT_SECRET: "google-secret",
+        BACKUP_DROPBOX_CLIENT_ID: "dropbox-id",
+        BACKUP_DROPBOX_CLIENT_SECRET: "dropbox-secret",
+      } as unknown as NodeJS.ProcessEnv);
+
+      expect(env.backupOAuthApps.google).toEqual({
+        clientId: "google-id",
+        clientSecret: "google-secret",
+      });
+      expect(env.backupOAuthApps.dropbox?.clientId).toBe("dropbox-id");
+      expect(env.backupOAuthApps.microsoft).toBeUndefined();
+    });
+
+    it.each([
+      ["BACKUP_GOOGLE_CLIENT_ID", "BACKUP_GOOGLE_CLIENT_SECRET"],
+      ["BACKUP_DROPBOX_CLIENT_SECRET", "BACKUP_DROPBOX_CLIENT_ID"],
+      ["BACKUP_MICROSOFT_CLIENT_ID", "BACKUP_MICROSOFT_CLIENT_SECRET"],
+    ])("names the missing half when only %s is set", (given, missing) => {
+      expect(() =>
+        parseEnv({ ...base, [given]: "value" } as unknown as NodeJS.ProcessEnv),
+      ).toThrow(new RegExp(`${missing} is required`));
+    });
+
+    it("reads an empty value, which Compose passes for 'unset', as unset", () => {
+      const env = parseEnv({
+        ...base,
+        BACKUP_GOOGLE_CLIENT_ID: "",
+        BACKUP_GOOGLE_CLIENT_SECRET: "",
+        BACKUP_RCLONE_PATH: "",
+      } as unknown as NodeJS.ProcessEnv);
+
+      expect(env.backupOAuthApps.google).toBeUndefined();
+      expect(env.BACKUP_RCLONE_PATH).toBeUndefined();
+    });
+
+    it("accepts the two operator decisions in the usual spellings", () => {
+      const env = parseEnv({
+        ...base,
+        BACKUP_ALLOW_PRIVATE_ENDPOINTS: "yes",
+        BACKUP_EXPERIMENTAL_PROVIDERS: "true",
+      } as unknown as NodeJS.ProcessEnv);
+
+      expect(env.BACKUP_ALLOW_PRIVATE_ENDPOINTS).toBe(true);
+      expect(env.BACKUP_EXPERIMENTAL_PROVIDERS).toBe(true);
+    });
+  });
+
   describe("Sign in with Apple", () => {
     const apple = {
       APP_URL: "https://balancia.example.com",
@@ -888,6 +952,14 @@ const READ_AS_DERIVED_FIELD: Readonly<Record<string, string>> = {
   // Read by the migration runner, which runs before the app and needs nothing
   // from the schema but a connection string.
   ALLOW_NEWER_SCHEMA: "isNewerSchemaAllowed",
+  // Paired into one registration per provider by `buildEnv`, and read as
+  // `getEnv().backupOAuthApps` — never one half at a time.
+  BACKUP_GOOGLE_CLIENT_ID: "backupOAuthApps",
+  BACKUP_GOOGLE_CLIENT_SECRET: "backupOAuthApps",
+  BACKUP_DROPBOX_CLIENT_ID: "backupOAuthApps",
+  BACKUP_DROPBOX_CLIENT_SECRET: "backupOAuthApps",
+  BACKUP_MICROSOFT_CLIENT_ID: "backupOAuthApps",
+  BACKUP_MICROSOFT_CLIENT_SECRET: "backupOAuthApps",
 };
 
 /**

@@ -220,6 +220,18 @@ describe("message catalogues", () => {
       "payouts.addressStreetHint",
       // An income category French spells exactly as English does.
       "expenses.incomeCategories.contributions",
+      // Product names over the 12 characters the rule lets through.
+      "cloudBackup.where.oneDrive",
+      "cloudBackup.connect.serviceCloudflare",
+      "cloudBackup.connect.serviceInfomaniak",
+      // A list of provider names and nothing else.
+      "cloudBackup.where.s3Hint",
+      // Placeholders around a separator dot: nothing in them to translate.
+      "cloudBackup.hub.summary",
+      "cloudBackup.overview.lastValue",
+      // A shell command and a key prefix, typed exactly as they are.
+      "cloudBackup.restore.selfCommand",
+      "cloudBackup.restore.keyPlaceholder",
     ]);
 
     const identical = [...english].filter(

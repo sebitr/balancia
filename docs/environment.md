@@ -26,8 +26,8 @@ below. A standalone install has no source to build, so it is not asked and
 `COMPOSE_FILE` is written to pull. Then, either way, it asks about the optional
 features and writes those answers too: `APP_URL`, `ALLOW_REGISTRATION`, `EXCHANGE_RATE_PROVIDER`,
 `RECEIPT_SCANNING`, `SEMANTIC_CATEGORIZATION`, the `PUSH_VAPID_*` trio, the
-`SMTP_*` group, `TELEMETRY_MODE` with `TELEMETRY_DEFAULT`, and
-`METRICS_ENABLED`. Telemetry is asked as one question with two answers —
+`SMTP_*` group, `TELEMETRY_MODE` with `TELEMETRY_DEFAULT`,
+`METRICS_ENABLED`, and `BACKUP_ALLOW_PRIVATE_ENDPOINTS`. Telemetry is asked as one question with two answers —
 whether an administrator may turn it on, and whether it starts on — and writes
 both variables. Anything it writes can be edited here afterwards; nothing here
 has to go through it.
@@ -440,6 +440,54 @@ _Settings → Sign-in & security_. Without that rule, anyone able to register wi
 an address they do not own could wait to inherit the account of whoever later
 arrives through Apple. Note that an instance with no SMTP never verifies an
 address, so on one of those the deliberate path is always the one taken.
+
+---
+
+## Encrypted cloud backup (optional)
+
+Lets the owner of a group back it up, encrypted, to a cloud storage account of
+their own, on a schedule. The data is encrypted in the worker to a recovery key
+that only the owner holds, so neither this server nor the cloud can read what
+was written. How it works, the provider walk-throughs and the limits of each
+are in [cloud-backup.md](cloud-backup.md); this section is only the settings.
+
+**With none of these set the feature still works** for anyone who brings a
+bucket (S3 and compatibles) or a WebDAV server (Nextcloud, ownCloud, kDrive):
+the image carries `rclone`, and the details are the owner's. What the settings
+below add is the three providers that need an app registered by whoever runs
+the instance, and two decisions that are the operator's to make.
+
+| Variable                         | Default  | Notes                                                                                                      |
+| -------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------- |
+| `BACKUP_ALLOW_PRIVATE_ENDPOINTS` | `false`  | Let a backup go to an address on this server's own network, such as a NAS. See below before turning it on. |
+| `BACKUP_EXPERIMENTAL_PROVIDERS`  | `false`  | Offer Proton Drive. It uses an interface the provider does not publish, and keeps a password on disk.      |
+| `BACKUP_GOOGLE_CLIENT_ID`        | unset    | Google Drive. Both halves, or neither.                                                                     |
+| `BACKUP_GOOGLE_CLIENT_SECRET`    | unset    |                                                                                                            |
+| `BACKUP_DROPBOX_CLIENT_ID`       | unset    | Dropbox: the app key. Both halves, or neither.                                                             |
+| `BACKUP_DROPBOX_CLIENT_SECRET`   | unset    | Dropbox: the app secret.                                                                                   |
+| `BACKUP_MICROSOFT_CLIENT_ID`     | unset    | OneDrive (personal accounts). Both halves, or neither.                                                     |
+| `BACKUP_MICROSOFT_CLIENT_SECRET` | unset    |                                                                                                            |
+| `BACKUP_RCLONE_PATH`             | `rclone` | Only if the binary is somewhere `PATH` does not reach. The image puts it on `PATH`.                        |
+
+A provider's tile is offered exactly when both halves of its pair are set, and
+half a pair stops the app at startup, naming the missing one. Each registration
+needs the redirect URI `<APP_URL>/api/backup/oauth/<google|dropbox|microsoft>/callback`
+and nothing wider than the permissions listed in
+[cloud-backup.md](cloud-backup.md#registering-the-apps).
+
+**`BACKUP_ALLOW_PRIVATE_ENDPOINTS` is a trade, not a convenience.** Backing up
+to a NAS is the commonest reason to self-host, and it needs this on. But the
+address is typed by whoever owns a group, and the worker connects to it every
+night; with it on, any account on this instance can make this server open
+connections to anything it can reach — the database, an admin page on the
+router. Turn it on for a household where everyone with an account is trusted.
+The platform metadata address (`169.254.169.254`) stays refused either way.
+
+**Rotating `AUTH_SECRET` disconnects every backup destination.** Their
+credentials are sealed under a key derived from it, and a rotated secret cannot
+open them: each destination shows "reconnect" and the owner re-enters or
+re-authorises it. The backups already in the cloud are unaffected, because they
+are encrypted to the owner's recovery key and not to anything on the server.
 
 ---
 

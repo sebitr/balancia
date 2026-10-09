@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown, Download } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { Chip } from "@/components/ui/chip";
 
 export interface ExportableGroup {
   readonly id: string;
@@ -101,33 +101,5 @@ export function ExportPanel({ groups }: { groups: ExportableGroup[] }) {
         {t("exportAction")}
       </a>
     </div>
-  );
-}
-
-/** Selected is a filled chip in the accent; unselected is an outline. */
-function Chip({
-  selected,
-  label,
-  onClick,
-}: {
-  selected: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={selected}
-      className={cn(
-        "tap-target h-8 min-w-16 rounded-full px-3.5 text-xs font-semibold transition-colors",
-        "focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-        selected
-          ? "bg-primary text-primary-foreground"
-          : "border border-input text-foreground hover:bg-wash-2",
-      )}
-    >
-      {label}
-    </button>
   );
 }

@@ -72,7 +72,7 @@ type RouteEntry = RouteRule | Readonly<Record<string, RouteRule>>;
  *
  * On the refusals, since each was a decision rather than an oversight:
  *
- * **`account`** — `/api/auth/*`, `/api/profile/*` and `/api/push/*`. A token
+ * **`account`** — `/api/auth/*`, `/api/backup/*`, `/api/profile/*` and `/api/push/*`. A token
  * is a narrower thing than the account that minted it, so it must not be able
  * to reach back and change the account, read the address and payout details on
  * it, or unsubscribe somebody's phone. The auth routes are also where
@@ -119,6 +119,14 @@ export const API_ROUTES = {
   "/api/auth/passkey/upgrade": "account",
   "/api/auth/register": "account",
   "/api/auth/session": "account",
+  // Cloud backup: where the account's groups are copied to, and the copies. A
+  // key that could attach a cloud would copy every group the account owns to a
+  // place the owner never chose, so connecting one, listing what is there and
+  // reading it back are all the account's own business.
+  "/api/backup/destinations/[id]/files": "account",
+  "/api/backup/destinations/[id]/files/[name]": "account",
+  "/api/backup/oauth/[kind]/callback": "account",
+  "/api/backup/oauth/[kind]/start": "account",
   "/api/profile": "account",
   "/api/profile/avatar": "account",
   "/api/profile/payouts": "account",
