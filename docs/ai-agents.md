@@ -175,8 +175,8 @@ For Claude and ChatGPT on the web to reach your instance:
 - `/mcp` is a normal request/response endpoint: no WebSocket, no long-lived
   stream, so it needs no special proxy configuration.
 
-It adds three tables (`agent_clients`, `agent_codes`, `agent_grants`) to the
-database and nothing to the file store. They are in the ordinary backup, so a
+It adds four tables (`agent_clients`, `agent_codes`, `agent_grants`,
+`agent_refresh_history`) to the database and nothing to the file store. They are in the ordinary backup, so a
 restore brings back whatever was connected when the backup was taken — including
 a connection disconnected since, as it does a session or an API key revoked
 since. The person sees it in their list and can disconnect it again; an access

@@ -154,8 +154,15 @@ See the [full project status](./docs/implementation-status.md),
   to keep people using it; receipts can be downloaded separately.
 - **Passkeys and passwords.** Authentication is implemented in this repository;
   no third-party identity service is required.
+- **Ask your AI assistant.** Add Balancia to Claude, ChatGPT or any assistant
+  that supports the Model Context Protocol (MCP) by its address and a sign-in
+  screen of Balancia's own — nothing to install and no key to copy. Ask who owes
+  whom, or have it record an expense. You choose read only or read and make
+  changes, every group or just one, and you can disconnect it at any time. See
+  [AI assistants](./docs/ai-agents.md).
 - **Local categorization and receipt scanning.** Optional models run on the
-  instance. Expense data is not sent to an external AI service.
+  instance. Balancia sends no expense data to an external AI service; an
+  assistant you connect yourself sees only what you allow it to.
 - **English and French.** Language, date format, number format and currency
   preferences are independent. A language Balancia does not have yet is
   [a browser away](https://hosted.weblate.org/engage/balancia/).
@@ -206,7 +213,8 @@ Telemetry is off by default for self-hosted instances. If an administrator opts
 in, the instance sends one anonymous, inspectable report each week; it never
 contains amounts, names, receipts, group data, identifiers, IP addresses or the
 instance address. Optional network integrations only run when an administrator
-enables them.
+enables them. An AI assistant sees a group only when a signed-in person
+connects it, and what it reads goes to whoever runs that assistant.
 
 Financial correctness is treated as a product requirement:
 
@@ -224,15 +232,16 @@ Read the [security model](./SECURITY.md), [telemetry design](./docs/telemetry.md
 
 Start with the **[documentation index](./docs/README.md)**, or go directly to:
 
-| I want to…                              | Read                                                                                                                               |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Decide whether Balancia is right for me | [FAQ](./docs/faq.md) · [vs Splitwise](./docs/compare-splitwise.md) · [vs tricount](./docs/compare-tricount.md)                     |
-| Install or operate an instance          | [Self-hosting](./docs/self-hosting.md) · [Environment](./docs/environment.md) · [Backup and restore](./docs/backup-and-restore.md) |
-| Offer a public demo of my instance      | [Running a demo](./docs/demo.md)                                                                                                   |
-| Move existing data                      | [Splitwise migration](./docs/data-migration.md)                                                                                    |
-| Understand privacy and correctness      | [Security](./SECURITY.md) · [Telemetry](./docs/telemetry.md) · [Financial correctness](./docs/financial-correctness.md)            |
-| Work on the code                        | [Development](./docs/development.md) · [Architecture](./docs/architecture.md) · [Contributing](./CONTRIBUTING.md)                  |
-| Check what is complete                  | [Implementation status](./docs/implementation-status.md)                                                                           |
+| I want to…                               | Read                                                                                                                               |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Decide whether Balancia is right for me  | [FAQ](./docs/faq.md) · [vs Splitwise](./docs/compare-splitwise.md) · [vs tricount](./docs/compare-tricount.md)                     |
+| Install or operate an instance           | [Self-hosting](./docs/self-hosting.md) · [Environment](./docs/environment.md) · [Backup and restore](./docs/backup-and-restore.md) |
+| Offer a public demo of my instance       | [Running a demo](./docs/demo.md)                                                                                                   |
+| Move existing data                       | [Splitwise migration](./docs/data-migration.md)                                                                                    |
+| Use it from Claude, ChatGPT or an editor | [AI assistants](./docs/ai-agents.md) · [The mobile API and API keys](./docs/mobile-api.md)                                         |
+| Understand privacy and correctness       | [Security](./SECURITY.md) · [Telemetry](./docs/telemetry.md) · [Financial correctness](./docs/financial-correctness.md)            |
+| Work on the code                         | [Development](./docs/development.md) · [Architecture](./docs/architecture.md) · [Contributing](./CONTRIBUTING.md)                  |
+| Check what is complete                   | [Implementation status](./docs/implementation-status.md)                                                                           |
 
 ## Technology
 

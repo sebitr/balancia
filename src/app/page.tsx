@@ -5,7 +5,7 @@ import { ArrowRight } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { InstallCopyButton, SplitDemo } from "@/components/marketing/SplitDemo";
 import { INSTALL_COMMANDS } from "@/components/marketing/install-commands";
-import { HOME_QUESTIONS } from "@/components/marketing/questions";
+import { homeQuestions } from "@/components/marketing/questions";
 import {
   ArrowIcon,
   DARK_OUTLINE_BUTTON,
@@ -128,12 +128,25 @@ export default async function LandingPage() {
     [t("comparison.rows.export.before"), t("comparison.rows.export.after")],
   ];
 
-  const faqItems = HOME_QUESTIONS.map((key) => ({
+  // What an assistant is told in the example below. The exchange is an
+  // illustration, so it says so in its caption; the names and the group are
+  // the ones the demo above already uses.
+  const conversation = [
+    ["you", t("assistants.chat.ask")],
+    ["assistant", t("assistants.chat.answer")],
+    ["you", t("assistants.chat.add")],
+    ["assistant", t("assistants.chat.added")],
+  ] as const;
+
+  const faqItems = homeQuestions(env.agentAccessEnabled).map((key) => ({
     key,
     question: t(`faq.items.${key}.question`),
     answer: t(`faq.items.${key}.answer`),
   }));
 
+  // The page speaks for the instance it is served from: where an
+  // administrator has switched assistants off, `/mcp` answers 404, and the
+  // section, the question and the structured data's feature all go with it.
   const featureList = [
     t("seo.features.splits"),
     t("seo.features.payers"),
@@ -145,6 +158,7 @@ export default async function LandingPage() {
     t("seo.features.import"),
     t("seo.features.export"),
     t("seo.features.receipts"),
+    ...(env.agentAccessEnabled ? [t("seo.features.assistants")] : []),
     t("seo.features.selfHost"),
   ];
   const installNotes = [
@@ -442,6 +456,75 @@ export default async function LandingPage() {
             </div>
           </div>
         </section>
+
+        {env.agentAccessEnabled && (
+          <section className="border-t bg-marketing-cream px-6 py-[clamp(72px,9vw,116px)]">
+            <div className="mx-auto grid w-full max-w-[1120px] grid-cols-[repeat(auto-fit,minmax(min(320px,100%),1fr))] items-center gap-[clamp(32px,5vw,64px)]">
+              <div>
+                <Eyebrow>{t("assistants.eyebrow")}</Eyebrow>
+                <h2 className="mt-3 text-[clamp(30px,3.6vw,44px)] leading-[1.1] font-semibold tracking-[-0.03em] text-balance">
+                  {t("assistants.title")}
+                </h2>
+                <p className="mt-5 max-w-[50ch] text-[17px] leading-[1.6] text-pretty text-muted-foreground">
+                  {t("assistants.body")}
+                </p>
+                <ul className="mt-7 space-y-3">
+                  {[
+                    t("assistants.control.access"),
+                    t("assistants.control.scope"),
+                    t("assistants.control.disconnect"),
+                  ].map((item) => (
+                    <li
+                      key={item}
+                      className="flex items-start gap-3 text-[15px]"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="mt-[9px] size-[5px] shrink-0 rounded-full bg-primary"
+                      />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <a
+                  href={`${GITHUB_BLOB}/docs/ai-agents.md`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`${TEXT_LINK} mt-7 text-sm`}
+                >
+                  {t("assistants.link")}
+                  <ArrowIcon />
+                </a>
+              </div>
+              <figure className="overflow-hidden rounded-[20px] bg-card shadow-[0_0_0_1px_oklch(0.226_0.072_319_/_0.1)]">
+                <ol className="space-y-3 p-5 sm:p-6">
+                  {conversation.map(([who, text]) => (
+                    <li
+                      key={text}
+                      className={`flex ${who === "you" ? "justify-end" : "justify-start"}`}
+                    >
+                      <p
+                        className={`max-w-[88%] rounded-[18px] px-4 py-3 text-[15px] leading-[1.55] ${
+                          who === "you"
+                            ? "rounded-br-[6px] bg-marketing-plum text-marketing-cream"
+                            : "rounded-bl-[6px] bg-marketing-soft"
+                        }`}
+                      >
+                        <span className="sr-only">
+                          {t(`assistants.chat.${who}`)}:{" "}
+                        </span>
+                        {text}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+                <figcaption className="border-t px-5 py-3.5 text-[13px] leading-[1.5] text-pretty text-muted-foreground sm:px-6">
+                  {t("assistants.chat.caption")}
+                </figcaption>
+              </figure>
+            </div>
+          </section>
+        )}
 
         <section className="bg-marketing-plum px-6 py-[clamp(72px,9vw,116px)] text-marketing-cream">
           <div className="mx-auto grid w-full max-w-[1120px] grid-cols-[repeat(auto-fit,minmax(min(320px,100%),1fr))] items-start gap-[clamp(32px,5vw,64px)]">

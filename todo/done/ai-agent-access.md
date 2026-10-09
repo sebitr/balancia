@@ -1,6 +1,6 @@
 # Connect an AI agent: add Balancia to Claude or ChatGPT by its address and manage groups by talking to it
 
-Branch: `feat/ai-agent-access`
+Merged: 2026-10-09 in #465
 
 A remote MCP server at `/mcp` (Streamable HTTP, stateless), with Balancia as
 its own OAuth 2.1 authorization server so the one-step "add a connector" flow in

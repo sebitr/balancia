@@ -15,9 +15,10 @@ import { groups } from "./groups";
  * Claude and ChatGPT add a connector by its address and then send the person
  * through a sign-in and consent screen on the server they named. That screen
  * hands back a code, the code becomes an access token, and the token is what
- * `/mcp` accepts. These three tables are the whole of that: who asked
- * (`agent_clients`), the single-use step in the middle (`agent_codes`), and
- * what was agreed (`agent_grants`).
+ * `/mcp` accepts. These tables are the whole of that: who asked
+ * (`agent_clients`), the single-use step in the middle (`agent_codes`), what
+ * was agreed (`agent_grants`), and the refresh tokens that have been replaced
+ * (`agent_refresh_history`), kept so that a stolen one is noticed.
  *
  * The same two rules as every other credential table here:
  *

@@ -22,6 +22,21 @@ export const HOME_QUESTIONS = [
   "splitwise",
   "comparison",
   "devices",
+  "assistants",
   "openSource",
   "selfHost",
 ] as const satisfies readonly FaqQuestion[];
+
+/**
+ * What a page prints, which is `HOME_QUESTIONS` less the one about AI
+ * assistants on an instance whose administrator has switched them off
+ * (`AGENT_ACCESS`). A page that answers "can I use it with Claude?" with a
+ * yes, when `/mcp` answers 404 there, is the one place the homepage would be
+ * lying about the instance it is served from. `/llms-full.txt` describes the
+ * software rather than the instance and keeps every question.
+ */
+export function homeQuestions(
+  assistants: boolean,
+): readonly (typeof HOME_QUESTIONS)[number][] {
+  return HOME_QUESTIONS.filter((key) => assistants || key !== "assistants");
+}

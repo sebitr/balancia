@@ -52,6 +52,7 @@ a limitation here stops being true.
 | 31  | Transaction search, filtering and keyset pagination                              | ✅     |
 | 32  | Offline expense entry with a send queue                                          | ✅     |
 | 33  | Encrypted cloud backup of the groups an owner owns (opt-in)                      | ✅     |
+| 34  | AI assistant access: a remote MCP server with its own OAuth sign-in              | ✅     |
 
 ## Verification
 
@@ -202,6 +203,14 @@ These are deliberate omissions for this version, not oversights:
   file holds what each credential is sent — a guest no email, account id or
   address field, an API key no payout hint. A third caller of
   `listPayoutsOwed` would be held to the rule by review alone.
+- **An assistant that may write to every group can be steered from one group
+  into another.** Text in group A can tell it to read group B and copy what it
+  finds into an expense's notes, where group A's members can read it. Balancia
+  cannot tell that from the person asking for the same thing, so the defences
+  are the person's: pin a connection that writes to the one group it is for,
+  or leave it read only, and keep the assistant's confirmation on. It is
+  written down, with the rest of how to use one safely, in
+  [ai-agents.md](ai-agents.md#using-one-safely).
 
 ## Next priorities
 
