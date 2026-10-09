@@ -54,6 +54,50 @@ describe("the pending connection", () => {
     expect(sealed).not.toContain(pending.userId);
   });
 
+  describe("carrying a person's own app", () => {
+    const app = { clientId: "mine.apps.example", clientSecret: "my-secret-9" };
+
+    it("brings the app back from the trip", () => {
+      const sealed = encodePending({ ...pending, app });
+
+      expect(decodePending(sealed, NOW)?.app).toEqual(app);
+    });
+
+    it("keeps the secret out of the cookie's readable part", () => {
+      const sealed = encodePending({ ...pending, app });
+
+      expect(sealed).not.toContain("my-secret-9");
+      expect(sealed).not.toContain("mine.apps.example");
+    });
+
+    it("has no app when the trip was made through the server's", () => {
+      expect(decodePending(encodePending(pending), NOW)?.app).toBeUndefined();
+    });
+
+    it("drops half an app rather than signing with it", async () => {
+      const { seal } = await import("@/lib/security/secret-box");
+      const half = seal(
+        "backup-oauth-state",
+        JSON.stringify({ ...pending, app: { clientId: "only-an-id" } }),
+      );
+
+      expect(decodePending(half, NOW)?.app).toBeUndefined();
+    });
+
+    it("drops an app with something in it that rclone or a token request could not carry", async () => {
+      const { seal } = await import("@/lib/security/secret-box");
+      const forged = seal(
+        "backup-oauth-state",
+        JSON.stringify({
+          ...pending,
+          app: { clientId: "id", clientSecret: "two words\nline" },
+        }),
+      );
+
+      expect(decodePending(forged, NOW)?.app).toBeUndefined();
+    });
+  });
+
   it("expires", () => {
     expect(decodePending(encodePending(pending), NOW + 601_000)).toBeNull();
   });

@@ -2,30 +2,31 @@ import { NextResponse } from "next/server";
 import { getEnv } from "@/lib/env";
 import { trackRoute } from "@/lib/metrics/http";
 import { getCurrentUser } from "@/lib/security/actor";
+import { beginConnection } from "@/modules/backup/begin";
 import { BackupError } from "@/modules/backup/errors";
-import {
-  buildAuthorizeUrl,
-  challengeFor,
-  isOAuthKind,
-  oauthApp,
-  PROVIDER_OF,
-  randomToken,
-} from "@/modules/backup/oauth";
+import { isOAuthKind, oauthApp, PROVIDER_OF } from "@/modules/backup/oauth";
 import { setPendingConnection } from "@/app/api/backup/oauth/cookie";
-import { ttlExpiry } from "@/modules/backup/oauth-state";
-import { getBackupKey } from "@/modules/backup/service";
+import { BackupInputError } from "@/modules/backup/service";
+import { isUuid } from "@/app/api/mobile";
 
 /**
  * Sends the signed-in person to Google, Dropbox or Microsoft to connect their
- * account as a backup destination.
+ * account as a backup destination, through the app the operator registered for
+ * this server.
+ *
+ * A person who brings their own app does not come here: they paste a client ID
+ * and secret, which cannot ride in a link, and an action starts the trip for
+ * them (`beginOwnAppConnectionAction`). Both end in the same cookie and the
+ * same callback.
  *
  * A GET because it is only a navigation: it changes nothing here, and the two
  * random values it mints are useless to anyone who cannot also read the sealed
  * cookie they are written to.
  *
  * `?reconnect=<destination id>` re-authorises an existing destination instead
- * of adding one. The id is only carried in the cookie; the callback checks
- * that it belongs to the person who comes back.
+ * of adding one, through the app it was connected with. The id is only carried
+ * in the cookie; the callback checks that it belongs to the person who comes
+ * back.
  */
 
 function redirectTo(path: string, params: Record<string, string> = {}) {
@@ -67,35 +68,34 @@ async function handleGet(
           ...params,
         });
 
-  if (!isOAuthKind(kind) || !oauthApp(kind)) {
+  if (!isOAuthKind(kind)) return back({ connect: "unavailable" });
+  // Looked up by this id before anything is sent anywhere, so it has to be one.
+  if (reconnect && !isUuid(reconnect)) return back({ connect: "notFound" });
+
+  // A new connection through this link has only the operator's app to use. A
+  // reconnect may have its own, which `beginConnection` finds.
+  if (!reconnect && !oauthApp(kind)) {
     // A stale bookmark, or the operator has not registered this provider. The
-    // screen does not draw the button in that case, so nobody is lost here.
+    // screen shows the form for the person's own app in that case, so nobody
+    // is lost here.
     return back({ connect: "unavailable" });
   }
 
-  // A connection with nothing to encrypt to would be refused on its first run.
-  if (!(await getBackupKey(user.userId))) {
-    return redirectTo("/settings/backup/setup", { step: "key" });
-  }
-
-  const state = randomToken();
-  const verifier = randomToken(48);
-  await setPendingConnection({
-    kind,
-    state,
-    verifier,
-    userId: user.userId,
-    reconnectId: reconnect ?? undefined,
-    expiresAt: ttlExpiry(),
-  });
-
   try {
-    return NextResponse.redirect(
-      buildAuthorizeUrl(kind, { state, challenge: challengeFor(verifier) }),
-      303,
-    );
+    const { pending, url } = await beginConnection({
+      userId: user.userId,
+      kind,
+      reconnectId: reconnect ?? undefined,
+    });
+    await setPendingConnection(pending);
+    return NextResponse.redirect(url, 303);
   } catch (error) {
-    if (error instanceof BackupError) return back({ connect: error.code });
+    if (error instanceof BackupInputError && error.code === "noKey") {
+      return redirectTo("/settings/backup/setup", { step: "key" });
+    }
+    if (error instanceof BackupError || error instanceof BackupInputError) {
+      return back({ connect: error.code });
+    }
     throw error;
   }
 }

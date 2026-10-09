@@ -298,7 +298,7 @@ describe("the setup page", () => {
       serverScreen({
         providers: TILES.map((tile) =>
           tile.id === "dropbox"
-            ? { ...tile, availability: "needs_operator" as const }
+            ? { ...tile, availability: "experimental_off" as const }
             : tile,
         ),
       });

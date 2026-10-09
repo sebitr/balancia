@@ -36,6 +36,21 @@ describe("classify", () => {
       "reconnect",
     ],
     [
+      "Google does not know the app",
+      'Failed to create file system for "BACKUP:": couldn\'t fetch token: invalid_client: The OAuth client was not found.',
+      "app",
+    ],
+    [
+      "Microsoft says the client secret expired",
+      "AADSTS7000222: The provided client secret keys for app are expired.",
+      "app",
+    ],
+    [
+      "Microsoft cannot find the application",
+      "AADSTS700016: Application with identifier was not found in the directory.",
+      "app",
+    ],
+    [
       "Drive full",
       "googleapi: Error 403: The user's Drive storage quota has been exceeded., storageQuotaExceeded",
       "quota",
@@ -80,6 +95,8 @@ describe("classify", () => {
 describe("needsPerson", () => {
   it("stops retrying only where a retry cannot work", () => {
     expect(needsPerson("reconnect")).toBe(true);
+    // A refused app is refused again an hour later, and flags the account.
+    expect(needsPerson("app")).toBe(true);
     expect(needsPerson("no_key")).toBe(true);
     expect(needsPerson("unreachable")).toBe(false);
     expect(needsPerson("quota")).toBe(false);

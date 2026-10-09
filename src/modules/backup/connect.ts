@@ -9,6 +9,7 @@ import {
   PROVIDER_OF,
   type OAuthKind,
 } from "./oauth";
+import type { OwnOAuthApp } from "./providers";
 import {
   createDestination,
   replaceCredentials,
@@ -43,6 +44,11 @@ export async function completeConnection(
     readonly verifier: string;
     /** Set when the person came from "Reconnect" on an existing destination. */
     readonly reconnectId?: string;
+    /**
+     * The person's own app, when the trip was made through one. It is kept
+     * with the token: the token only works for the app it was issued to.
+     */
+    readonly app?: OwnOAuthApp;
   },
   seams: Seams & { readonly deps?: ConnectDeps } = {},
 ): Promise<Connected> {
@@ -75,6 +81,7 @@ export async function completeConnection(
   const tokens = await deps.exchangeCode(input.kind, {
     code: input.code,
     verifier: input.verifier,
+    app: input.app,
   });
   const connected = await deps.describeAccount(input.kind, tokens.accessToken);
 
@@ -82,6 +89,7 @@ export async function completeConnection(
     refreshToken: tokens.refreshToken,
     account: connected.account || undefined,
     ...(connected.onedrive ?? {}),
+    ...(input.app ? { app: input.app } : {}),
   };
 
   if (input.reconnectId) {

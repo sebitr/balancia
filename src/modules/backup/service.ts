@@ -14,6 +14,7 @@ import {
   credentialSchemas,
   PROVIDER_NAMES,
   type BackupProvider,
+  type OwnOAuthApp,
 } from "./providers";
 import {
   nextRunAfter,
@@ -321,6 +322,28 @@ async function loadOwn(
   // The same answer for "not yours" and "not there".
   if (!row) throw new BackupInputError("notFound");
   return row;
+}
+
+/**
+ * The app a destination was connected through, when it is the person's own.
+ *
+ * For a reconnect, which must go back through the same app the refresh token
+ * was issued to. Read here, from the sealed row, and not asked of the browser:
+ * the secret was never sent back to it. None for a destination that uses the
+ * operator's app.
+ */
+export async function getDestinationApp(
+  userId: string,
+  id: string,
+  seams: Seams = {},
+): Promise<OwnOAuthApp | undefined> {
+  const db = seams.db ?? getDb();
+  const row = await loadOwn(userId, id, db);
+  const parsed = credentialSchemas[row.provider].safeParse(
+    openCredentials(row.id, row.credentials),
+  );
+  if (!parsed.success) return undefined;
+  return (parsed.data as { app?: OwnOAuthApp }).app;
 }
 
 export interface NewDestination {
@@ -1039,7 +1062,7 @@ async function markFailure(
       // Retrying a revoked token only annoys the provider. The destination
       // waits for the person.
       status:
-        code === "reconnect" && dest.status === "active"
+        (code === "reconnect" || code === "app") && dest.status === "active"
           ? "needs_reconnect"
           : dest.status,
       updatedAt: at,

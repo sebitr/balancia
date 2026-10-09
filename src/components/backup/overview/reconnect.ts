@@ -12,6 +12,10 @@ import { PROVIDERS, type BackupProvider } from "@/modules/backup/providers";
  * The providers connected by typing details have nothing to redirect to, so the
  * person is sent back through the wizard's connect step, which replaces the old
  * destination once the new one works.
+ *
+ * So is an account whose *app* was refused. Going back through the same app
+ * would be refused the same way; what is wrong is the client ID or secret, or
+ * the app itself, and only the wizard can ask for new ones.
  */
 
 /** The route's name for each OAuth provider, which is not always the provider's. */
@@ -28,9 +32,10 @@ export type ReconnectTarget =
 export function reconnectTarget(
   provider: BackupProvider,
   destinationId: string,
+  options: { appRefused?: boolean } = {},
 ): ReconnectTarget {
   const route = OAUTH_ROUTE[provider];
-  if (PROVIDERS[provider].kind === "oauth" && route) {
+  if (PROVIDERS[provider].kind === "oauth" && route && !options.appRefused) {
     return {
       kind: "oauth",
       href: `/api/backup/oauth/${route}/start?reconnect=${encodeURIComponent(destinationId)}`,

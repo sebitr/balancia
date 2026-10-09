@@ -19,6 +19,13 @@
 export const BACKUP_ERROR_CODES = [
   /** The provider no longer accepts the credentials: revoked, expired or changed. */
   "reconnect",
+  /**
+   * The provider does not recognise the app (the client ID and secret) the
+   * connection was made through: a secret that was reset, an app deleted, a
+   * mistyped value. Reconnecting through the same app would fail the same way,
+   * so this is not `reconnect`.
+   */
+  "app",
   /** Signed in, but not allowed to do this — a read-only key, a bucket policy. */
   "forbidden",
   /** The account or bucket is full. */
@@ -56,7 +63,7 @@ export class BackupError extends Error {
 
 /** Codes where trying again later cannot help until the person does something. */
 export function needsPerson(code: BackupErrorCode): boolean {
-  return code === "reconnect" || code === "no_key";
+  return code === "reconnect" || code === "app" || code === "no_key";
 }
 
 /**
@@ -73,8 +80,16 @@ const PATTERNS: readonly (readonly [BackupErrorCode, RegExp])[] = [
     /\b429\b|too many requests|slowdown|rate ?limit(?:ed)?|throttl|request(?:s)? per second/i,
   ],
   [
+    // Before `reconnect`, which would otherwise take `invalid_client` and send
+    // the person round the same trip with the same wrong secret. The AADSTS
+    // numbers are Microsoft's: an unknown, expired or mistyped client secret,
+    // and an application that does not exist.
+    "app",
+    /invalid_client|aadsts7000215|aadsts7000222|aadsts700016|unauthorized_client|client (?:secret|id) is (?:invalid|incorrect)/i,
+  ],
+  [
     "reconnect",
-    /invalid_grant|invalid_client|invalid[_ ]token|(?:expired|invalid)_access_token|\brevoked\b|token (?:has )?(?:expired|been (?:expired|revoked))|refresh token|couldn'?t fetch token|failed to refresh|unauthori[sz]ed|\b401\b|authenticationfailed|invalidaccesskeyid|signaturedoesnotmatch|bad credentials|invalid credentials|login (?:failed|incorrect)|incorrect (?:username|password)|wrong password|two-?factor|2fa|trust ?token|verification code|session (?:expired|has expired)|access token/i,
+    /invalid_grant|invalid[_ ]token|(?:expired|invalid)_access_token|\brevoked\b|token (?:has )?(?:expired|been (?:expired|revoked))|refresh token|couldn'?t fetch token|failed to refresh|unauthori[sz]ed|\b401\b|authenticationfailed|invalidaccesskeyid|signaturedoesnotmatch|bad credentials|invalid credentials|login (?:failed|incorrect)|incorrect (?:username|password)|wrong password|two-?factor|2fa|trust ?token|verification code|session (?:expired|has expired)|access token/i,
   ],
   [
     "not_found",

@@ -66,6 +66,9 @@ export function SetupWizard(props: SetupWizardProps) {
   const provider = draft.provider;
   const formKey = formKeyFor(provider, draft.infomaniak);
   const oauth = provider !== null && kindOfChoice(provider) === "oauth";
+  const accountTile = oauth
+    ? providers.find((tile) => tile.id === provider)
+    : undefined;
   // The connection the trip made counts for the provider it was made with.
   const connection =
     props.connected && pending !== null && provider === pending.provider
@@ -323,6 +326,15 @@ export function SetupWizard(props: SetupWizardProps) {
           draft={draft}
           connection={connection}
           outcome={props.connectOutcome}
+          account={{
+            instanceApp: accountTile?.instanceApp ?? false,
+            redirectUri: accountTile?.redirectUri ?? null,
+          }}
+          otherAccountHref={setupUrl({
+            step: "connect",
+            provider,
+            replace: replace?.id,
+          })}
           onInfomaniak={chooseInfomaniak}
           onForm={editForm}
           onTest={runTest}

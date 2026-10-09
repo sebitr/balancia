@@ -10,8 +10,11 @@ import {
   RateLimitedError,
   type RateLimitBucket,
 } from "@/lib/security/rate-limit";
+import { setPendingConnection } from "@/app/api/backup/oauth/cookie";
+import { beginConnection } from "./begin";
 import { BackupError, type BackupErrorCode } from "./errors";
-import { BACKUP_PROVIDERS, PROVIDERS } from "./providers";
+import { KIND_OF } from "./oauth";
+import { BACKUP_PROVIDERS, oauthAppSchema, PROVIDERS } from "./providers";
 import { estimateReceipts } from "./receipts";
 import {
   BackupInputError,
@@ -152,6 +155,54 @@ const testSchema = z.object({
   provider: z.enum(BACKUP_PROVIDERS),
   credentials,
 });
+
+const ownAppSchema = z.object({
+  provider: z.enum(["google_drive", "dropbox", "onedrive"]),
+  clientId: z.string().max(1000),
+  clientSecret: z.string().max(2000),
+});
+
+/**
+ * Sets out for Google, Dropbox or Microsoft through an app the person
+ * registered themselves, and answers with the provider's address to go to.
+ *
+ * A client secret cannot ride in a link — it would sit in the history, in the
+ * server's logs and in the `Referer` of whatever the provider's page loads —
+ * so it is posted here, kept in the sealed cookie the trip already uses, and
+ * what comes back is only the address to navigate to. The page does that with
+ * a plain assignment, not a form or a fetch: the page's `form-action 'self'`
+ * would refuse a form whose answer redirects to the provider.
+ *
+ * Nothing is saved yet. The app is stored, sealed, with the connection the
+ * callback makes, and only if the provider accepts it.
+ */
+export async function beginOwnAppConnectionAction(
+  input: z.input<typeof ownAppSchema>,
+): Promise<ActionResult<BackupOutcome<{ url: string }>>> {
+  const { user, refusal } = await requireUser();
+  if (!user) return refusal;
+  const parsed = ownAppSchema.safeParse(input);
+  if (!parsed.success) return malformed();
+
+  const app = oauthAppSchema.safeParse({
+    clientId: parsed.data.clientId,
+    clientSecret: parsed.data.clientSecret,
+  });
+
+  return runAction("beginBackupConnection", async () => {
+    await spend("backupTest", user.userId);
+    return attempt(async () => {
+      if (!app.success) throw new BackupInputError("invalidDetails");
+      const { pending, url } = await beginConnection({
+        userId: user.userId,
+        kind: KIND_OF[parsed.data.provider],
+        app: app.data,
+      });
+      await setPendingConnection(pending);
+      return { url: url.toString() };
+    });
+  });
+}
 
 /** What step 4 of the wizard decides, whichever way the destination was connected. */
 const choicesSchema = z.object({

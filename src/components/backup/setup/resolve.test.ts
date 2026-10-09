@@ -12,7 +12,7 @@ import { resolveSetup, type Resolution, type SetupFacts } from "./resolve";
 
 const TILES = [
   { id: "google_drive", availability: "available" },
-  { id: "dropbox", availability: "needs_operator" },
+  { id: "dropbox", availability: "experimental_off" },
   { id: "s3", availability: "available" },
   { id: "webdav", availability: "available" },
   { id: "proton_drive", availability: "experimental_off" },

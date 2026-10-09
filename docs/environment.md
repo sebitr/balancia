@@ -451,17 +451,19 @@ that only the owner holds, so neither this server nor the cloud can read what
 was written. How it works, the provider walk-throughs and the limits of each
 are in [cloud-backup.md](cloud-backup.md); this section is only the settings.
 
-**With none of these set the feature still works** for anyone who brings a
-bucket (S3 and compatibles) or a WebDAV server (Nextcloud, ownCloud, kDrive):
-the image carries `rclone`, and the details are the owner's. What the settings
-below add is the three providers that need an app registered by whoever runs
-the instance, and two decisions that are the operator's to make.
+**With none of these set the feature fully works.** The image carries `rclone`;
+anyone can bring a bucket (S3 and compatibles) or a WebDAV server (Nextcloud,
+ownCloud, kDrive); and Google Drive, Dropbox and OneDrive work too, because each
+owner registers an app of their own with the provider and pastes its client ID
+and secret into the wizard. What the settings below add is a single button for
+those three, from an app registered once for the whole instance, and two
+decisions that are the operator's to make.
 
 | Variable                         | Default  | Notes                                                                                                      |
 | -------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------- |
 | `BACKUP_ALLOW_PRIVATE_ENDPOINTS` | `false`  | Let a backup go to an address on this server's own network, such as a NAS. See below before turning it on. |
 | `BACKUP_EXPERIMENTAL_PROVIDERS`  | `false`  | Offer Proton Drive. It uses an interface the provider does not publish, and keeps a password on disk.      |
-| `BACKUP_GOOGLE_CLIENT_ID`        | unset    | Google Drive. Both halves, or neither.                                                                     |
+| `BACKUP_GOOGLE_CLIENT_ID`        | unset    | Google Drive: one button for everyone, through your app. Both halves, or neither.                          |
 | `BACKUP_GOOGLE_CLIENT_SECRET`    | unset    |                                                                                                            |
 | `BACKUP_DROPBOX_CLIENT_ID`       | unset    | Dropbox: the app key. Both halves, or neither.                                                             |
 | `BACKUP_DROPBOX_CLIENT_SECRET`   | unset    | Dropbox: the app secret.                                                                                   |
@@ -469,11 +471,16 @@ the instance, and two decisions that are the operator's to make.
 | `BACKUP_MICROSOFT_CLIENT_SECRET` | unset    |                                                                                                            |
 | `BACKUP_RCLONE_PATH`             | `rclone` | Only if the binary is somewhere `PATH` does not reach. The image puts it on `PATH`.                        |
 
-A provider's tile is offered exactly when both halves of its pair are set, and
-half a pair stops the app at startup, naming the missing one. Each registration
-needs the redirect URI `<APP_URL>/api/backup/oauth/<google|dropbox|microsoft>/callback`
-and nothing wider than the permissions listed in
-[cloud-backup.md](cloud-backup.md#registering-the-apps).
+A provider gets its one button exactly when both halves of its pair are set, and
+half a pair stops the app at startup, naming the missing one. Without the pair
+the provider is still offered, and the owner is asked for an app of their own.
+Setting a pair is a trade — every connection made through the button shares your
+app's quota, review status and secret — which
+[cloud-backup.md](cloud-backup.md#giving-everyone-one-button) spells out. Each
+registration needs the redirect URI
+`<APP_URL>/api/backup/oauth/<google|dropbox|microsoft>/callback` and nothing wider
+than the permissions listed under
+[Use your own app](cloud-backup.md#use-your-own-app).
 
 **`BACKUP_ALLOW_PRIVATE_ENDPOINTS` is a trade, not a convenience.** Backing up
 to a NAS is the commonest reason to self-host, and it needs this on. But the

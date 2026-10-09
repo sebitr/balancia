@@ -6,7 +6,13 @@ import { createTestUser } from "../../../tests/helpers/factories";
 import { createRecoveryKey } from "./age";
 import { completeConnection, type ConnectDeps } from "./connect";
 import { BackupError } from "./errors";
-import { listDestinations, saveBackupKey, type Seams } from "./service";
+import {
+  createDestination,
+  getDestinationApp,
+  listDestinations,
+  saveBackupKey,
+  type Seams,
+} from "./service";
 import type { BackupTransport } from "./transport";
 
 /**
@@ -108,6 +114,133 @@ describe("completing a connection", () => {
       .where(eq(backupDestinations.id, connected.destinationId));
 
     expect(row?.credentials).not.toContain("refresh-1");
+  });
+
+  describe("through an app of the person's own", () => {
+    const app = { clientId: "mine.apps.example", clientSecret: "my-secret-9" };
+
+    it("trades the code as that app, and keeps it with the connection", async () => {
+      const owner = await ownerWithKey();
+      const exchangeCode = vi.fn(async () => ({
+        accessToken: "access-1",
+        refreshToken: "refresh-1",
+        expiresAt: new Date("2026-10-09T04:30:00Z"),
+      }));
+      const opened: unknown[] = [];
+
+      await completeConnection(
+        {
+          userId: owner.userId,
+          kind: "google",
+          code: "c",
+          verifier: "v",
+          app,
+        },
+        {
+          deps: { ...deps(), exchangeCode },
+          openTransport: async (_provider, credentials) => {
+            opened.push(credentials);
+            return transport;
+          },
+        },
+      );
+
+      expect(exchangeCode).toHaveBeenCalledWith("google", {
+        code: "c",
+        verifier: "v",
+        app,
+      });
+      // What a run will open the destination with: the token and the app it
+      // was issued to, together.
+      expect(opened).toEqual([
+        { refreshToken: "refresh-1", account: "ada@gmail.com", app },
+      ]);
+    });
+
+    it("keeps the secret sealed, not readable in the row", async () => {
+      const owner = await ownerWithKey();
+      const connected = await completeConnection(
+        {
+          userId: owner.userId,
+          kind: "dropbox",
+          code: "c",
+          verifier: "v",
+          app,
+        },
+        { ...seams(), deps: deps() },
+      );
+
+      const [row] = await getDb()
+        .select({ credentials: backupDestinations.credentials })
+        .from(backupDestinations)
+        .where(eq(backupDestinations.id, connected.destinationId));
+
+      expect(row?.credentials).not.toContain("my-secret-9");
+      expect(row?.credentials).not.toContain("mine.apps.example");
+    });
+
+    it("hands the app back to a reconnect of that destination, and to nobody else", async () => {
+      const owner = await ownerWithKey();
+      const stranger = await ownerWithKey();
+      const { id } = await createDestination(
+        owner.userId,
+        {
+          provider: "google_drive",
+          credentials: { refreshToken: "old", app },
+        },
+        seams(),
+      );
+
+      expect(await getDestinationApp(owner.userId, id, seams())).toEqual(app);
+      await expect(
+        getDestinationApp(stranger.userId, id, seams()),
+      ).rejects.toMatchObject({ code: "notFound" });
+    });
+
+    it("has none to hand back for a destination made through the server's app", async () => {
+      const owner = await ownerWithKey();
+      const { id } = await createDestination(
+        owner.userId,
+        { provider: "google_drive", credentials: { refreshToken: "old" } },
+        seams(),
+      );
+
+      expect(
+        await getDestinationApp(owner.userId, id, seams()),
+      ).toBeUndefined();
+    });
+
+    it("replaces the app on a reconnect, so a corrected secret takes over from the refused one", async () => {
+      const owner = await ownerWithKey();
+      const { id } = await createDestination(
+        owner.userId,
+        {
+          provider: "google_drive",
+          credentials: { refreshToken: "old", app },
+        },
+        seams(),
+      );
+      const corrected = {
+        clientId: app.clientId,
+        clientSecret: "fixed-secret",
+      };
+
+      await completeConnection(
+        {
+          userId: owner.userId,
+          kind: "google",
+          code: "c",
+          verifier: "v",
+          reconnectId: id,
+          app: corrected,
+        },
+        { ...seams(), deps: deps() },
+      );
+
+      expect(await getDestinationApp(owner.userId, id, seams())).toEqual(
+        corrected,
+      );
+    });
   });
 
   it("keeps OneDrive's app folder with it, because rclone needs to be told", async () => {

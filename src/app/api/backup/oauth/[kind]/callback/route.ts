@@ -119,6 +119,7 @@ async function handleGet(
         pending.reconnectId && isUuid(pending.reconnectId)
           ? pending.reconnectId
           : undefined,
+      app: pending.app,
     });
     return back(
       connected.reconnected

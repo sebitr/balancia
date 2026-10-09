@@ -114,14 +114,41 @@ describe("the authorization request", () => {
     );
   });
 
-  it("refuses when the operator registered no app", () => {
+  it("refuses when there is no app at all: none of the person's own, none for the server", () => {
     delete process.env.BACKUP_GOOGLE_CLIENT_ID;
     delete process.env.BACKUP_GOOGLE_CLIENT_SECRET;
     resetEnvCache();
 
     expect(() => buildAuthorizeUrl("google", input)).toThrowError(
-      expect.objectContaining({ code: "unavailable" }),
+      expect.objectContaining({ code: "app" }),
     );
+  });
+
+  describe("through an app of the person's own", () => {
+    const own = { clientId: "mine.apps.example", clientSecret: "my-secret-9" };
+
+    it("asks as that app, in place of the server's", () => {
+      const url = buildAuthorizeUrl("google", { ...input, app: own });
+
+      expect(url.searchParams.get("client_id")).toBe("mine.apps.example");
+      expect(url.searchParams.get("client_id")).not.toBe("google-id");
+    });
+
+    it("works on a server that registered nothing", () => {
+      delete process.env.BACKUP_DROPBOX_CLIENT_ID;
+      delete process.env.BACKUP_DROPBOX_CLIENT_SECRET;
+      resetEnvCache();
+
+      const url = buildAuthorizeUrl("dropbox", { ...input, app: own });
+
+      expect(url.searchParams.get("client_id")).toBe("mine.apps.example");
+    });
+
+    it("never puts the secret in the address the browser is sent to", () => {
+      const url = buildAuthorizeUrl("microsoft", { ...input, app: own });
+
+      expect(url.toString()).not.toContain("my-secret-9");
+    });
   });
 });
 
@@ -164,6 +191,43 @@ describe("exchangeCode", () => {
     expect(body.get("grant_type")).toBe("authorization_code");
     expect(body.get("code_verifier")).toBe("v-1");
     expect(body.get("client_secret")).toBe(SECRET);
+  });
+
+  it("trades the code as the person's own app, not the server's", async () => {
+    const fetchMock = answer({ access_token: "at-1", refresh_token: "rt-1" });
+
+    await exchangeCode("google", {
+      code: "code-1",
+      verifier: "v-1",
+      app: { clientId: "mine", clientSecret: "my-secret-9" },
+    });
+
+    const body = sentBody(fetchMock);
+    expect(body.get("client_id")).toBe("mine");
+    expect(body.get("client_secret")).toBe("my-secret-9");
+  });
+
+  it("does not echo the person's own secret when the provider does", async () => {
+    answer(
+      { error: "invalid_grant", error_description: "bad my-secret-9" },
+      400,
+    );
+
+    const failure = await exchangeCode("google", {
+      code: "code-1",
+      verifier: "v-1",
+      app: { clientId: "mine", clientSecret: "my-secret-9" },
+    }).catch((error: unknown) => error);
+
+    expect(JSON.stringify(failure)).not.toContain("my-secret-9");
+  });
+
+  it("tells a refused app from a refused code: a wrong secret is not a reason to try the same trip", async () => {
+    answer({ error: "invalid_client", error_description: "Unauthorized" }, 401);
+
+    await expect(
+      exchangeCode("google", { code: "c", verifier: "v" }),
+    ).rejects.toMatchObject({ code: "app" });
   });
 
   it("is not satisfied with an hour of access", async () => {
@@ -243,12 +307,34 @@ describe("refreshAccessToken", () => {
     });
   });
 
-  it("says to reconnect when the app itself was removed", async () => {
+  it("says the app was refused when it was removed or its secret changed, not that access was taken back", async () => {
     answer({ error: "invalid_client" }, 401);
 
     await expect(refreshAccessToken("dropbox", "rt-1")).rejects.toMatchObject({
-      code: "reconnect",
+      code: "app",
     });
+  });
+
+  it("refreshes as the connection's own app, because a token only works for the client it was issued to", async () => {
+    const fetchMock = answer({ access_token: "at-2", expires_in: 3600 });
+
+    await refreshAccessToken("google", "rt-1", new Date(), {
+      clientId: "mine",
+      clientSecret: "my-secret-9",
+    });
+
+    const body = sentBody(fetchMock);
+    expect(body.get("client_id")).toBe("mine");
+    expect(body.get("client_secret")).toBe("my-secret-9");
+    expect(body.get("refresh_token")).toBe("rt-1");
+  });
+
+  it("falls back to the server's app for a connection that has none of its own", async () => {
+    const fetchMock = answer({ access_token: "at-2", expires_in: 3600 });
+
+    await refreshAccessToken("google", "rt-1");
+
+    expect(sentBody(fetchMock).get("client_id")).toBe("google-id");
   });
 
   it("does not treat the provider having a bad day as a revoked token", async () => {

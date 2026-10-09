@@ -43,12 +43,23 @@ export function BackupBanner({
   const provider = PROVIDER_NAMES[destination.provider];
 
   if (destination.attention === "reconnect") {
-    const target = reconnectTarget(destination.provider, destination.id);
+    // The app, not the person's access, is what the provider turned away: a
+    // new secret, a deleted app. Reconnecting through the same one would end
+    // the same way, so this goes to the wizard to be given new details.
+    const appRefused = failedRun?.errorCode === "app";
+    const target = reconnectTarget(destination.provider, destination.id, {
+      appRefused,
+    });
+    const copy = errorCopy(t, "app", provider);
     return (
       <Alert variant="destructive">
         <CircleAlert aria-hidden="true" />
         <AlertTitle>{t("attention.revokedTitle", { provider })}</AlertTitle>
-        <AlertDescription>{t("attention.revoked")}</AlertDescription>
+        <AlertDescription>
+          {appRefused
+            ? `${copy.sentence} ${copy.hint ?? ""}`.trim()
+            : t("attention.revoked")}
+        </AlertDescription>
         <div className="col-start-2 mt-2.5">
           <Button asChild size="sm" className="font-semibold">
             {target.kind === "oauth" ? (

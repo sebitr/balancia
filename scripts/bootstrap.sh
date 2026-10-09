@@ -1622,9 +1622,11 @@ TEXT
     prose <<'TEXT'
 The owner of a group can back it up to a cloud of their own choosing, encrypted
 before it leaves this server so that neither this server nor the cloud can read
-it. Google Drive, Dropbox and OneDrive need an app registration you make
-yourself (docs/cloud-backup.md); a bucket or a WebDAV server such as Nextcloud
-needs nothing.
+it. Nothing has to be registered by you: a bucket or a WebDAV server such as
+Nextcloud needs nothing, and Google Drive, Dropbox and OneDrive work with an
+app each person registers in their own account. (You may register one app for
+everyone to get a single button instead; docs/cloud-backup.md says what that
+costs.)
 
 The one question is whether a backup may go to a server on this machine's own
 network, such as a NAS at home. It is off by default because it also lets any

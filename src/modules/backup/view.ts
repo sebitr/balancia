@@ -8,6 +8,7 @@ import {
   type BackupProvider,
   type ProviderKind,
 } from "./providers";
+import { KIND_OF, redirectUri } from "./oauth";
 import { rcloneAvailable } from "./rclone";
 import { estimateReceipts, type ReceiptEstimate } from "./receipts";
 import {
@@ -17,7 +18,7 @@ import {
   type BackupKeyView,
   type DestinationView,
 } from "./service";
-import { providerAvailability } from "./transport";
+import { providerAvailability, instanceApp } from "./transport";
 
 /**
  * Everything the cloud backup screen needs, read once on the server.
@@ -34,15 +35,25 @@ export interface ProviderTile {
   readonly experimental: boolean;
   /**
    * `available` — can be connected now.
-   * `needs_operator` — an OAuth provider the operator has not registered an app
-   * for; the tile is drawn disabled and says to ask them.
    * `experimental_off` — Proton Drive on an instance that has not switched
-   * experimental providers on; drawn disabled the same way. Both read as "not
-   * enabled on this server", because to the person they are the same thing.
+   * experimental providers on; drawn disabled, as "not enabled on this server".
    *
    * A provider nothing offers at all (see `ProviderInfo.offered`) has no tile.
+   * Google Drive, Dropbox and OneDrive are `available` on every server, whether
+   * or not the operator registered an app: see `instanceApp`.
    */
-  readonly availability: "available" | "needs_operator" | "experimental_off";
+  readonly availability: "available" | "experimental_off";
+  /**
+   * An account provider only: the operator registered an app that everybody on
+   * this server can connect through, so one button does it. Without one the
+   * person brings their own app and pastes its client ID and secret.
+   */
+  readonly instanceApp: boolean;
+  /**
+   * An account provider only: the address to register as the redirect when
+   * creating an app, which is this server's and nobody else's.
+   */
+  readonly redirectUri: string | null;
 }
 
 export interface OwnedGroupRow {
@@ -78,12 +89,17 @@ export function providerTiles(): ProviderTile[] {
   return BACKUP_PROVIDERS.flatMap((id) => {
     const availability = providerAvailability(id);
     if (availability === "not_offered") return [];
+    const account = PROVIDERS[id].kind === "oauth";
     return [
       {
         id,
         kind: PROVIDERS[id].kind,
         experimental: PROVIDERS[id].experimental,
         availability,
+        instanceApp: instanceApp(id),
+        redirectUri: account
+          ? redirectUri(KIND_OF[id as keyof typeof KIND_OF])
+          : null,
       },
     ];
   });

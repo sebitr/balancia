@@ -32,6 +32,12 @@ export interface RouterMock {
   refresh: Mock;
 }
 
+const ROUTE_OF: Partial<Record<ProviderTile["id"], string>> = {
+  google_drive: "google",
+  dropbox: "dropbox",
+  onedrive: "microsoft",
+};
+
 export const TILES: readonly ProviderTile[] = [
   tile("google_drive", "oauth"),
   tile("dropbox", "oauth"),
@@ -41,11 +47,24 @@ export const TILES: readonly ProviderTile[] = [
   { ...tile("proton_drive", "credentials"), experimental: true },
 ];
 
-function tile(
+/** By default the operator registered every app, so an account is one button. */
+export function tile(
   id: ProviderTile["id"],
   kind: ProviderTile["kind"],
+  overrides: Partial<ProviderTile> = {},
 ): ProviderTile {
-  return { id, kind, experimental: false, availability: "available" };
+  const route = ROUTE_OF[id];
+  return {
+    id,
+    kind,
+    experimental: false,
+    availability: "available",
+    instanceApp: kind === "oauth",
+    redirectUri: route
+      ? `https://balancia.example.com/api/backup/oauth/${route}/callback`
+      : null,
+    ...overrides,
+  };
 }
 
 export const GROUPS: readonly SetupGroup[] = [

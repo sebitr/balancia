@@ -22,7 +22,7 @@ import type { BackupProvider } from "./providers";
  *  - **Google** `drive.file`: only files this app created. Balancia cannot
  *    list, read or touch anything else in the person's Drive.
  *  - **Dropbox**: the app must be registered as an *app folder* app, which
- *    confines it to `Apps/<name>/`. That is the operator's registration, not a
+ *    confines it to `Apps/<name>/`. That is the registrant's choice, not a
  *    scope we can ask for, so `docs/cloud-backup.md` says so in the steps.
  *  - **OneDrive** `Files.ReadWrite.AppFolder`: the app's own folder. Microsoft
  *    offers it for **personal accounts only**; a work or school account has no
@@ -30,6 +30,17 @@ import type { BackupProvider } from "./providers";
  *    cannot connect. The alternative — `Files.ReadWrite` — would let a stolen
  *    token read the whole OneDrive, which is not a price worth paying for a
  *    convenience.
+ *
+ * ## Whose app
+ *
+ * Every call takes the app to act as, and falls back to the instance's
+ * (`BACKUP_*_CLIENT_ID`) only when it is not given one. A person's own app is
+ * what lets this work on a server whose operator registered nothing, and keeps
+ * one person's revoked or rate-limited app from stopping everybody else's
+ * backups; the instance's is the convenience for a server that wants a single
+ * button. The app is a property of the *connection* — a refresh token only
+ * works with the client it was issued to — so it is stored with the token and
+ * handed back here on every refresh.
  *
  * Nothing here has been run against the three live providers by the people who
  * wrote it; the requests follow each provider's published reference and are
@@ -63,8 +74,17 @@ export function isOAuthKind(value: string): value is OAuthKind {
   return (OAUTH_KINDS as readonly string[]).includes(value);
 }
 
+/** The app the operator registered for everybody on this server, if they did. */
 export function oauthApp(kind: OAuthKind): BackupOAuthApp | undefined {
   return getEnv().backupOAuthApps[kind];
+}
+
+/** The app a connection acts as: its own if it has one, else the operator's. */
+export function resolveApp(
+  kind: OAuthKind,
+  own?: BackupOAuthApp,
+): BackupOAuthApp | undefined {
+  return own ?? oauthApp(kind);
 }
 
 export function redirectUri(kind: OAuthKind): string {
@@ -111,15 +131,9 @@ export function challengeFor(verifier: string): string {
 
 export function buildAuthorizeUrl(
   kind: OAuthKind,
-  input: { state: string; challenge: string },
+  input: { state: string; challenge: string; app?: BackupOAuthApp },
 ): URL {
-  const app = oauthApp(kind);
-  if (!app) {
-    throw new BackupError(
-      "unavailable",
-      `This server has no ${kind} app registered.`,
-    );
-  }
+  const app = requireApp(kind, input.app);
   const url = new URL(ENDPOINTS[kind].authorize);
   const params = url.searchParams;
   params.set("client_id", app.clientId);
@@ -190,14 +204,19 @@ async function postForm(
     const said = [parsed.error, parsed.error_description]
       .filter((part): part is string => typeof part === "string")
       .join(": ");
-    // `invalid_grant` is the provider saying the person took access back (or
-    // the token aged out). That is the one answer that means "ask them again".
+    // `invalid_client` is the provider not knowing the app, which asking the
+    // person to connect again through the same app would not mend. Checked
+    // first because Microsoft answers it with a 401, which on its own reads as
+    // a revoked token. `invalid_grant` is the other answer: the person took
+    // access back, or the token aged out, and that one does mean "ask them
+    // again".
     const code =
-      parsed.error === "invalid_grant" ||
       parsed.error === "invalid_client" ||
-      response.status === 401
-        ? "reconnect"
-        : classify(`${response.status} ${said}`);
+      parsed.error === "unauthorized_client"
+        ? "app"
+        : parsed.error === "invalid_grant" || response.status === 401
+          ? "reconnect"
+          : classify(`${response.status} ${said}`);
     throw new BackupError(
       code,
       scrub(said || `The provider answered ${response.status}.`, secrets),
@@ -224,13 +243,11 @@ function toTokenSet(body: TokenResponse, now: Date): TokenSet {
   };
 }
 
-function requireApp(kind: OAuthKind): BackupOAuthApp {
-  const app = oauthApp(kind);
+function requireApp(kind: OAuthKind, own?: BackupOAuthApp): BackupOAuthApp {
+  const app = resolveApp(kind, own);
   if (!app) {
-    throw new BackupError(
-      "unavailable",
-      `This server has no ${kind} app registered.`,
-    );
+    // Nobody to act as: no app of the person's own, and none for the server.
+    throw new BackupError("app", `There is no ${kind} app to connect through.`);
   }
   return app;
 }
@@ -238,10 +255,10 @@ function requireApp(kind: OAuthKind): BackupOAuthApp {
 /** Trades the one-time code for tokens. */
 export async function exchangeCode(
   kind: OAuthKind,
-  input: { code: string; verifier: string },
+  input: { code: string; verifier: string; app?: BackupOAuthApp },
   now = new Date(),
 ): Promise<TokenSet & { readonly refreshToken: string }> {
-  const app = requireApp(kind);
+  const app = requireApp(kind, input.app);
   const body = await postForm(
     ENDPOINTS[kind].token,
     {
@@ -276,8 +293,9 @@ export async function refreshAccessToken(
   kind: OAuthKind,
   refreshToken: string,
   now = new Date(),
+  own?: BackupOAuthApp,
 ): Promise<TokenSet> {
-  const app = requireApp(kind);
+  const app = requireApp(kind, own);
   const body = await postForm(
     ENDPOINTS[kind].token,
     {

@@ -350,6 +350,20 @@ own retry is immediate, which is exactly wrong for a revoked token and how an
 account gets flagged by its provider. A revoked destination
 (`needs_reconnect`) is not retried at all until its owner acts.
 
+**A connection keeps the app it was made through, and the server's app is never
+the only way in.** Google, Dropbox and OneDrive need a client ID and secret, and
+a refresh token works only for the client it was issued to. So an owner's own
+app (`credentials.app`, checked by `oauthAppSchema`) is sealed beside the token
+and used for every refresh; absent means the operator's `BACKUP_*_CLIENT_ID`.
+Do not make the operator's registration a requirement again: most servers have
+none, and one shared app is one quota and one point of failure for everybody on
+it. The pasted secret is posted once, rides the provider's round trip in the
+sealed cookie, and is never put in an address or returned to a browser;
+`getDestinationApp` reads it on the server for a reconnect and for nothing else.
+A provider refusing the app (`invalid_client`) is the `app` code, not
+`reconnect`: going round the same trip would be refused again, so it stops
+retrying and Reconnect goes back through the wizard for new details.
+
 Two things this feature cannot honestly claim, kept in `docs/cloud-backup.md`
 and not to be softened: the recovery key is made by JavaScript this server
 serves (a hostile operator could capture it; the answer is `age-keygen` on the

@@ -1,8 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../../tests/helpers/intl";
-import { facts, WizardHarness } from "../../../../tests/helpers/setup-wizard";
+import type { ProviderTile } from "@/modules/backup/view";
+import {
+  facts,
+  TILES,
+  WizardHarness,
+} from "../../../../tests/helpers/setup-wizard";
 
 /**
  * Step 3, in each of the shapes it takes.
@@ -13,14 +18,16 @@ import { facts, WizardHarness } from "../../../../tests/helpers/setup-wizard";
  * never unlocks it, and a change after a pass takes it away again.
  */
 
-const { router, testAction } = vi.hoisted(() => ({
+const { router, testAction, beginAction } = vi.hoisted(() => ({
   router: { push: vi.fn(), replace: vi.fn(), refresh: vi.fn() },
   testAction: vi.fn(),
+  beginAction: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("@/modules/backup/actions", () => ({
   testDestinationAction: testAction,
+  beginOwnAppConnectionAction: beginAction,
   saveRecoveryKeyAction: vi.fn(),
   createDestinationAction: vi.fn(),
   finishSetupAction: vi.fn(),
@@ -40,12 +47,27 @@ function fail(code: string, detail = "") {
   return { ok: true, data: { ok: false, code, detail } };
 }
 
-function renderAt(url: string, current = facts()) {
+function renderAt(
+  url: string,
+  current = facts(),
+  providers: readonly ProviderTile[] = TILES,
+) {
   const view = renderWithIntl(
-    <WizardHarness facts={current} url={url} router={router} />,
+    <WizardHarness
+      facts={current}
+      providers={providers}
+      url={url}
+      router={router}
+    />,
   );
   return { ...view, user: userEvent.setup() };
 }
+
+/** A server whose operator registered no app: every account is the person's own. */
+const NO_SHARED_APP: readonly ProviderTile[] = TILES.map((tile) => ({
+  ...tile,
+  instanceApp: false,
+}));
 
 const proceed = () => screen.getByRole("button", { name: "Continue" });
 const testButton = () =>
@@ -64,6 +86,7 @@ describe("ConnectStep", () => {
     router.replace.mockReset();
     router.refresh.mockReset();
     testAction.mockReset().mockResolvedValue(PASS);
+    beginAction.mockReset();
   });
 
   describe("an account: Google Drive, Dropbox, OneDrive", () => {
@@ -119,12 +142,18 @@ describe("ConnectStep", () => {
         expect(screen.queryByText("Not connected yet")).toBeNull();
       });
 
-      it("offers the same trip again for another account", () => {
+      it("offers the same choice again for another account, whichever way the first was made", () => {
         renderAt(RETURNED, facts({ pending: PENDING }));
 
+        // This step without the connection, so it shows the button or the
+        // form again as it did the first time: a link straight to the start
+        // route would have nothing to sign in as on a server with no app.
         expect(
           screen.getByRole("link", { name: "Use a different account" }),
-        ).toHaveAttribute("href", "/api/backup/oauth/google/start");
+        ).toHaveAttribute(
+          "href",
+          "/settings/backup/setup?step=connect&provider=google_drive",
+        );
       });
 
       it("lets Continue through, and takes the connection with it", async () => {
@@ -181,7 +210,7 @@ describe("ConnectStep", () => {
         ],
         [
           "unavailable",
-          "Dropbox is not set up on this server. Ask your administrator.",
+          "This server has no shared Dropbox app. Connect with one of your own below.",
         ],
       ])("words '%s'", (code, sentence) => {
         renderAt(`${BEFORE}dropbox&connect=${code}`);
@@ -202,6 +231,202 @@ describe("ConnectStep", () => {
       it("ignores a word nobody here would have sent", () => {
         renderAt(`${BEFORE}dropbox&connect=%3Cscript%3E`);
         expect(screen.queryByRole("alert")).toBeNull();
+      });
+
+      it("says the provider turned the app away, which is not the same as access being taken back", () => {
+        renderAt(`${BEFORE}dropbox&connect=app`);
+
+        expect(
+          within(alert()).getByText(
+            /Dropbox does not accept the app this connection was made with\./,
+          ),
+        ).toBeInTheDocument();
+        expect(
+          within(alert()).getByText(/with the right client ID and secret/),
+        ).toBeInTheDocument();
+      });
+    });
+
+    describe("through an app of the person's own", () => {
+      const GOOGLE = `${BEFORE}google_drive`;
+      const AUTHORIZE =
+        "https://accounts.google.com/o/oauth2/v2/auth?client_id=mine";
+      const assign = vi.fn();
+
+      beforeEach(() => {
+        assign.mockReset();
+        vi.stubGlobal("location", { ...window.location, assign });
+        beginAction.mockResolvedValue({
+          ok: true,
+          data: { ok: true, value: { url: AUTHORIZE } },
+        });
+      });
+
+      afterEach(() => {
+        vi.unstubAllGlobals();
+      });
+
+      const goOn = () =>
+        screen.getByRole("button", { name: "Continue to Google Drive" });
+
+      it("asks for the client ID and secret, not a button, on a server that registered no app", () => {
+        renderAt(GOOGLE, facts(), NO_SHARED_APP);
+
+        expect(screen.getByLabelText("Client ID")).toBeInTheDocument();
+        expect(screen.getByLabelText("Client secret")).toBeInTheDocument();
+        expect(
+          screen.queryByRole("link", { name: "Connect to Google Drive" }),
+        ).toBeNull();
+        expect(
+          screen.getByText(/This server has no shared Google Drive app/),
+        ).toBeInTheDocument();
+        expect(proceed()).toBeDisabled();
+      });
+
+      it("hides the secret as it is typed and lets no password manager offer the account's own", () => {
+        renderAt(GOOGLE, facts(), NO_SHARED_APP);
+
+        const secret = screen.getByLabelText("Client secret");
+        expect(secret).toHaveAttribute("type", "password");
+        expect(secret).toHaveAttribute("autocomplete", "new-password");
+      });
+
+      it.each([
+        ["dropbox", "Dropbox", "App key", "App secret"],
+        [
+          "onedrive",
+          "OneDrive",
+          "Application (client) ID",
+          "Client secret value",
+        ],
+      ])(
+        "names the two values in %s's own words",
+        (id, name, idLabel, secretLabel) => {
+          renderAt(`${BEFORE}${id}`, facts(), NO_SHARED_APP);
+
+          expect(screen.getByLabelText(idLabel)).toBeInTheDocument();
+          expect(screen.getByLabelText(secretLabel)).toBeInTheDocument();
+          expect(
+            screen.getByRole("button", { name: `Continue to ${name}` }),
+          ).toBeDisabled();
+        },
+      );
+
+      it("gives the address to register, this server's own, ready to copy", async () => {
+        const { user } = renderAt(GOOGLE, facts(), NO_SHARED_APP);
+
+        const address =
+          "https://balancia.example.com/api/backup/oauth/google/callback";
+        expect(screen.getByText(address)).toBeInTheDocument();
+
+        await user.click(screen.getByRole("button", { name: "Copy" }));
+
+        expect(await navigator.clipboard.readText()).toBe(address);
+        expect(
+          await screen.findByRole("button", { name: "Copied" }),
+        ).toBeInTheDocument();
+      });
+
+      it("warns about the one thing that ends a Google connection after a week", () => {
+        renderAt(GOOGLE, facts(), NO_SHARED_APP);
+
+        expect(screen.getByText(/“In production”/)).toBeInTheDocument();
+      });
+
+      it("will not go on until both values are there", async () => {
+        const { user } = renderAt(GOOGLE, facts(), NO_SHARED_APP);
+
+        expect(goOn()).toBeDisabled();
+        await user.type(screen.getByLabelText("Client ID"), "mine");
+        expect(goOn()).toBeDisabled();
+        await user.type(screen.getByLabelText("Client secret"), "s3cret");
+        expect(goOn()).toBeEnabled();
+      });
+
+      it("sends what was typed once, then goes to the provider by navigating", async () => {
+        const { user } = renderAt(GOOGLE, facts(), NO_SHARED_APP);
+
+        await user.type(screen.getByLabelText("Client ID"), "mine");
+        await user.type(screen.getByLabelText("Client secret"), "s3cret");
+        await user.click(goOn());
+
+        expect(beginAction).toHaveBeenCalledTimes(1);
+        expect(beginAction).toHaveBeenCalledWith({
+          provider: "google_drive",
+          clientId: "mine",
+          clientSecret: "s3cret",
+        });
+        // A plain navigation: the page's `form-action 'self'` would refuse a
+        // form whose answer redirects to the provider.
+        await waitFor(() => expect(assign).toHaveBeenCalledWith(AUTHORIZE));
+        expect(router.push).not.toHaveBeenCalled();
+      });
+
+      it("keeps the secret out of the address the wizard lives at", async () => {
+        const { user } = renderAt(GOOGLE, facts(), NO_SHARED_APP);
+
+        await user.type(screen.getByLabelText("Client secret"), "s3cret");
+
+        expect(JSON.stringify(router.push.mock.calls)).not.toContain("s3cret");
+        expect(JSON.stringify(router.replace.mock.calls)).not.toContain(
+          "s3cret",
+        );
+      });
+
+      it("says why it was refused, and stays put", async () => {
+        beginAction.mockResolvedValue({
+          ok: true,
+          data: { ok: false, code: "noKey", detail: "" },
+        });
+        const { user } = renderAt(GOOGLE, facts(), NO_SHARED_APP);
+
+        await user.type(screen.getByLabelText("Client ID"), "mine");
+        await user.type(screen.getByLabelText("Client secret"), "s3cret");
+        await user.click(goOn());
+
+        expect(await screen.findByRole("alert")).toHaveTextContent(
+          "There is no recovery key",
+        );
+        expect(assign).not.toHaveBeenCalled();
+        expect(goOn()).toBeEnabled();
+      });
+
+      it("says something when the request itself fails", async () => {
+        beginAction.mockRejectedValue(new Error("offline"));
+        const { user } = renderAt(GOOGLE, facts(), NO_SHARED_APP);
+
+        await user.type(screen.getByLabelText("Client ID"), "mine");
+        await user.type(screen.getByLabelText("Client secret"), "s3cret");
+        await user.click(goOn());
+
+        expect(await screen.findByRole("alert")).toHaveTextContent(
+          "Something went wrong.",
+        );
+      });
+
+      it("is still offered, folded away, where the server has an app of its own", async () => {
+        const { user } = renderAt(GOOGLE);
+
+        // The one button comes first, as it always did.
+        expect(
+          screen.getByRole("link", { name: "Connect to Google Drive" }),
+        ).toBeInTheDocument();
+        expect(screen.queryByLabelText("Client ID")).toBeNull();
+
+        await user.click(
+          screen.getByRole("button", { name: "Use your own Google Drive app" }),
+        );
+
+        expect(screen.getByLabelText("Client ID")).toBeInTheDocument();
+        expect(screen.getByLabelText("Client secret")).toBeInTheDocument();
+      });
+
+      it("does not say there is nothing to register when the server has an app", () => {
+        renderAt(GOOGLE);
+
+        expect(
+          screen.queryByText(/This server has no shared Google Drive app/),
+        ).toBeNull();
       });
     });
   });

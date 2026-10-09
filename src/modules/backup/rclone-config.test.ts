@@ -177,14 +177,14 @@ describe("OAuth providers", () => {
     });
   });
 
-  it("refuses to build one without the operator's app or a token", async () => {
+  it("refuses to build one without an app or a token", async () => {
     await expect(
       buildRemote(
         "google_drive",
         { refreshToken: "r" },
         { obscure: context.obscure },
       ),
-    ).rejects.toThrow(/operator/);
+    ).rejects.toThrow(/needs an app and a token/);
   });
 });
 

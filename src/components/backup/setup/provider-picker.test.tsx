@@ -115,7 +115,7 @@ describe("ProviderPicker", () => {
 
   it("moves with the arrow keys, over the rows it can choose", async () => {
     const { user, onSelect } = renderPicker(
-      tiles({ dropbox: "needs_operator" }),
+      tiles({ dropbox: "experimental_off" }),
       "google_drive",
     );
 
@@ -129,7 +129,7 @@ describe("ProviderPicker", () => {
 
   describe("a provider this server has not switched on", () => {
     const switchedOff = tiles({
-      onedrive: "needs_operator",
+      onedrive: "experimental_off",
       proton_drive: "experimental_off",
     });
 
@@ -177,7 +177,7 @@ describe("ProviderPicker", () => {
     });
 
     it("is there, but off, when one of them is switched off", () => {
-      renderPicker(tiles({ webdav: "needs_operator" }));
+      renderPicker(tiles({ webdav: "experimental_off" }));
       expect(radio("Infomaniak")).toBeDisabled();
     });
 
