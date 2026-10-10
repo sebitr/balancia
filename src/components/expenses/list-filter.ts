@@ -1,5 +1,6 @@
 import { toneFor } from "@/components/money/balance-tone";
 import { minorUnitsPerMajor } from "@/modules/currencies/iso-4217";
+import { MAX_MINOR_UNITS } from "@/modules/currencies/money";
 import { UNCATEGORISED } from "@/modules/expenses/spread";
 import {
   FILTER_PARAM,
@@ -672,7 +673,13 @@ export function amountBound(input: string, currency: string): bigint | null {
   const per = minorUnitsPerMajor(currency);
   const scale = per.toString().length - 1;
   const padded = fraction.slice(0, scale).padEnd(scale, "0");
-  return BigInt(whole === "" ? "0" : whole) * per + BigInt(padded || "0");
+  const bound =
+    BigInt(whole === "" ? "0" : whole) * per + BigInt(padded || "0");
+  // The column is a bigint and the bound is cast to one, so a bound past what
+  // fits is an error from the database rather than a filter that matches
+  // nothing. No amount this server writes is above the ceiling, so clamping to
+  // it changes no answer.
+  return bound > MAX_MINOR_UNITS ? MAX_MINOR_UNITS : bound;
 }
 
 function magnitude(minorUnits: string): bigint {

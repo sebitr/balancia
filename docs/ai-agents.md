@@ -141,7 +141,20 @@ assistant is immune to it, and Balancia does what it can on its side:
 - Nothing is permanent. Deleting is a soft delete that `balancia_restore_entry`
   undoes, and an expense or repayment that is identical to one written in the
   last ten minutes is refused once — so a retried call cannot quietly double a
-  debt.
+  debt. Two identical calls that arrive at the same moment are refused too, by a
+  lock, rather than both being written.
+- A change is refused when the group's name could mean two. Anybody can name a
+  group "Lisbon" and invite you to it, so "add dinner to Lisbon" is not acted on
+  while another group of yours is called "Lisbon trip 2026": Balancia lists both
+  with their ids and the assistant has to ask you. Every result says which group
+  it was about, so a wrong one shows up in the assistant's own answer.
+- It cuts what strangers typed. The list of groups gives how many people are in
+  each, not who; a long note on a repayment is cut to its first two hundred
+  characters in a list (an expense's full notes are in `balancia_get_expense`);
+  and a group or person's name is cut to sixty characters when an error quotes
+  it. An unequal split cannot give a person nothing or less.
+- It is metered. A connection may make a hundred changes an hour, because each
+  one notifies the other members of a group; reading is not counted here.
 - Adding or changing something notifies the other members, as it does when you
   do it yourself. An assistant that adds a wrong expense is something other
   people will see, which is a reason to read before you approve.
@@ -184,8 +197,8 @@ token lasts an hour, a refresh token ninety days.
 
 Requests are counted under the route `/mcp` in the [metrics](environment.md),
 and rate limited per credential — 600 requests in ten minutes, the same budget
-as an API key — with the token endpoint limited per application and
-registration per address and per instance.
+as an API key, and within it a hundred changes an hour — with the token endpoint
+limited per application and registration per address.
 
 ## How it works
 

@@ -260,11 +260,32 @@ and the sign-in is built to the current MCP and OAuth security guidance.
   malformed request to a registered one: with open registration that address is a
   stranger's claim, and redirecting to it by itself would make Balancia an open
   redirector.
-- **One call per request at `/mcp`.** Batches are refused, so the rate limit
-  counts what it says and identical writes cannot race the duplicate check.
-- **Writes are guarded and reversible.** Deleting is a soft delete with a
-  restore; an entry identical to one written in the last ten minutes is refused
-  once; write tools are annotated so clients can ask first.
+- **One call per request at `/mcp`, and a body is counted as it is read.**
+  Batches are refused, so the rate limit counts what it says. A body announcing
+  no length is cut off at the cap rather than buffered and measured afterwards,
+  here and on every OAuth endpoint, and no event stream is ever held open
+  (`subscriptions/listen` shares one pool between every caller on an instance).
+- **Writes are guarded, metered and reversible.** Deleting is a soft delete with
+  a restore; an entry identical to one written in the last ten minutes is
+  refused once, and two identical calls arriving together are refused by a lock
+  rather than both written; a connection may make a hundred changes an hour,
+  because each one tells the other members of a group; write tools are
+  annotated so clients can ask first.
+- **Nothing a stranger typed is repeated at length, and a change says where it
+  went.** Names of groups and people are cut to sixty characters when an error
+  quotes them, the list of groups returns a count of members rather than their
+  names, a repayment's note is cut to two hundred characters in a list, and every
+  result that is about a group names it. A change by _name_ is refused when
+  another group's name contains it ("Lisbon" beside "Lisbon trip 2026"), because
+  anybody can call their group anything and be a member of yours by invitation.
+- **An unequal split cannot give a person nothing or less.** The engine accepts a
+  negative exact amount for a receipt's discount; a model has no such receipt,
+  and one written by an injected instruction would leave a co-member owing a
+  sum nobody agreed.
+- **A name on the consent screen is a claim, and one is checked.** An
+  application that calls itself Claude or ChatGPT while sending the answer
+  somewhere that is not that vendor's own address is told so, in red, above the
+  buttons.
 - **It can be switched off** with `AGENT_ACCESS=false`, which makes every route
   answer `404`.
 

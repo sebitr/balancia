@@ -6,7 +6,7 @@ import {
   type UserActor,
 } from "@/lib/security/authorization";
 import { listGroupsForUser, listParticipants } from "@/modules/groups/service";
-import { ToolFailure } from "./support";
+import { shown, ToolFailure } from "./support";
 
 /**
  * Names in, ids out.
@@ -40,6 +40,15 @@ function plain(value: string): string {
  * to its group before it fetches anything. A name is looked up among the groups
  * the account is in — and for a pinned credential, among that one — so a name
  * can never reach a group the id could not.
+ *
+ * **For a change, an exact name is not enough when another group's name
+ * contains it.** The groups an account is in include ones somebody else made,
+ * and anybody can call theirs "Lisbon". A person who says "add dinner to
+ * Lisbon" and means "Lisbon trip 2026" would otherwise have the dinner, its
+ * amount and a notification land in a group whose owner chose the name to catch
+ * exactly that. A change that could go to two places is refused with both ids;
+ * a read is still answered from the exact match, since reading the wrong group
+ * tells nobody anything.
  */
 export async function resolveGroup(
   actor: UserActor,
@@ -57,18 +66,25 @@ export async function resolveGroup(
   );
   const wanted = plain(ref);
   const exact = mine.filter((group) => plain(group.name) === wanted);
+  const near = mine.filter((group) => plain(group.name).includes(wanted));
+  const choices = (groups: typeof mine) =>
+    groups.map((group) => `${shown(group.name)} = ${group.id}`).join("; ");
+
   if (exact.length === 1) {
+    const changing = options.requireActive === true;
+    if (changing && wanted.length >= 3 && near.length > 1) {
+      throw new ToolFailure(
+        `"${shown(ref)}" is the name of one group and part of the name of another, so this change could go to either. Nothing was changed. Ask the person which they mean, then use the id: ${choices(near)}.`,
+      );
+    }
     return authorizeGroup(actor, exact[0]!.id, options);
   }
   if (exact.length > 1) {
     throw new ToolFailure(
-      `More than one group is called "${ref}". Use the id: ${exact
-        .map((group) => `${group.name} = ${group.id}`)
-        .join("; ")}.`,
+      `More than one group is called "${shown(ref)}". Use the id: ${choices(exact)}.`,
     );
   }
 
-  const near = mine.filter((group) => plain(group.name).includes(wanted));
   if (wanted.length >= 3 && near.length === 1) {
     return authorizeGroup(actor, near[0]!.id, options);
   }
@@ -76,8 +92,8 @@ export async function resolveGroup(
   throw new ToolFailure(
     mine.length === 0
       ? "There are no groups this connection can use."
-      : `No group matches "${ref}". Groups available: ${mine
-          .map((group) => `"${group.name}"`)
+      : `No group matches "${shown(ref)}". Groups available: ${mine
+          .map((group) => `"${shown(group.name)}"`)
           .join(", ")}.`,
   );
 }
@@ -154,8 +170,8 @@ export function pickPerson(
   if (partial.length > 1) throw ambiguous(ref, partial, role);
 
   throw new ToolFailure(
-    `No ${role} in this group matches "${ref}". Members: ${people
-      .map((person) => `"${person.name}"`)
+    `No ${role} in this group matches "${shown(ref)}". Members: ${people
+      .map((person) => `"${shown(person.name)}"`)
       .join(", ")}.`,
   );
 }
@@ -166,8 +182,8 @@ function ambiguous(
   role: string,
 ): ToolFailure {
   return new ToolFailure(
-    `"${ref}" could be more than one ${role}: ${matches
-      .map((person) => `${person.name} (${person.id})`)
+    `"${shown(ref)}" could be more than one ${role}: ${matches
+      .map((person) => `${shown(person.name)} (${person.id})`)
       .join("; ")}. Use the id.`,
   );
 }
