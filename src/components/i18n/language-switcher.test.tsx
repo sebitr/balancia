@@ -19,8 +19,8 @@ vi.mock("@/lib/load-document", () => ({ loadDocument }));
 
 const { MarketingLanguageSwitcher } = await import("./language-switcher");
 
-/** The homepage's two addresses, as `localePaths("home")` hands them over. */
-const PATHS = { en: "/", fr: "/fr" };
+/** The homepage's addresses, as `localePaths("home")` hands them over. */
+const PATHS = { en: "/", fr: "/fr", de: "/de" };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -37,7 +37,7 @@ describe("MarketingLanguageSwitcher", () => {
     ).toHaveTextContent("🇫🇷FR");
   });
 
-  it("lists both languages and marks the active one", async () => {
+  it("lists every language and marks the active one", async () => {
     const user = userEvent.setup();
     renderWithIntl(<MarketingLanguageSwitcher paths={PATHS} />, {
       locale: "en",
@@ -50,6 +50,7 @@ describe("MarketingLanguageSwitcher", () => {
       within(menu).getByText("English").closest("[role=menuitem]"),
     ).toHaveAttribute("aria-current", "true");
     expect(within(menu).getByText("Français")).toBeInTheDocument();
+    expect(within(menu).getByText("Deutsch")).toBeInTheDocument();
   });
 
   it("persists a choice, then goes to that language's own address", async () => {

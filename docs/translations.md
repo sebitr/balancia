@@ -1,7 +1,7 @@
 # Translations
 
-Balancia ships English and French. Every word either language shows lives in
-`messages/en.json` and `messages/fr.json` — the interface, the emails, the push
+Balancia ships English, French and German. Every word a language shows lives
+in its catalogue under `messages/` — the interface, the emails, the push
 notifications, the error states.
 
 There are two ways in, and which one you want depends on who you are. If you
