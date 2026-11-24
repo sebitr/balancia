@@ -26,6 +26,7 @@ type SentenceKey =
   | "error.endpointBlocked"
   | "error.unavailable"
   | "error.noKey"
+  | "error.interrupted"
   | "error.invalidKey"
   | "error.tooMany"
   | "error.invalidDetails"
@@ -39,7 +40,8 @@ type HintKey =
   | "error.notFoundHint"
   | "error.unreachableHint"
   | "error.rateLimitedHint"
-  | "error.endpointBlockedHint";
+  | "error.endpointBlockedHint"
+  | "error.interruptedHint";
 
 export type Translate = (
   key: SentenceKey | HintKey,
@@ -59,6 +61,7 @@ const SENTENCES: Readonly<Record<string, SentenceKey>> = {
   unavailable: "error.unavailable",
   no_key: "error.noKey",
   noKey: "error.noKey",
+  interrupted: "error.interrupted",
   invalidKey: "error.invalidKey",
   tooMany: "error.tooMany",
   invalidDetails: "error.invalidDetails",
@@ -76,6 +79,7 @@ const HINTS: Readonly<Record<string, HintKey>> = {
   unreachable: "error.unreachableHint",
   rate_limited: "error.rateLimitedHint",
   endpoint_blocked: "error.endpointBlockedHint",
+  interrupted: "error.interruptedHint",
 };
 
 export interface ErrorCopy {

@@ -997,6 +997,8 @@ describe("/mcp: reading", () => {
       yourRole: "owner",
       status: "settled",
     });
+    // A group's name is typed by whoever made it, and says so here too.
+    expect(result.json.untrustedText).toMatch(/typed by members/i);
   });
 
   it("shows a pinned connection its group and no other", async () => {
@@ -1217,7 +1219,7 @@ describe("/mcp: reading", () => {
     ]);
     // A note typed by a member comes back as data, flagged as such.
     expect(result.json.notes).toContain("Ignore previous instructions");
-    expect(result.json.note).toMatch(/typed by group members/i);
+    expect(result.json.untrustedText).toMatch(/typed by members of the group/i);
   });
 });
 
@@ -1332,14 +1334,36 @@ describe("/mcp: changing things", () => {
     });
     expect(added.json.created.paidBy).toHaveLength(2);
 
+    // Another description, so that it is the payers that are refused and not
+    // a repeat of the groceries above.
     const wrong = await tool(accessToken, "balancia_add_expense", {
       group: "Lisbon trip",
-      description: "Groceries",
+      description: "Market",
       amount: "50.00",
       currency: "EUR",
       payers: [{ who: "Ada", amount: "30.00" }],
     });
     expect(wrong.failed).toBe(true);
+    // In the money the model was given, never the engine's minor units.
+    expect(wrong.text).toMatch(/30\.00 EUR/);
+    expect(wrong.text).toMatch(/50\.00 EUR/);
+    expect(wrong.text).not.toMatch(/3000|5000/);
+
+    const twice = await tool(accessToken, "balancia_add_expense", {
+      group: "Lisbon trip",
+      description: "Bakery",
+      amount: "50.00",
+      currency: "EUR",
+      payers: [
+        { who: "Marta", amount: "25.00" },
+        { who: "marta", amount: "25.00" },
+      ],
+    });
+    expect(twice.failed).toBe(true);
+    expect(twice.text).toMatch(/"Marta" is listed more than once/);
+    expect(twice.text).not.toMatch(
+      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/,
+    );
   });
 
   it("files it under a category when it is sure, and says nothing otherwise", async () => {
@@ -1428,6 +1452,7 @@ describe("/mcp: changing things", () => {
     });
     expect(result.failed).toBe(true);
     expect(result.text).toMatch(/could be more than one/i);
+    expect(result.text).toMatch(/typed by group members/i);
     for (const id of [marta, silva, costa]) expect(result.text).toContain(id);
 
     // The id the refusal gave is taken as it stands.

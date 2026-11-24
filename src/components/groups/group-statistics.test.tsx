@@ -218,6 +218,70 @@ describe("the group statistics island", () => {
     ).toBeInTheDocument();
   });
 
+  /**
+   * Net is what somebody put in beyond their share, a payment habit and not a
+   * debt. The overview says what is owed; a red figure here for the same
+   * person disagreed with it. Only Open is a balance.
+   */
+  describe("who carries the group: money colours", () => {
+    const toneClasses = /positive|negative/;
+
+    it("draws Net unsigned and in words, with no money colour", () => {
+      renderWithIntl(<GroupStatistics stats={stats()} />);
+
+      const panel = screen.getByRole("tabpanel", { name: "Net" });
+      expect(panel.innerHTML).not.toMatch(toneClasses);
+      // No sign: the direction is in the words beside the figure.
+      expect(within(panel).queryByText(/[+−-]€/)).toBeNull();
+      expect(within(panel).getAllByText("above share")).toHaveLength(2);
+      expect(within(panel).getByText("below share")).toBeInTheDocument();
+    });
+
+    it("keeps the money colours on Open, which is a balance", async () => {
+      const user = userEvent.setup();
+      renderWithIntl(<GroupStatistics stats={stats()} />);
+
+      await user.click(screen.getByRole("tab", { name: "Open" }));
+
+      const panel = screen.getByRole("tabpanel", { name: "Open" });
+      expect(panel.innerHTML).toMatch(/text-positive-ink/);
+      expect(panel.innerHTML).toMatch(/text-negative-ink/);
+    });
+
+    it("shows no green zero when no income came in", () => {
+      renderWithIntl(
+        <GroupStatistics
+          stats={stats({
+            ranges: [
+              {
+                key: "1y",
+                granularity: "month",
+                months: 3,
+                currencies: [
+                  currency({
+                    flows: {
+                      spent: "1248000",
+                      spentCount: 96,
+                      revenue: "0",
+                      revenueCount: 0,
+                      settled: "0",
+                      settledCount: 0,
+                    },
+                  }),
+                ],
+              },
+            ],
+          })}
+        />,
+      );
+
+      const row = screen.getByText("Income").closest("div")!.parentElement!;
+      expect(within(row).getByText("nothing came in")).toBeInTheDocument();
+      expect(row.innerHTML).not.toMatch(/positive/);
+      expect(within(row).queryByText(/€0\.00/)).toBeNull();
+    });
+  });
+
   it("keeps repayments in their own row, out of the spending", () => {
     renderWithIntl(<GroupStatistics stats={stats()} />);
 
@@ -242,10 +306,10 @@ describe("the group statistics island", () => {
       screen
         .getAllByRole("listitem")
         .map((row) => row.textContent ?? "")
-        .filter((text) => /Nora|Inès|Tomas/.test(text));
+        .filter((text) => /You|Inès|Tomas/.test(text));
 
-    // Net: Nora fronted the most, Tomas the least.
-    expect(names()[0]).toContain("Nora");
+    // Net: You fronted the most, Tomas the least.
+    expect(names()[0]).toContain("You");
     expect(names()[2]).toContain("Tomas");
 
     await user.click(screen.getByRole("tab", { name: "Share" }));
@@ -291,7 +355,7 @@ describe("the group statistics island", () => {
     expect(open).toHaveAttribute("aria-selected", "true");
     // The rows are what the metric tabs switch.
     expect(
-      within(screen.getByRole("tabpanel", { name: "Open" })).getByText("Nora"),
+      within(screen.getByRole("tabpanel", { name: "Open" })).getByText("You"),
     ).toBeInTheDocument();
   });
 
@@ -309,7 +373,7 @@ describe("the group statistics island", () => {
     const classesOf = (element: Element) => element.getAttribute("class") ?? "";
     const list = screen
       .getAllByRole("list")
-      .find((candidate) => within(candidate).queryByText("Nora"));
+      .find((candidate) => within(candidate).queryByText("You"));
 
     expect(list).toBeDefined();
     expect(classesOf(list!)).toMatch(/(^|\s)grid(\s|$)/);

@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
 import Link from "next/link";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { ArrowDown, ArrowUp, Paperclip } from "lucide-react";
 import { useDateFormatter } from "@/i18n/format-context";
 import { Amount } from "@/components/money/amount";
@@ -17,7 +16,13 @@ import { findPaymentMethod } from "@/modules/settlements/payment-methods";
 import { cn } from "@/lib/utils";
 import { withQuery } from "./list-query";
 import { kindOf, type RowView, type SortChoice } from "./list-filter";
-import { badgeOf, Position, TypeBadge } from "./row-parts";
+import {
+  badgeOf,
+  Position,
+  TypeBadge,
+  usePayerLine,
+  usePayerNames,
+} from "./row-parts";
 
 /**
  * The transactions as a table, from `lg` up: the phone's list, drawn at width.
@@ -115,12 +120,9 @@ export function TransactionsTable({
 }: TransactionsTableProps) {
   const t = useTranslations("expensesList");
   const tt = useTranslations("expensesList.table");
-  const locale = useLocale();
-  // One formatter for every row's payers rather than one per row.
-  const list = useMemo(
-    () => new Intl.ListFormat(locale, { style: "long", type: "conjunction" }),
-    [locale],
-  );
+  // Made once for the table and handed to every row.
+  const namesOf = usePayerNames(self);
+  const payerLine = usePayerLine(self);
 
   // Nothing matches only once there is nothing left to read — the same rule
   // the phone's list keeps, for the same reason.
@@ -230,7 +232,8 @@ export function TransactionsTable({
               members={members}
               today={today}
               nameOf={nameOf}
-              list={list}
+              namesOf={namesOf}
+              payerLine={payerLine}
             />
           ))}
         </tbody>
@@ -289,7 +292,8 @@ function TableRow({
   members,
   today,
   nameOf,
-  list,
+  namesOf,
+  payerLine,
 }: {
   row: RowView;
   groupId: string;
@@ -299,7 +303,8 @@ function TableRow({
   members: readonly EntryMember[];
   today: string;
   nameOf: (category: string) => string;
-  list: Intl.ListFormat;
+  namesOf: (row: RowView) => string;
+  payerLine: (row: RowView) => string | null;
 }) {
   const t = useTranslations("expensesList.table");
   const tMethods = useTranslations("paymentMethods");
@@ -314,13 +319,7 @@ function TableRow({
       ? dates.plain(row.date, "dayMonth")
       : dates.plain(row.date);
 
-  // "You" in the reader's place, and the names joined the way the language
-  // joins them: "Jonas and Ravi", "Jonas et Ravi".
-  const names = list.format(
-    row.payers.map((payer, index) =>
-      payer === self ? t("you") : (row.payerNames[index] ?? ""),
-    ),
-  );
+  const names = namesOf(row);
 
   const category = repayment ? null : nameOf(row.category ?? "");
   const Glyph =
@@ -356,20 +355,7 @@ function TableRow({
     ? [method, row.note]
     : [
         category,
-        row.payers.length === 0
-          ? null
-          : t("paidByLine", {
-              who:
-                self !== null &&
-                row.payers.length === 1 &&
-                row.payers[0] === self
-                  ? "you"
-                  : self !== null && row.payers.includes(self)
-                    ? "withYou"
-                    : "other",
-              names,
-              count: row.payers.length,
-            }),
+        payerLine(row),
         split,
         row.receipts > 0 ? t("receipts", { count: row.receipts }) : null,
       ];
@@ -512,19 +498,3 @@ function splitWays(
     total: everyone.size,
   };
 }
-
-/*
- * Which of the two renderers is mounted.
- *
- * `lg` is 64rem, and from there the table is drawn instead of the list. Both
- * are in the server's HTML and the first client render — the server cannot
- * know the width, and hydration has to match what it sent — with CSS showing
- * exactly one; `display: none` keeps the other out of the accessibility tree
- * as well as off the screen. From the next render on, only the one the window
- * can see is mounted, so a phone does not carry a hidden table of every row it
- * holds, nor a desk a hidden list of them.
- *
- * The hook itself is shared with the entry dialog, which lays its split out in
- * place from the same width.
- */
-export { useDeskWidth } from "@/components/ui/use-desk-width";

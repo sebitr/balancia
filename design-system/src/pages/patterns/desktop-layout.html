@@ -486,7 +486,10 @@
       Adding or changing an entry, on a desk. A dialog over the screen it was
       started from, which stays where it was — the same intercepted route as the
       phone's drawer, so Back closes it, and so do Esc, the scrim, the ✕ and
-      Cancel; what was typed is the draft whichever way it closed. 720px wide at
+      Cancel; what was typed is the draft whichever way it closed. A change to
+      an entry or a repayment keeps no draft, so the scrim leaves those open
+      once something has been typed: Esc, the ✕ and Cancel are the deliberate
+      ways out. 720px wide at
       <code>lg</code> and 880px from <code>xl</code>
       (<code>dialog-size.ts</code>), anchored by its top so a form that grows
       pushes only its foot down, and capped at the window less 5rem, past which
@@ -787,9 +790,10 @@
       <dt>⌘↵</dt>
       <dd>
         Ctrl ↵ off a Mac. The form's own key, not the window's: it presses the
-        button, from any field, and does nothing the button would not. The
-        button says so with <code>aria-keyshortcuts</code>; the hint beside it
-        is hidden from a screen reader.
+        button, from any field, and does nothing the button would not — nor
+        anything while a dialog over the form, such as the delete question, is
+        open. The button says so with <code>aria-keyshortcuts</code>; the hint
+        beside it is hidden from a screen reader.
       </dd>
       <dt>repayment</dt>
       <dd>

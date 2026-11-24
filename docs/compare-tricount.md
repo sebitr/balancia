@@ -82,8 +82,9 @@ tricount support before entering long-lived group records.
 
 With self-hosted Balancia, the operator chooses the server, storage, domain,
 email provider and optional integrations. No external service is required at
-runtime, telemetry starts off, and local categorization or receipt scanning
-does not send expenses to an AI provider.
+runtime, telemetry starts off, and local categorization does not send expenses
+to an AI provider. Neither does receipt scanning, unless the operator turns on
+server-side reading and the person scanning chooses it.
 
 tricount is owned and operated by bunq. Its privacy policy explains the
 financial, identification, device and usage data used to operate and improve

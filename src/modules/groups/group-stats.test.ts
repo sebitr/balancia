@@ -487,4 +487,38 @@ describe("computeGroupStats", () => {
       true,
     );
   });
+
+  describe("per person per month", () => {
+    const spend = (expenseDate: string) =>
+      entry({
+        expenseDate,
+        payers: [{ participantId: "nora", amount: 36000n }],
+        shares: [{ participantId: "nora", amount: 36000n }],
+      });
+
+    it("divides by the months the group was active, not the window's length", () => {
+      // Three people, one entry three weeks ago: one month of life, so the
+      // year window must not spread it over twelve.
+      const block = eur(
+        computeGroupStats(input({ facts: [spend("2026-08-01")] })),
+      );
+      expect(block.perPersonMonth).toBe(12000n);
+    });
+
+    it("counts a group older than the window as the window's twelve months", () => {
+      const block = eur(
+        computeGroupStats(
+          input({ facts: [spend("2025-09-01"), spend("2026-08-01")] }),
+        ),
+      );
+      expect(block.perPersonMonth).toBe(72000n / 36n);
+    });
+
+    it("never divides by less than one month", () => {
+      const block = eur(
+        computeGroupStats(input({ facts: [spend("2026-08-20")] })),
+      );
+      expect(block.perPersonMonth).toBe(12000n);
+    });
+  });
 });

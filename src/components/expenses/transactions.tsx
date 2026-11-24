@@ -21,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useDeskWidth } from "@/components/ui/use-desk-width";
 import { Amount } from "@/components/money/amount";
 import { RANKED_BANDS, UNCATEGORISED } from "@/modules/expenses/spread";
 import { useCategoryLabel } from "@/components/expenses/category-field";
@@ -50,9 +51,9 @@ import {
 } from "./list-filter";
 import { FilterSheet } from "./filter-sheet";
 import { FilterRow } from "./filter-row";
-import { badgeOf, Position, TypeBadge, usePaidBy } from "./row-parts";
+import { badgeOf, Position, usePayerLine } from "./row-parts";
 import { SwipeToDelete } from "./swipe-to-delete";
-import { TransactionsTable, useDeskWidth } from "./transactions-table";
+import { TransactionsTable } from "./transactions-table";
 import { forgetPlace, readPlace, rememberPlace } from "./list-place";
 
 /**
@@ -126,25 +127,34 @@ export type { EntryKind, RowView };
  * palette's chart colours are darker, and cream on the teal `--chart-3` or
  * the slate `--chart-4` falls well short. Each band therefore takes whichever
  * of the two inks its own colour can carry. `--chart-2` is the accent — the
- * "you" series — so its band has to read under plum in all seven accents,
- * which it does; `src/app/token-contrast.test.ts` holds every pairing below
+ * "you" series — so its band takes `--primary-foreground`, the text the accent
+ * itself says belongs on its fill, which reads in all seven accents; `src/app/token-contrast.test.ts` holds every pairing below
  * to 4.5:1 in both themes.
  */
 const BAND_STYLES: readonly string[] = [
   "bg-chart-1 text-background",
-  "bg-chart-2 text-foreground dark:text-background",
+  "bg-chart-2 text-primary-foreground",
   "bg-chart-3 text-foreground dark:text-background",
   "bg-chart-4 text-foreground dark:text-background",
   "bg-chart-5 text-foreground",
 ];
 
-/** The rail beside a row, in the colour of the band the row belongs to. */
-const RAIL_STYLES: readonly string[] = [
-  "bg-chart-1",
-  "bg-chart-2",
-  "bg-chart-3",
-  "bg-chart-4",
-  "bg-chart-5",
+/**
+ * The tile a row's glyph sits on: a tint of the band the row belongs to, so
+ * the list and the spine above it still say which band is which.
+ *
+ * A tint and not the band's own fill, because the glyph on it is drawn in
+ * `--foreground` and has to read on every one of them in both themes; a quarter
+ * of the colour is enough to tell the bands apart and leaves the glyph at the
+ * contrast of plain text. It used to be a 3px rail beside the title, which
+ * carried the same link in a stroke too thin to read as a colour at all.
+ */
+const TILE_STYLES: readonly string[] = [
+  "bg-chart-1/25",
+  "bg-chart-2/25",
+  "bg-chart-3/25",
+  "bg-chart-4/25",
+  "bg-chart-5/25",
 ];
 
 const REMAINDER_STYLE = "bg-muted text-foreground";
@@ -261,7 +271,9 @@ export function Transactions({
   /*
    * Which renderer the window can see: the phone's list below `lg`, the table
    * from it. Unknown on the server and through hydration, when both are drawn
-   * and CSS shows one — see `useDeskWidth`.
+   * and CSS shows one — see `useDeskWidth`. From the next render on, only the
+   * one the window can see is mounted, so a phone does not carry a hidden
+   * table of every row it holds, nor a desk a hidden list of them.
    */
   const desk = useDeskWidth();
   const showList = desk !== true;
@@ -580,15 +592,36 @@ export function Transactions({
     setOpen(true);
   };
 
-  /** Which colour a row's rail takes, from the band its category sits in. */
-  const railOf = (category: string | null): string => {
-    if (category === null || !visibleBands) return "bg-border";
+  /**
+   * Which tint a row's tile takes, from the band the spine shows its category
+   * in — the grey remainder when the spine had no room for a band of its own,
+   * so the tile and the band above always agree.
+   */
+  const tileOf = (category: string | null): string => {
+    if (category === null || !visibleBands) return "bg-muted";
     const band = visibleBands.find((band) =>
       band.categories.includes(category),
     );
-    if (!band) return "bg-border";
-    return band.rank === null ? "bg-muted" : RAIL_STYLES[band.rank - 1];
+    if (!band || band.rank === null) return "bg-muted";
+    return TILE_STYLES[band.rank - 1];
   };
+
+  /*
+   * In date order the rows stand under the day they happened, so the day is
+   * said once above them rather than again on every row — it was a third of
+   * what a row had to say. Sorted by amount, neighbours share no day and each
+   * row carries its own date instead.
+   */
+  const byDay = applied.sort !== "largest";
+  const days = byDay ? groupByDay(shown) : [shown];
+  // Where each row stands in the whole list, for the stagger as it arrives —
+  // counted across the days, so the second day does not start again at zero.
+  const position = new Map(shown.map((row, index) => [row, index]));
+  const payerLine = usePayerLine(self);
+  const dayLabel = (date: string): string =>
+    date.slice(0, 4) === today.slice(0, 4)
+      ? dates.plain(date, "dayMonth")
+      : dates.plain(date);
 
   /*
    * Replayed on every filter change, because the list the reader is looking at
@@ -851,34 +884,67 @@ export function Transactions({
               </p>
             </div>
           ) : (
-            <ul className="mt-3 flex flex-col gap-[22px] lg:hidden">
-              {shown.map((row, index) => (
-                <li
-                  key={`${row.kind}-${row.id}-${signature}`}
-                  // Capped, so the last row of a long list is not still
-                  // arriving when the reader has started scrolling.
-                  style={{ animationDelay: `${Math.min(index * 24, 280)}ms` }}
-                  className="animate-in duration-[260ms] ease-[cubic-bezier(0.2,0.7,0.3,1)] fill-mode-both fade-in slide-in-from-bottom-2 motion-reduce:animate-none"
-                >
-                  <SwipeToDelete
-                    groupId={groupId}
-                    kind={row.kind}
-                    id={row.id}
-                    description={row.title}
+            <div className="mt-4 flex flex-col gap-5 lg:hidden">
+              {days.map((rows) => {
+                const first = rows[0];
+                if (!first) return null;
+                const list = (
+                  // One card per day, the rows inside it parted by a hairline
+                  // — the design system's stacked-content rule — rather than
+                  // floating on the page, where nothing said where one row
+                  // ended and the next began.
+                  <ul className="overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10">
+                    {rows.map((row, index) => (
+                      <li
+                        key={`${row.kind}-${row.id}-${signature}`}
+                        // Capped, so the last row of a long list is not still
+                        // arriving when the reader has started scrolling.
+                        style={{
+                          animationDelay: `${Math.min((position.get(row) ?? 0) * 24, 280)}ms`,
+                        }}
+                        className="animate-in duration-[260ms] ease-[cubic-bezier(0.2,0.7,0.3,1)] fill-mode-both fade-in slide-in-from-bottom-2 motion-reduce:animate-none"
+                      >
+                        <SwipeToDelete
+                          groupId={groupId}
+                          kind={row.kind}
+                          id={row.id}
+                          description={row.title}
+                        >
+                          <Row
+                            row={row}
+                            groupId={groupId}
+                            tile={tileOf(row.category)}
+                            name={
+                              row.category === null
+                                ? null
+                                : nameOf(row.category)
+                            }
+                            date={byDay ? null : dayLabel(row.date)}
+                            payerLine={payerLine}
+                            divided={index > 0}
+                            query={filterQuery}
+                            onOpen={remember}
+                          />
+                        </SwipeToDelete>
+                      </li>
+                    ))}
+                  </ul>
+                );
+                return byDay ? (
+                  <section
+                    key={`${first.date}-${signature}`}
+                    className="flex flex-col gap-2"
                   >
-                    <Row
-                      row={row}
-                      groupId={groupId}
-                      rail={railOf(row.category)}
-                      name={row.category === null ? null : nameOf(row.category)}
-                      query={filterQuery}
-                      self={self}
-                      onOpen={remember}
-                    />
-                  </SwipeToDelete>
-                </li>
-              ))}
-            </ul>
+                    <h2 className="px-1 text-xs font-semibold text-muted-foreground">
+                      {dayLabel(first.date)}
+                    </h2>
+                    {list}
+                  </section>
+                ) : (
+                  <div key={`all-${signature}`}>{list}</div>
+                );
+              })}
+            </div>
           )}
 
           {showTable && (
@@ -1372,91 +1438,87 @@ function BandGlyph({ category }: { category: string }) {
   return <Glyph aria-hidden="true" className="size-[15px] shrink-0" />;
 }
 
+/**
+ * Rows in the order they arrived, cut wherever the day changes.
+ *
+ * Runs of one date, not buckets of it: the list is already in date order when
+ * this is asked, and if a page boundary or an oldest-first sort ever put one
+ * day in two places, two headings saying so is the truthful drawing.
+ */
+export function groupByDay(rows: readonly RowView[]): RowView[][] {
+  const days: RowView[][] = [];
+  for (const row of rows) {
+    const last = days.at(-1);
+    if (last && last[0]?.date === row.date) last.push(row);
+    else days.push([row]);
+  }
+  return days;
+}
+
+/**
+ * One transaction on a phone: two lines beside a category tile.
+ *
+ * The first line is what it was and how much — the title takes every pixel the
+ * amount leaves it, and wraps rather than being cut, because the title is how
+ * a reader finds the row they are looking for. The second is who paid and what
+ * the row left the reader holding. Each figure sits on the line its words are
+ * on, so neither column squeezes the other: the position sentence used to
+ * stand in a column beside the title, and "You get back €22.50" was wide
+ * enough to cut "Taxi to the airport" down to "Taxi to the…".
+ *
+ * There is no chevron and no badge line. The whole row is the link, which the
+ * press state already says; and what the badge said — a repayment, income, a
+ * recurring entry — is a word at the head of the second line.
+ */
 function Row({
   row,
   groupId,
-  rail,
+  tile,
   name,
+  date,
+  payerLine,
+  divided,
   query,
-  self,
   onOpen,
 }: {
   row: RowView;
   groupId: string;
-  rail: string;
+  /** The tint of the band the row's category is in. */
+  tile: string;
   name: string | null;
+  /** The row's own date, when the list is not grouped under days. */
+  date: string | null;
+  payerLine: (row: RowView) => string | null;
+  /** Not the first in its card, so a hairline parts it from the one above. */
+  divided: boolean;
   /** The list's filters, so the screen this opens can hand them back. */
   query: string;
-  /** The reader's participant id, so "You paid" is said as the reader's own. */
-  self: string | null;
   onOpen: () => void;
 }) {
-  const dates = useDateFormatter();
-  // A repayment's title is already the two names; "X paid" would repeat it.
-  const payer = usePaidBy(row, self);
-  const paidBy = row.kind === "settlement" ? null : payer;
-  const Glyph = hasGlyph(row.category)
-    ? CATEGORY_GLYPHS[row.category]
-    : FALLBACK_GLYPH;
+  const t = useTranslations("expensesList");
+  const repayment = row.kind === "settlement";
+  const Glyph = repayment
+    ? TYPE_GLYPHS.settlement
+    : hasGlyph(row.category)
+      ? CATEGORY_GLYPHS[row.category]
+      : FALLBACK_GLYPH;
 
   const badge = badgeOf(row);
+  const kindWord =
+    badge === "revenue"
+      ? t("revenueBadge")
+      : badge === "settlement"
+        ? t("paymentBadge")
+        : badge === "recurring"
+          ? t("recurringBadge")
+          : null;
 
-  const body = (
-    <>
-      <span className={cn("h-[34px] w-[3px] shrink-0 rounded-sm", rail)} />
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1.5">
-          <Glyph
-            aria-hidden="true"
-            className="size-[13px] shrink-0 text-muted-foreground"
-          />
-          {/* The category is named for a screen reader; a sighted reader has
-              the glyph, and the rail matching the band it came from. */}
-          {name && <span className="sr-only">{name}</span>}
-          <span className="truncate text-sm font-medium">{row.title}</span>
-        </span>
-        <span className="mt-[3px] block truncate text-xs text-muted-foreground">
-          {dates.plain(row.date)}
-          {/* Who put the money in, in the payer's amber — the same cue as
-              "Paid by" in the entry form, and never a money colour. */}
-          {paidBy && (
-            <>
-              {" · "}
-              <span className="text-payer-ink">{paidBy}</span>
-            </>
-          )}
-          {row.note ? ` · ${row.note}` : null}
-        </span>
-        {badge && (
-          <span className="mt-[5px] flex">
-            <TypeBadge kind={badge} />
-          </span>
-        )}
-      </span>
-      <span className="flex shrink-0 flex-col items-end gap-[3px]">
-        <Amount
-          minorUnits={row.amount}
-          currency={row.currency}
-          signDisplay={row.revenue ? "always" : undefined}
-          className={cn(
-            "text-sm font-medium",
-            row.kind === "settlement" && "text-muted-foreground",
-          )}
-        />
-        {row.position !== null && (
-          <Position
-            minorUnits={row.position}
-            currency={row.currency}
-            kind={kindOf(row)}
-          />
-        )}
-      </span>
-      <ChevronRight
-        aria-hidden="true"
-        className="-ml-0.5 size-3.5 shrink-0 text-muted-foreground"
-      />
-    </>
-  );
+  // A repayment's title is already the two names; what it was for, if anyone
+  // said, is the useful thing under it. An expense's title is what it was, so
+  // under it goes who paid.
+  const sub = [date, kindWord, repayment ? row.note : payerLine(row)]
+    .filter((part): part is string => Boolean(part))
+    .join(" · ");
 
   return (
     <Link
@@ -1464,7 +1526,7 @@ function Row({
       // thing this row cannot say about a repayment is whether it finished the
       // job, and that is the whole of what the screen behind it is for.
       href={withQuery(
-        row.kind === "settlement"
+        repayment
           ? `/groups/${groupId}/settlements/${row.id}`
           : `/groups/${groupId}/expenses/${row.id}`,
         query,
@@ -1475,15 +1537,61 @@ function Row({
       // asked to scroll, and `scrollY` is no longer the answer to anything.
       onClick={onOpen}
       // A finger never hovers, so the row answers the press itself — every
-      // other list in the app already does.
-      //
-      // The negative margins that used to pull this out to the full width of
-      // the list now sit on `SwipeToDelete` around it, which clips at its own
-      // edge — see the note there. The ring is inset for the same reason: an
-      // outset one would be cropped by that clip on both sides.
-      className="flex items-center gap-2.5 rounded-[10px] px-1.5 py-[7px] transition-colors duration-150 hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset active:bg-muted motion-reduce:transition-none"
+      // other list in the app already does. The ring is inset because the
+      // card around the rows clips at its edge.
+      className="flex items-center gap-3 pl-3.5 transition-colors duration-150 hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset active:bg-muted motion-reduce:transition-none"
     >
-      {body}
+      <span
+        aria-hidden="true"
+        className={cn(
+          "flex size-10 shrink-0 items-center justify-center rounded-xl text-foreground",
+          repayment ? "bg-muted" : tile,
+        )}
+      >
+        <Glyph className="size-5" />
+      </span>
+      {/* The category is named for a screen reader; a sighted reader has the
+          glyph, and the tile's tint matching the band it came from. */}
+      {name && <span className="sr-only">{name}</span>}
+
+      {/* The hairline is drawn on this half only, so it starts where the text
+          does and the tiles stand in an unbroken column. */}
+      <span
+        className={cn(
+          "flex min-w-0 flex-1 flex-col gap-1 py-3.5 pr-3.5",
+          divided && "border-t",
+        )}
+      >
+        <span className="flex items-baseline gap-3">
+          <span className="min-w-0 flex-1 text-base leading-snug font-medium break-words">
+            {row.title}
+          </span>
+          <Amount
+            minorUnits={row.amount}
+            currency={row.currency}
+            signDisplay={row.revenue ? "always" : undefined}
+            className={cn(
+              "shrink-0 text-base leading-snug font-semibold whitespace-nowrap",
+              repayment && "font-medium text-muted-foreground",
+            )}
+          />
+        </span>
+        {(sub || row.position !== null) && (
+          <span className="flex items-baseline gap-3">
+            <span className="min-w-0 flex-1 text-xs break-words text-muted-foreground">
+              {sub}
+            </span>
+            {row.position !== null && (
+              <Position
+                minorUnits={row.position}
+                currency={row.currency}
+                kind={kindOf(row)}
+                className="shrink-0"
+              />
+            )}
+          </span>
+        )}
+      </span>
     </Link>
   );
 }

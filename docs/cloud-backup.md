@@ -182,6 +182,16 @@ group join links. A copy of the database alone yields none of them. Rotating
 `AUTH_SECRET` makes them unreadable: every destination then asks to be
 reconnected, and nothing already in the cloud is affected.
 
+A provider may hand back a new refresh token each time the old one is used
+(Microsoft does). Whenever that happens — proving a new connection, a
+reconnect, or a run — the new one is sealed in place of the old, except that a
+run never writes over details the owner gave while it was going. Balancia
+mints every access token itself and does it again before any rclone call that
+the token might not outlast, a quarter of an hour ahead: rclone could refresh
+on its own, but with its remote defined by environment variables it has
+nowhere to save what it gets back and drops it, which would leave a rotating
+provider's connection holding a spent token.
+
 ## What it protects against, and what it does not
 
 **It protects against:**
@@ -337,7 +347,11 @@ whether the token really lasts. It is in `todo/next/`.
 destination is connected), and paste or drop your recovery key.
 
 Decryption happens **in your browser**. The key is not sent anywhere, and the
-file, if it came through this server, was ciphertext on the way. You get the
+file, if it came through this server, was ciphertext on the way — passed on as it
+arrived from the cloud, never held whole. A file larger than 64 MiB is not passed
+on at all (a backup is a few megabytes after years of use; one that size would
+have been several hundred megabytes of JSON to write): download it from your
+cloud and open it here or with `age` as below. You get the
 groups found in the backup, each with **Download as JSON**. Create a group for it
 and use _Import a backup_ in group settings; the details, and what does and does
 not come back, are in [data-migration.md](data-migration.md#restoring-a-balancia-backup).
@@ -424,16 +438,43 @@ that carries one of them (`[::ffff:a9fe:a9fe]`, `[64:ff9b::a9fe:a9fe]`) is
 refused like the address itself. An S3 region is letters, digits and hyphens only,
 since with no endpoint rclone builds the host name out of it.
 
-One thing this check cannot do: a name that answers differently between the check
-and rclone's own lookup a moment later (DNS rebinding) is not caught, because
-rclone cannot be handed a pre-resolved address. Keep the setting off unless the
-people with accounts are people you would give a shell.
+Two things this check cannot do, both because it judges the address once and
+rclone then makes its own connections:
+
+- **DNS rebinding.** A name that answers differently between the check and
+  rclone's own lookup a moment later is not caught, because rclone cannot be
+  handed a pre-resolved address.
+- **Redirects.** rclone follows a redirect from a WebDAV or S3 server to any
+  other address, and has no option to stop it (checked against rclone 1.76: 301,
+  302, 307 and 308, WebDAV and S3 alike). So a public server that answers
+  "moved, try `http://10.0.0.5/…`" makes the worker send that request, which the
+  check never sees. What does hold: the credentials stay behind — rclone drops
+  the `Authorization` header when a redirect leaves the host, and Balancia never
+  sets WebDAV's `auth_redirect`, which would keep it (`rclone.test.ts` checks
+  this against the real binary). And from **rclone 1.76** a redirect from
+  `https://` to `http://` is refused unless `--allow-https-downgrade` is passed,
+  which Balancia never does; that is what keeps a public HTTPS endpoint from
+  bouncing the worker to a metadata service, which answers on plain HTTP only.
+  The image pins 1.76.0 for that reason (1.75 followed the downgrade, leaving
+  the metadata service reachable, blind and without credentials, by anyone who
+  could create a destination), and `rclone-version.test.ts` fails the build if
+  either Dockerfile goes back below it. A redirect from one plain-HTTP address
+  to another is still followed. Closing both for good needs
+  rclone's connections to pass through something that checks every address it
+  actually dials, such as a filtering proxy of Balancia's own on loopback.
+
+Keep `BACKUP_ALLOW_PRIVATE_ENDPOINTS` off unless the people with accounts are
+people you would give a shell.
 
 ### When something goes wrong
 
 Each failed run records a code and the provider's own words, scrubbed and cut to
-a few hundred characters, in the card's history. The worker logs the code and the
-destination, never a credential. The codes:
+a few hundred characters, in the card's history. Scrubbed means every password,
+key, token and client secret the connection holds is taken out by value, as typed
+and as rclone was handed it, and then anything shaped like one; the address,
+region, user name and folder stay, because they are what tells you which setting
+is wrong. The worker logs the code and the destination, never a credential. The
+codes:
 
 | Code               | Meaning                                                                                         | What happens next                                |
 | ------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------ |
@@ -447,9 +488,20 @@ destination, never a credential. The codes:
 | `endpoint_blocked` | This server refuses that address.                                                               | Retried; fix the setting or the address.         |
 | `unavailable`      | `rclone` is missing, or the provider is not enabled here.                                       | Retried.                                         |
 | `no_key`           | There is no recovery key to encrypt to.                                                         | Retried.                                         |
+| `interrupted`      | The server stopped before the run finished: a restart, an update, a process that died.          | Not counted as a failure; runs at its next turn. |
 
-After three failures in a row the card raises a banner. A run left "running" by a
-process that died is closed as failed after two hours.
+After three failures in a row the card raises a banner.
+
+Runs are queued and the worker takes them one at a time, so a run's clock starts
+when the worker picks it up, not when it was queued. A server that is stopped
+while a run is going — a restart, an update — gives it the usual twenty seconds
+to finish and then closes it as `interrupted` before it exits, so "Back up now"
+works again as soon as the server is back. A process that dies outright cannot
+do that: its run is closed the same way two hours after it started. So is a run
+that waited two hours in the queue without a worker reaching it; the sweep queues
+a fresh one straight after, and the old job, if it is ever reached, finds its run
+closed and does nothing. A run that has been closed is never reopened by the job
+that held it finishing late.
 
 ### Raising the rclone version
 

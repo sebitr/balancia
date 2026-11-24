@@ -1,6 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetEnvCache } from "@/lib/env";
-import { instanceApp, openTransport, providerAvailability } from "./transport";
+import type { RcloneRemote } from "./rclone-config";
+import {
+  instanceApp,
+  openTransport,
+  providerAvailability,
+  TOKEN_MARGIN_MS,
+} from "./transport";
+
+/** The remotes rclone was handed, in order, without running it. */
+const listed = vi.hoisted(() => [] as RcloneRemote[]);
+vi.mock("./rclone", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./rclone")>()),
+  listObjects: vi.fn(async (remote: RcloneRemote) => {
+    listed.push(remote);
+    return [];
+  }),
+}));
 
 /**
  * Which app an account provider acts as, decided where the token is minted.
@@ -124,6 +140,102 @@ describe("an account connection's app", () => {
     );
 
     expect(kept).toHaveBeenCalledWith("rt-rotated");
+  });
+
+  describe("over a run longer than an access token lasts", () => {
+    const TOKEN_ENV = "RCLONE_CONFIG_BACKUP_TOKEN";
+    const tokenIn = (remote: RcloneRemote | undefined) =>
+      JSON.parse(remote?.env[TOKEN_ENV] ?? "{}") as {
+        access_token?: string;
+        refresh_token?: string;
+      };
+
+    /** A token endpoint that rotates the refresh token on every call. */
+    function rotatingEndpoint() {
+      let issued = 0;
+      const fetchMock = vi.fn(async () => {
+        issued += 1;
+        return new Response(
+          JSON.stringify({
+            access_token: `at-${issued}`,
+            refresh_token: `rt-${issued}`,
+            expires_in: 3600,
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      return fetchMock;
+    }
+
+    beforeEach(() => {
+      listed.length = 0;
+    });
+
+    it("refreshes before a call the token might not outlast, and keeps what the provider rotated", async () => {
+      const fetchMock = rotatingEndpoint();
+      const kept = vi.fn(async () => undefined);
+      let clock = new Date("2026-10-09T03:00:00Z");
+
+      const transport = await openTransport(
+        "google_drive",
+        { refreshToken: "rt-0", app: OWN },
+        { onRefreshToken: kept, now: () => clock },
+      );
+      // Fifty minutes in: ten left on an hour's token, less than one call may take.
+      clock = new Date(
+        clock.getTime() + 3600_000 - TOKEN_MARGIN_MS + 5 * 60_000,
+      );
+      await transport.list();
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      // The second refresh presents the token the first one rotated to, not
+      // the spent one the transport was opened with.
+      expect(
+        new URLSearchParams(
+          (fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1]
+            .body as URLSearchParams,
+        ).get("refresh_token"),
+      ).toBe("rt-1");
+      expect(kept.mock.calls).toEqual([["rt-1"], ["rt-2"]]);
+      // And rclone is handed the fresh pair, so it has no reason to refresh
+      // on its own and lose what it got.
+      expect(tokenIn(listed[0])).toMatchObject({
+        access_token: "at-2",
+        refresh_token: "rt-2",
+      });
+    });
+
+    it("leaves a token with time to spare alone", async () => {
+      const fetchMock = rotatingEndpoint();
+      const clock = new Date("2026-10-09T03:00:00Z");
+
+      const transport = await openTransport(
+        "google_drive",
+        { refreshToken: "rt-0", app: OWN },
+        { now: () => clock },
+      );
+      await transport.list();
+      await transport.list();
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(tokenIn(listed[1])).toMatchObject({ access_token: "at-1" });
+    });
+
+    it("refreshes once when several calls find the token low together", async () => {
+      const fetchMock = rotatingEndpoint();
+      let clock = new Date("2026-10-09T03:00:00Z");
+      const transport = await openTransport(
+        "google_drive",
+        { refreshToken: "rt-0", app: OWN },
+        { now: () => clock },
+      );
+      clock = new Date(clock.getTime() + 3600_000);
+
+      await Promise.all([transport.list(), transport.list()]);
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
   });
 
   it("refuses a pasted app with a space or a line break in it", async () => {

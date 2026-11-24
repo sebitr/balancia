@@ -392,11 +392,14 @@ const ROW = "flex min-h-[56px] items-center gap-2.5 px-3.5";
 /** A person and one figure — who paid, who received. */
 export function PartyRow({
   name,
+  label = name,
   tone,
   minorUnits,
   currency,
 }: {
   name: string;
+  /** What the row calls them, when that is not their name: "You". */
+  label?: string;
   tone: PersonTone;
   minorUnits: string;
   currency: string;
@@ -405,7 +408,7 @@ export function PartyRow({
     <div className={ROW}>
       <PersonAvatar name={name} tone={tone} />
       <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-        {name}
+        {label}
       </span>
       <Amount
         minorUnits={minorUnits}
@@ -467,6 +470,7 @@ export function SplitList({
  */
 export function SplitRow({
   name,
+  label = name,
   tone,
   minorUnits,
   currency,
@@ -474,6 +478,8 @@ export function SplitRow({
   outcome,
 }: {
   name: string;
+  /** What the row calls them, when that is not their name: "You". */
+  label?: string;
   tone: PersonTone;
   minorUnits: string;
   currency: string;
@@ -487,7 +493,7 @@ export function SplitRow({
       <PersonAvatar name={name} tone={tone} />
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="flex items-baseline gap-2.5 text-sm font-semibold">
-          <span className="min-w-0 flex-1 truncate">{name}</span>
+          <span className="min-w-0 flex-1 truncate">{label}</span>
           <span className="shrink-0 whitespace-nowrap">
             <span className="sr-only">{figureLabel} </span>
             <Amount minorUnits={minorUnits} currency={currency} />
@@ -581,6 +587,7 @@ const CELL =
 /** One person's row in that table. */
 export function SplitTableRow({
   name,
+  label = name,
   tone,
   share,
   paid,
@@ -588,6 +595,8 @@ export function SplitTableRow({
   outcome,
 }: {
   name: string;
+  /** What the row calls them, when that is not their name: "You". */
+  label?: string;
   tone: PersonTone;
   /** Minor units, or null for somebody who paid and had no share. */
   share: string | null;
@@ -608,7 +617,7 @@ export function SplitTableRow({
       >
         <span className="flex min-w-0 items-center gap-2.5">
           <PersonAvatar name={name} tone={tone} />
-          <span className="min-w-0 truncate">{name}</span>
+          <span className="min-w-0 truncate">{label}</span>
         </span>
       </th>
       <td className={cn(CELL, "text-right")}>

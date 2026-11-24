@@ -1,3 +1,4 @@
+import { getEnv } from "@/lib/env";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { SettingsScreen } from "@/components/settings/settings-screen";
@@ -43,7 +44,7 @@ export default async function SettingsHubPage(props: PageProps<"/settings">) {
     <>
       <div className="lg:hidden">
         <SettingsScreen title={t("title")} close={{ label: t("close") }}>
-          <SettingsHub user={user} hub={hub} />
+          <SettingsHub user={user} hub={hub} demo={getEnv().DEMO_MODE} />
         </SettingsScreen>
       </div>
       <div className="hidden lg:block">

@@ -1,0 +1,10 @@
+Subject: Die E-Mail-Adresse deines Balancia-Kontos wird geändert
+
+Jemand hat angefordert, die E-Mail-Adresse deines Balancia-Kontos in sebastien@trosset.net zu ändern.
+
+Es wurde noch nichts geändert. Zunächst muss die neue Adresse bestätigt werden. Sobald das geschehen ist, funktioniert diese E-Mail-Adresse nicht mehr für dein Konto.
+
+Falls du diese Änderung nicht angefordert hast, setze jetzt dein Passwort zurück. Die Person, die diese Änderung angefordert hat, hat Zugriff auf dein Konto:
+https://balancia.app/forgot-password
+
+Wenn du die Änderung selbst angefordert hast, musst du nichts weiter unternehmen.

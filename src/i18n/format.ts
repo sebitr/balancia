@@ -250,6 +250,11 @@ export interface DateFormatter {
     value: Date | string | number,
     options?: { style?: DateStyle; time?: "short"; timeZone?: string },
   ): string;
+  /**
+   * The time of day alone, for a row that sits under a heading which already
+   * says the date. The locale writes the clock, as it does inside `at`.
+   */
+  clock(value: Date | string | number, timeZone?: string): string;
 }
 
 export function createDateFormatter(preferences: {
@@ -274,6 +279,11 @@ export function createDateFormatter(preferences: {
         style: options.style,
         time: options.time,
       }),
+    clock: (value, zone) =>
+      new Intl.DateTimeFormat(formatLocale, {
+        timeStyle: "short",
+        timeZone: zone ?? timeZone,
+      }).format(value instanceof Date ? value : new Date(value)),
   };
 }
 

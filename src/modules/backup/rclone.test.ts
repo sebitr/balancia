@@ -1,5 +1,6 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
+import { createServer as createHttpServer, type Server } from "node:http";
 import { createServer, connect } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -16,6 +17,7 @@ import {
   putObject,
   rcloneAvailable,
   readObject,
+  streamObject,
 } from "./rclone";
 
 /**
@@ -191,6 +193,57 @@ describe.skipIf(!HAVE_RCLONE)("rclone over WebDAV", () => {
     });
   });
 
+  it("hands a file over as it arrives, and errors the stream rather than ending it when it runs past the cap", async () => {
+    const target = await remote({ folder: "big" });
+
+    const stream = await streamObject(
+      target,
+      "balancia-backup-20261009T033012Z.json.gz.age",
+      { maxBytes: 1024 * 1024 },
+    );
+    const reader = stream.getReader();
+    let received = 0;
+    const reading = (async () => {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) return "ended";
+        received += value.length;
+      }
+    })();
+
+    await expect(reading).rejects.toMatchObject({
+      code: "unknown",
+      detail: expect.stringMatching(/larger/),
+    });
+    // Something did arrive before the cap: it was streamed, not held.
+    expect(received).toBeGreaterThan(0);
+    expect(received).toBeLessThanOrEqual(1024 * 1024);
+  });
+
+  it("refuses a file that is not there before handing anything back", async () => {
+    await expect(
+      streamObject(
+        await remote(),
+        "balancia-backup-20200101T000000Z.json.gz.age",
+      ),
+    ).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("reads an empty file back as an empty file", async () => {
+    const target = await remote({ folder: "empty" });
+    await ensureDirectory(target);
+    await putObject(
+      target,
+      "balancia-backup-20261009T033012Z.json.gz.age",
+      new Uint8Array(),
+    );
+
+    expect(
+      (await readObject(target, "balancia-backup-20261009T033012Z.json.gz.age"))
+        .length,
+    ).toBe(0);
+  });
+
   it("keeps backups inside the folder it was given", async () => {
     const target = await remote({ folder: "family/backups" });
     await ensureDirectory(target);
@@ -223,12 +276,19 @@ describe.skipIf(!HAVE_RCLONE)("rclone over WebDAV", () => {
     );
   });
 
-  it("calls a server that is not there unreachable", async () => {
+  it("calls a server that is not there unreachable, and says which one", async () => {
     const dead = await freePort();
 
-    await expect(
-      checkConnection(await remote({ url: `http://127.0.0.1:${dead}` })),
-    ).rejects.toMatchObject({ code: "unreachable" });
+    const attempt = checkConnection(
+      await remote({ url: `http://127.0.0.1:${dead}` }),
+    );
+
+    // The address is what the person needs to see to know what is wrong. It
+    // is not a secret, and is no longer blanked as if it were one.
+    await expect(attempt).rejects.toMatchObject({
+      code: "unreachable",
+      detail: expect.stringContaining(`127.0.0.1:${dead}`),
+    });
   });
 
   it("refuses a file name that is not one it made", async () => {
@@ -320,6 +380,63 @@ describe.skipIf(!CAN_SERVE_S3)("rclone over S3", () => {
     ).rejects.toMatchObject({
       code: expect.stringMatching(/not_found|forbidden/),
     });
+  });
+});
+
+describe.skipIf(!HAVE_RCLONE)("a server that redirects elsewhere", () => {
+  // rclone follows a redirect, and has no option to stop it: the limit is in
+  // docs/cloud-backup.md beside DNS rebinding. What must hold is that the
+  // credentials stay behind — so nothing here may set `auth_redirect`.
+  const opened: Server[] = [];
+
+  afterAll(() => {
+    for (const server of opened) server.close();
+  });
+
+  async function listening(server: Server): Promise<number> {
+    opened.push(server);
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
+    const address = server.address();
+    if (typeof address !== "object" || !address) throw new Error("no port");
+    return address.port;
+  }
+
+  it("does not take the password along to another host", async () => {
+    const reached: (string | undefined)[] = [];
+    const elsewhere = await listening(
+      createHttpServer((request, response) => {
+        reached.push(request.headers.authorization);
+        response.statusCode = 404;
+        response.end();
+      }),
+    );
+    const origin = await listening(
+      createHttpServer((request, response) => {
+        response.statusCode = 307;
+        response.setHeader(
+          "location",
+          `http://localhost:${elsewhere}${request.url ?? "/"}`,
+        );
+        response.end();
+      }),
+    );
+    const target = await buildRemote(
+      "webdav",
+      {
+        url: `http://127.0.0.1:${origin}`,
+        vendor: "other",
+        username: "ada",
+        password: "correct horse battery",
+        folder: "",
+      },
+      { obscure },
+    );
+
+    await listObjects(target).catch(() => []);
+
+    for (const authorization of reached) expect(authorization).toBeUndefined();
   });
 });
 

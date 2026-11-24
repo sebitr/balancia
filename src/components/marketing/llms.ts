@@ -160,8 +160,12 @@ No advertising, no paid tier, and no third-party service required at runtime.
 Optional integrations only make network requests when an administrator enables
 them. Telemetry exists only to improve the tool, never carries personal data or
 amounts, and is off by default on self-hosted instances. Expense category guessing
-runs locally, with no AI service involved. An AI assistant only ever sees a group
-if a signed-in person connects it; Balancia itself sends nothing to an AI vendor.
+runs locally, with no AI service involved. Receipt scanning reads the photo on the
+person's own device, unless the administrator has turned on server-side receipt
+reading and the person scanning chooses it; the photo then goes to the provider the
+administrator configured, which can be a model on their own hardware. An AI
+assistant only ever sees a group if a signed-in person connects it; apart from that
+receipt reader, Balancia itself sends nothing to an AI vendor.
 
 ## Self-hosting
 

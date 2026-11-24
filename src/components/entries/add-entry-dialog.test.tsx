@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { AddEntryDrawer } from "./add-entry-drawer";
@@ -18,19 +18,23 @@ import { AddEntryDrawer } from "./add-entry-drawer";
  * service layer's problem.
  */
 
-const { createExpense, back } = vi.hoisted(() => ({
-  createExpense: vi.fn(),
-  back: vi.fn(),
-}));
+const { createExpense, updateExpense, deleteExpense, back } = vi.hoisted(
+  () => ({
+    createExpense: vi.fn(),
+    updateExpense: vi.fn(),
+    deleteExpense: vi.fn(),
+    back: vi.fn(),
+  }),
+);
 
 vi.mock("@/modules/expenses/actions", () => ({
   createExpenseAction: createExpense,
   createSettlementAction: vi.fn(),
-  updateExpenseAction: vi.fn(),
+  updateExpenseAction: updateExpense,
   updateSettlementAction: vi.fn(),
   convertExpenseToSettlementAction: vi.fn(),
   convertSettlementToExpenseAction: vi.fn(),
-  deleteExpenseAction: vi.fn(),
+  deleteExpenseAction: deleteExpense,
   deleteSettlementAction: vi.fn(),
   restoreExpenseAction: vi.fn(),
   restoreSettlementAction: vi.fn(),
@@ -97,6 +101,10 @@ beforeEach(() => {
   atDesk(true);
   createExpense.mockReset();
   createExpense.mockResolvedValue({ ok: true, data: { expenseId: "e1" } });
+  updateExpense.mockReset();
+  updateExpense.mockResolvedValue({ ok: true, data: { expenseId: "e1" } });
+  deleteExpense.mockReset();
+  deleteExpense.mockResolvedValue({ ok: true, data: undefined });
   back.mockReset();
 });
 
@@ -124,6 +132,27 @@ function renderDialog(
     />,
   );
 }
+
+/** An expense that already exists, opened for editing. */
+const EXPENSE = {
+  kind: "expense" as const,
+  id: "e1",
+  type: "expense" as const,
+  amountText: "84.60",
+  currency: "CHF",
+  exchangeRate: "",
+  date: "2026-08-12",
+  description: "Migros",
+  category: "groceries",
+  subcategory: "",
+  notes: "",
+  payerId: "herve",
+  settleTo: null,
+  includedIds: ["seb", "herve"],
+  splitMethod: "equal" as const,
+  splitValues: {},
+  paymentMethod: "",
+};
 
 async function fillIn(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByRole("textbox", { name: "Amount" }), "42");
@@ -258,6 +287,33 @@ describe("the entry dialog on a desk", () => {
       expect(createExpense).not.toHaveBeenCalled();
     });
 
+    // React carries a key up through a portal to whoever rendered it, and
+    // the delete question is rendered by the form: its ⌘↵ used to save.
+    it("leaves ⌘↵ in “Delete this entry?” to the question", async () => {
+      const user = userEvent.setup();
+      renderDialog({ editing: EXPENSE }, "/groups/g1/expenses/e1/edit");
+      const description = screen.getByRole("textbox", { name: "Description" });
+      await user.clear(description);
+      await user.type(description, "Coop");
+
+      await user.click(
+        screen.getByRole("button", { name: "Delete this entry" }),
+      );
+      const question = await screen.findByRole("alertdialog", {
+        name: "Delete this entry?",
+      });
+      // On the question itself rather than on a button in it, which Enter
+      // would press whatever else is held.
+      fireEvent.keyDown(within(question).getByText("Delete this entry?"), {
+        key: "Enter",
+        metaKey: true,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(updateExpense).not.toHaveBeenCalled();
+      expect(question).toBeInTheDocument();
+    });
+
     it("says the key on the button, and beside it", () => {
       renderDialog();
 
@@ -305,6 +361,91 @@ describe("the entry dialog on a desk", () => {
     ).toBeInTheDocument();
     await new Promise((resolve) => setTimeout(resolve, 450));
     expect(back).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * A press on the dimmed screen beside the dialog, as Radix hears one: a
+ * pointer going down outside the layer.
+ */
+async function clickBeside() {
+  const overlay = document.querySelector('[data-slot="sheet-overlay"]');
+  // The layer starts listening a tick after it opens.
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const target = overlay ?? document.body;
+  // A primary button's press is decided on the click that ends it.
+  fireEvent.pointerDown(target);
+  fireEvent.pointerUp(target);
+  fireEvent.click(target);
+  // Radix decides on the next tick, and the sheet then takes its exit.
+  await new Promise((resolve) => setTimeout(resolve, 450));
+}
+
+describe("a click beside the dialog", () => {
+  it("closes a new expense, which its draft keeps", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await fillIn(user);
+
+    await clickBeside();
+
+    expect(back).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes an entry opened and left as it was", async () => {
+    renderDialog({ editing: EXPENSE }, "/groups/g1/expenses/e1/edit");
+
+    await clickBeside();
+
+    expect(back).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not drop a change to an entry, which nothing keeps", async () => {
+    const user = userEvent.setup();
+    renderDialog({ editing: EXPENSE }, "/groups/g1/expenses/e1/edit");
+    await user.type(
+      screen.getByRole("textbox", { name: "Description" }),
+      " and Coop",
+    );
+
+    await clickBeside();
+
+    expect(back).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("heading", { name: "Edit expense" }),
+    ).toBeInTheDocument();
+
+    // Esc is still a way out, and a deliberate one.
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(back).toHaveBeenCalledTimes(1));
+  });
+
+  it("does not drop a half-typed repayment", async () => {
+    const user = userEvent.setup();
+    renderDialog({}, "/groups/g1/expenses/new#type=settle");
+    await user.click(
+      screen.getByRole("button", { name: /Hervé pays you back/ }),
+    );
+
+    await clickBeside();
+
+    expect(back).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(back).toHaveBeenCalledTimes(1));
+  });
+
+  it("closes the phone's sheet as it always did", async () => {
+    atDesk(false);
+    const user = userEvent.setup();
+    renderDialog({ editing: EXPENSE }, "/groups/g1/expenses/e1/edit");
+    await user.type(
+      screen.getByRole("textbox", { name: "Description" }),
+      " and Coop",
+    );
+
+    await clickBeside();
+
+    expect(back).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -8,6 +8,7 @@ import {
 } from "@/components/layout/group-header-facts";
 import { GroupNav } from "@/components/layout/group-nav";
 import { GroupSwitcher } from "@/components/layout/group-switcher";
+import { KnownGroupsOwner } from "@/components/layout/known-groups";
 import { readNarrowWindow } from "@/components/layout/narrow-window-cookie";
 import { readSidebarCollapsed } from "@/components/layout/sidebar-cookie";
 import { SidebarGroupAdd } from "@/components/layout/sidebar-group-add";
@@ -153,6 +154,17 @@ export default async function GroupLayout({
    * scanner, the statistics, the reminders — arrive with the group rather
    * than with every page. Around the whole shell, the drawer slot included:
    * all of it is the group's.
+   *
+   * And whose groups the sidebar, the switcher and the palette may keep and
+   * draw again — nobody's, for a guest. See `known-groups.tsx`.
    */
-  return <AreaMessages area="group">{shell}</AreaMessages>;
+  return (
+    <AreaMessages area="group">
+      <KnownGroupsOwner
+        userId={access.actor.kind === "user" ? access.actor.userId : null}
+      >
+        {shell}
+      </KnownGroupsOwner>
+    </AreaMessages>
+  );
 }

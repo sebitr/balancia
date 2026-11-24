@@ -120,12 +120,11 @@ export function SwipeToDelete({
 
   return (
     /*
-     * The negative margins live here rather than on the row inside, so that
-     * this box and the row's own painted area are the same box. Left on the
-     * row, `overflow-hidden` would have cropped its hover fill six pixels in
-     * from each side and drawn a seam down both edges of every row.
+     * Edge to edge of the day's card, which rounds and clips the corners, so
+     * this box and the row's own painted area are the same box and the reveal
+     * behind it shows nothing either side of the row.
      */
-    <div className="relative -mx-1.5 -my-[7px] overflow-hidden rounded-[10px]">
+    <div className="relative overflow-hidden">
       {/* Paint for the finger, not a word for a screen reader: the button
           below is what says Delete, and says what it deletes. */}
       <span
@@ -142,7 +141,7 @@ export function SwipeToDelete({
           contained rather than collapsing out through a parent with no
           padding, which would leave a band of the reveal above and below every
           row as if it were a border. */}
-      <div ref={swipe} className="relative flow-root touch-pan-y bg-background">
+      <div ref={swipe} className="relative flow-root touch-pan-y bg-card">
         {children}
         {/* The same action without the gesture. Invisible until focused: a
             list of thirty rows does not need thirty visible Delete buttons,

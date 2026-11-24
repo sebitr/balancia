@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useNumberLocale } from "@/i18n/format-context";
 import {
@@ -23,6 +23,64 @@ import type { EntryKind, RowView } from "./list-filter";
  * renderer's business — under the title on a phone, inline beside it in a
  * table cell — which is why neither carries a margin of its own.
  */
+
+/**
+ * Who put the money in, said as a sentence: "You paid", "Jonas and Ravi
+ * paid", "You and Grace paid". Null on a row nobody paid.
+ *
+ * The table's folded line and the phone's second line both say it, so it is
+ * worded once, here. The returned function is stable for a given reader and
+ * language, so a list can hand it to every row without making new ones.
+ */
+export function usePayerLine(
+  self: string | null,
+): (row: RowView) => string | null {
+  const t = useTranslations("expensesList.table");
+  const namesOf = usePayerNames(self);
+
+  return useCallback(
+    (row: RowView) => {
+      if (row.payers.length === 0) return null;
+      const names = namesOf(row);
+      return t("paidByLine", {
+        who:
+          self !== null && row.payers.length === 1 && row.payers[0] === self
+            ? "you"
+            : self !== null && row.payers.includes(self)
+              ? "withYou"
+              : "other",
+        names,
+        count: row.payers.length,
+      });
+    },
+    [t, namesOf, self],
+  );
+}
+
+/**
+ * The payers' names alone, joined the way the language joins them — "Jonas
+ * and Ravi", "Jonas et Ravi" — with "You" in the reader's place. The table's
+ * Paid by column prints this; `usePayerLine` makes a sentence of it.
+ */
+export function usePayerNames(self: string | null): (row: RowView) => string {
+  const t = useTranslations("expensesList.table");
+  const locale = useLocale();
+  // One formatter for every row's payers rather than one per row.
+  const list = useMemo(
+    () => new Intl.ListFormat(locale, { style: "long", type: "conjunction" }),
+    [locale],
+  );
+
+  return useCallback(
+    (row: RowView) =>
+      list.format(
+        row.payers.map((payer, index) =>
+          payer === self ? t("you") : (row.payerNames[index] ?? ""),
+        ),
+      ),
+    [t, list, self],
+  );
+}
 
 export type BadgeKind = "revenue" | "settlement" | "recurring";
 
@@ -131,39 +189,4 @@ export function Position({
       {words}
     </span>
   );
-}
-
-/**
- * Who put the money in, as one phrase: "You paid", "Katherine paid",
- * "Jonas and Ravi paid". Null when the row records no payer.
- *
- * The phone's meta line and the desk table's folded line both say it, in the
- * one sentence the language joins its names with, so it is built here.
- */
-export function usePaidBy(
-  row: Pick<RowView, "payers" | "payerNames">,
-  self: string | null,
-): string | null {
-  const t = useTranslations("expensesList.table");
-  const locale = useLocale();
-  const list = useMemo(
-    () => new Intl.ListFormat(locale, { style: "long", type: "conjunction" }),
-    [locale],
-  );
-  if (row.payers.length === 0) return null;
-  const names = list.format(
-    row.payers.map((payer, index) =>
-      payer === self ? t("you") : (row.payerNames[index] ?? ""),
-    ),
-  );
-  return t("paidByLine", {
-    who:
-      self !== null && row.payers.length === 1 && row.payers[0] === self
-        ? "you"
-        : self !== null && row.payers.includes(self)
-          ? "withYou"
-          : "other",
-    names,
-    count: row.payers.length,
-  });
 }

@@ -17,6 +17,7 @@ import {
   type SupportedCountry,
 } from "@/modules/settlements/payment-methods";
 import { repaymentSide } from "@/modules/settlements/side";
+import { TONE } from "@/components/money/balance-tone";
 import { MethodMark } from "@/components/settlements/method-mark";
 import { PinnedActions, PinnedBody } from "./entry-sheet";
 import { MemberAvatar, MemberPill, type EntryMember } from "./pills";
@@ -280,6 +281,22 @@ function PairSide({
 }
 
 /**
+ * The ink of the selected row's figure, from the reader's side of the debt.
+ *
+ * Red where the reader pays, green where they are paid, plain ink between two
+ * other people: a pair that does not involve the reader is nobody's loss or
+ * gain from here. It was green for all three, which painted "You pay Katherine
+ * back" in the colour of money owed to you. The sentence beside it carries the
+ * words, so the colour never has to say it alone.
+ */
+function figureInk(pair: DebtPair, selfId: string | null): string {
+  const side = repaymentSide(pair, selfId);
+  if (side === "paid") return TONE.negative.ink;
+  if (side === "received") return TONE.positive.ink;
+  return "text-foreground";
+}
+
+/**
  * The outstanding debts, and the way out of them.
  *
  * The list is the fast path: almost every settlement is one of these, and
@@ -384,7 +401,9 @@ export function OutstandingList({
         {pairs.map((pair, index) => {
           const active = index === selectedIndex;
           return (
-            <li key={`${pair.fromParticipantId}-${pair.toParticipantId}`}>
+            <li
+              key={`${pair.fromParticipantId}-${pair.toParticipantId}-${pair.currency}`}
+            >
               <button
                 type="button"
                 onClick={() => onSelect(index)}
@@ -424,7 +443,7 @@ export function OutstandingList({
                     className={cn(
                       "block text-sm tabular-nums lg:shrink-0",
                       active
-                        ? "font-semibold text-positive-ink"
+                        ? cn("font-semibold", figureInk(pair, selfId))
                         : "text-muted-foreground",
                     )}
                   >

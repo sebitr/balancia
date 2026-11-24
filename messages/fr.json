@@ -102,6 +102,7 @@
     "searchLabel": "Rechercher une devise",
     "clear": "Effacer",
     "favorites": "Favoris",
+    "inGroup": "Dans ce groupe",
     "allCurrencies": "Toutes les devises",
     "results": "{count, plural, one {# résultat} other {# résultats}}",
     "favorite": "Ajouter {code} aux favoris",
@@ -801,6 +802,7 @@
     "signOut": "Se déconnecter",
     "signOutTitle": "Se déconnecter de Balancia ?",
     "signOutBody": "Tes groupes restent exactement tels quels. Il te faudra ta clé d’accès ou ton mot de passe pour revenir.",
+    "signOutBodyDemo": "Cette démo se termine quand tu te déconnectes. Crée un compte pour garder un groupe.",
     "signOutUnsent": "{count, plural, one {# transaction de cet appareil n’a pas encore été synchronisée, et la déconnexion la supprime. Sans te déconnecter, elle partira dès que tu retrouveras une connexion.} other {# transactions de cet appareil n’ont pas encore été synchronisées, et la déconnexion les supprime. Sans te déconnecter, elles partiront dès que tu retrouveras une connexion.}}",
     "signOutCancel": "Rester sur ce compte",
     "photoAdd": "Ajouter une photo",
@@ -1106,6 +1108,130 @@
     "convertedToExpense": {
       "full": "a transformé un remboursement de {before} en « {description} » ({amount})",
       "plain": "a transformé un remboursement en « {description} »"
+    },
+    "today": "Aujourd’hui",
+    "yesterday": "Hier",
+    "you": "Tu",
+    "self": {
+      "actions": {
+        "expense": {
+          "created": "as ajouté une dépense",
+          "updated": "as modifié une dépense",
+          "deleted": "as supprimé une dépense",
+          "restored": "as rétabli une dépense"
+        },
+        "settlement": {
+          "created": "as enregistré un remboursement",
+          "updated": "as modifié un remboursement",
+          "deleted": "as supprimé un remboursement",
+          "restored": "as rétabli un remboursement"
+        },
+        "member": {
+          "added": "as ajouté quelqu’un au groupe",
+          "removed": "as retiré quelqu’un du groupe",
+          "role_changed": "as changé le rôle de quelqu’un"
+        },
+        "participant": {
+          "created": "as ajouté quelqu’un au groupe",
+          "updated": "as mis à jour les informations de quelqu’un",
+          "removed": "as retiré quelqu’un du groupe",
+          "restored": "as rétabli une personne dans le groupe"
+        },
+        "guest_link": {
+          "created": "as envoyé un lien personnel à quelqu’un",
+          "revoked": "as révoqué un lien personnel",
+          "redeemed": "as ouvert ton lien personnel"
+        },
+        "recurring": {
+          "created": "as configuré une dépense récurrente",
+          "updated": "as modifié une dépense récurrente",
+          "deleted": "as supprimé une dépense récurrente",
+          "restored": "as rétabli une dépense récurrente",
+          "generated": "as ajouté une dépense automatiquement",
+          "paused": "as mis en pause une dépense récurrente",
+          "resumed": "as repris une dépense récurrente"
+        },
+        "import": {
+          "completed": "as terminé un import"
+        },
+        "group": {
+          "created": "as créé le groupe",
+          "updated": "as mis à jour le groupe",
+          "archived": "as archivé le groupe",
+          "unarchived": "as sorti le groupe des archives"
+        },
+        "reminder": {
+          "sent": "as envoyé une relance"
+        },
+        "income": {
+          "created": "as ajouté un revenu",
+          "updated": "as modifié un revenu",
+          "deleted": "as supprimé un revenu",
+          "restored": "as rétabli un revenu",
+          "generated": "as ajouté un revenu automatiquement"
+        }
+      },
+      "actionsNamed": {
+        "participant": {
+          "created": "as ajouté {name} au groupe",
+          "updated": "as mis à jour les informations concernant {name}",
+          "removed": "as retiré {name} du groupe",
+          "restored": "as rétabli {name} dans le groupe"
+        },
+        "guest_link": {
+          "created": "as envoyé un lien personnel à {name}",
+          "revoked": "as révoqué le lien personnel pour {name}"
+        },
+        "reminder": {
+          "sent": "as envoyé une relance à {name}"
+        }
+      },
+      "repaymentRecorded": {
+        "between": "as enregistré un remboursement de {amount} versé par {from} à {to}",
+        "toYou": "as enregistré un remboursement de {amount} qui t’a été versé par {from}",
+        "yours": "as enregistré ton remboursement de {amount} à {to}"
+      },
+      "repaymentEdited": {
+        "between": "as modifié le remboursement de {amount} versé par {from} à {to}",
+        "toYou": "as modifié le remboursement de {amount} qui t’a été versé par {from}",
+        "yours": "as modifié ton remboursement de {amount} à {to}"
+      },
+      "repaymentDeleted": {
+        "between": "as supprimé le remboursement de {amount} versé par {from} à {to}",
+        "toYou": "as supprimé le remboursement de {amount} qui t’a été versé par {from}",
+        "yours": "as supprimé ton remboursement de {amount} à {to}"
+      },
+      "repaymentRestored": {
+        "between": "as rétabli le remboursement de {amount} versé par {from} à {to}",
+        "toYou": "as rétabli le remboursement de {amount} qui t’a été versé par {from}",
+        "yours": "as rétabli ton remboursement de {amount} à {to}"
+      },
+      "participantRenamed": "as renommé {before} en {name}",
+      "groupCreated": "as créé le groupe « {name} »",
+      "groupChanged": {
+        "renamed": "as renommé le groupe « {before} » en « {name} »",
+        "timezone": "as réglé le fuseau horaire du groupe sur {timezone}",
+        "fields": "as mis à jour le groupe : {fields}"
+      },
+      "expenseChanged": {
+        "amount": "as changé le montant de « {description} » de {before} à {after}",
+        "renamed": "as renommé « {before} » en « {description} »",
+        "fields": "as modifié « {description} » : {fields}"
+      },
+      "left": "as quitté le groupe",
+      "joinedWithGroupLink": "as rejoint le groupe avec le lien du groupe",
+      "claimedPersonalLink": "as transformé ton lien personnel en compte",
+      "importCompleted": "{imported, plural, =0 {n’as rien importé depuis « {file} »} one {as importé # transaction depuis « {file} »} other {as importé # transactions depuis « {file} »}}{failed, plural, =0 {} one {, # n’a pas pu être importée} other {, # n’ont pas pu être importées}}",
+      "convertedToRepayment": {
+        "between": "as transformé « {description} » en un remboursement de {amount} versé par {from} à {to}",
+        "toYou": "as transformé « {description} » en un remboursement de {amount} qui t’a été versé par {from}",
+        "yours": "as transformé « {description} » en ton remboursement de {amount} à {to}",
+        "plain": "as transformé « {description} » en remboursement"
+      },
+      "convertedToExpense": {
+        "full": "as transformé un remboursement de {before} en « {description} » ({amount})",
+        "plain": "as transformé un remboursement en « {description} »"
+      }
     }
   },
   "recurring": {
@@ -1443,7 +1569,7 @@
         },
         "assistants": {
           "question": "Puis-je utiliser Balancia avec Claude, ChatGPT ou un autre assistant IA ?",
-          "answer": "Oui. Balancia est un serveur MCP : Claude, ChatGPT et les autres assistants qui acceptent les connecteurs personnalisés peuvent l’ajouter avec son adresse, puis t’envoyer sur un écran Balancia pour te connecter et appuyer sur Autoriser. Rien à installer, aucune clé à copier. Tu choisis la lecture seule ou la lecture avec modifications, tous les groupes ou un seul, et tu peux le déconnecter à tout moment depuis les Paramètres. Il agit en ton nom, ne voit jamais les coordonnées de paiement ni les adresses e-mail, et Balancia n’appelle lui-même aucun service d’IA. Les formules qui acceptent un connecteur personnalisé dépendent de l’éditeur de l’assistant."
+          "answer": "Oui. Balancia est un serveur MCP : Claude, ChatGPT et les autres assistants qui acceptent les connecteurs personnalisés peuvent l’ajouter avec son adresse, puis t’envoyer sur un écran Balancia pour te connecter et appuyer sur Autoriser. Rien à installer, aucune clé à copier. Tu choisis la lecture seule ou la lecture avec modifications, tous les groupes ou un seul, et tu peux le déconnecter à tout moment depuis les Paramètres. Il agit en ton nom, ne voit jamais les coordonnées de paiement ni les adresses e-mail, et Balancia n’appelle lui-même aucun service d’IA, sauf si l’administrateur a activé la lecture des reçus sur le serveur et que tu la choisis pour un reçu. Les formules qui acceptent un connecteur personnalisé dépendent de l’éditeur de l’assistant."
         },
         "comparison": {
           "question": "Quelle est la différence entre Balancia, Splitwise et Tricount ?",
@@ -1604,7 +1730,7 @@
       "sections": {
         "privacy": {
           "title": "Confidentialité et contrôle",
-          "body1": "En auto-hébergement, c’est toi qui choisis le serveur, le stockage, le domaine, le fournisseur d’e-mail et chaque intégration facultative. L’application n’a besoin d’aucun service extérieur pour fonctionner et la télémétrie est désactivée au départ. Les suggestions de catégorie et la lecture des reçus s’exécutent localement, sans envoyer de dépense à un service d’IA.",
+          "body1": "En auto-hébergement, c’est toi qui choisis le serveur, le stockage, le domaine, le fournisseur d’e-mail et chaque intégration facultative. L’application n’a besoin d’aucun service extérieur pour fonctionner et la télémétrie est désactivée au départ. Les suggestions de catégorie s’exécutent localement, sans envoyer de dépense à un service d’IA, et la lecture des reçus aussi, sauf si l’administrateur active la lecture sur le serveur et que la personne qui scanne la choisit ; la photo part alors chez le fournisseur choisi par l’administrateur, qui peut être un modèle sur son propre matériel.",
           "body2": "Ce contrôle est aussi une responsabilité : il faut appliquer les mises à jour, configurer HTTPS, protéger les secrets, surveiller l’instance et tester les sauvegardes. Splitwise prend ce travail en charge, et sa politique de confidentialité encadre la façon dont le service et ses prestataires traitent ce que tu saisis."
         },
         "migration": {
@@ -1746,7 +1872,7 @@
         },
         "privacy": {
           "title": "Confidentialité et contrôle",
-          "body1": "En auto-hébergement, c’est toi qui choisis le serveur, le stockage, le domaine, le fournisseur d’e-mail et chaque intégration facultative. L’application n’a besoin d’aucun service extérieur pour fonctionner et la télémétrie est désactivée au départ. Les suggestions de catégorie et la lecture des reçus s’exécutent localement, sans envoyer de dépense à un service d’IA.",
+          "body1": "En auto-hébergement, c’est toi qui choisis le serveur, le stockage, le domaine, le fournisseur d’e-mail et chaque intégration facultative. L’application n’a besoin d’aucun service extérieur pour fonctionner et la télémétrie est désactivée au départ. Les suggestions de catégorie s’exécutent localement, sans envoyer de dépense à un service d’IA, et la lecture des reçus aussi, sauf si l’administrateur active la lecture sur le serveur et que la personne qui scanne la choisit ; la photo part alors chez le fournisseur choisi par l’administrateur, qui peut être un modèle sur son propre matériel.",
           "body2": "Tricount appartient à bunq, qui l’exploite. Sa politique de confidentialité détaille les données financières, d’identification, d’appareil et d’usage utilisées pour faire fonctionner et améliorer le service, ainsi que les traitements confiés à ses prestataires. En échange, personne dans le groupe n’a de serveur, de base de données, de mises à jour ni de sauvegardes à gérer."
         },
         "migration": {
@@ -2441,7 +2567,7 @@
     "control3": "Garde activée la confirmation de ton assistant pour tout ce qui modifie quelque chose. Ajouter une dépense ou un remboursement prévient les autres membres, comme si tu l’avais fait toi-même.",
     "control4": "Il ne pourra jamais modifier ton compte, ajouter ou retirer des personnes, créer des liens d’invitation, exporter ou supprimer un groupe, ni voir les moyens de paiement de qui que ce soit.",
     "control5": "Les notes et les noms d’un groupe sont saisis par les autres membres, et l’un d’eux pourrait essayer de donner des ordres à ton assistant. Lis ce qu’il s’apprête à faire avant d’autoriser.",
-    "control6": "Une connexion prend fin d’elle-même quand tu réinitialises ton mot de passe ou changes d’adresse e-mail.",
+    "control6": "Une connexion prend fin d’elle-même quand tu changes ou réinitialises ton mot de passe, ou que tu changes d’adresse e-mail.",
     "troubleTitle": "Si ça ne marche pas",
     "trouble1": "Il ne peut pas ajouter de dépenses : il a été connecté en lecture seule. Déconnecte-le puis reconnecte-le en choisissant Lire et modifier.",
     "trouble2": "Claude ou ChatGPT dit qu’il ne peut pas joindre le serveur : l’adresse doit être accessible depuis internet en HTTPS. La personne qui gère ce Balancia peut te dire si c’est le cas.",
@@ -2494,6 +2620,8 @@
   },
   "importWizard": {
     "fileLabel": "Sauvegarde ou export",
+    "chooseFile": "Choisir un fichier",
+    "noFileChosen": "Aucun fichier choisi",
     "fileHelp": "Un export JSON Balancia, un CSV de groupe Splitwise, ou une sauvegarde JSON Splitwise, jusqu’à {limit} Mo. Le fichier est analysé sur ce serveur et n’est jamais transmis ailleurs.",
     "read": "Lire le fichier",
     "readFailed": "Ce fichier n’a pas pu être lu.",
@@ -2806,7 +2934,10 @@
     "recordSquareSub": "Tout le monde à zéro, du {from} au {to}",
     "days": "{count, plural, one {# jour} other {# jours}}",
     "percent": "{percent, number, ::.0} %",
-    "method": "Les parts utilisent les répartitions enregistrées sur chaque transaction, pas celles d’aujourd’hui. Les remboursements déplacent de l’argent entre les personnes du groupe et ne comptent jamais comme des dépenses. Les montants dans d’autres devises sont listés à part et jamais additionnés."
+    "method": "Les parts utilisent les répartitions enregistrées sur chaque transaction, pas celles d’aujourd’hui. Les remboursements déplacent de l’argent entre les personnes du groupe et ne comptent jamais comme des dépenses. Les montants dans d’autres devises sont listés à part et jamais additionnés.",
+    "you": "Toi",
+    "netAbove": "au-dessus de sa part",
+    "netBelow": "en dessous de sa part"
   },
   "recurringPage": {
     "title": "Dépenses récurrentes",
@@ -2827,7 +2958,9 @@
       "actions": "Actions",
       "footer": "{running, plural, one {# en cours} other {# en cours}}{paused, plural, =0 {} one { · # suspendue} other { · # suspendues}}",
       "footerNote": "Modifier une règle change les dépenses qu’elle ajoutera désormais. Celles déjà ajoutées restent telles quelles."
-    }
+    },
+    "due": "Échue · ajoutée au prochain passage de la tâche quotidienne du serveur",
+    "dueShort": "Échue"
   },
   "settingsPage": {
     "title": "Paramètres du groupe",
@@ -2944,7 +3077,8 @@
       "paidYou": "Tu as payé",
       "received": "{count, plural, one {{name} l’a reçu} other {# personnes l’ont reçu}}",
       "receivedYou": "Tu l’as reçu"
-    }
+    },
+    "you": "Toi"
   },
   "emails": {
     "codeLabel": "Ton code — appuie ou clique pour sélectionner",
@@ -3661,7 +3795,6 @@
       "namedByYou": "Nommé par toi",
       "notListed": "Absent de la liste",
       "useMethodName": "Utiliser « {name} »",
-      "outcomeNoMethod": "Choisis comment l’argent a changé de mains.",
       "outcomeNoPair": "Choisis qui paie qui.",
       "outcomeZero": "Saisis le montant qui a changé de mains.",
       "outcomeAwaitingRate": "Saisis le taux, pour que ce remboursement compte sur ce qui est dû.",
@@ -4290,6 +4423,8 @@
       "endpointBlockedHint": "Utilise une adresse publique, ou demande à l’administrateur d’autoriser le réseau local.",
       "unavailable": "La sauvegarde cloud n’est pas installée sur ce serveur. Demande à l’administrateur.",
       "noKey": "Il n’y a pas de clé de récupération, donc rien ne peut être chiffré.",
+      "interrupted": "Cette sauvegarde a été interrompue, en général par un redémarrage du serveur.",
+      "interruptedHint": "Les sauvegardes précédentes sont intactes. La suivante aura lieu comme prévu.",
       "unknown": "Une erreur est survenue.",
       "invalidKey": "Ce n’est pas une clé de récupération valide.",
       "tooMany": "Tu sauvegardes déjà vers le maximum d’endroits permis. Arrête-en un d’abord.",

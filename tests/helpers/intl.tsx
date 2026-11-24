@@ -2,6 +2,7 @@ import type { ReactElement, ReactNode } from "react";
 import { render, type RenderOptions } from "@testing-library/react";
 import { NextIntlClientProvider, type Messages } from "next-intl";
 import en from "../../messages/en.json";
+import de from "../../messages/de.json";
 import { clientMessages, type MessageArea } from "@/i18n/client-messages";
 import { DEFAULT_LOCALE, type AppLocale } from "@/i18n/locales";
 import fr from "../../messages/fr.json";
@@ -23,7 +24,7 @@ import fr from "../../messages/fr.json";
  * too, rather than only in the browser. `AreaMessages` itself cannot be
  * mounted in jsdom: it relies on the server's provider to fill in the locale.
  */
-const CATALOGUES: Record<AppLocale, Record<string, unknown>> = { en, fr };
+const CATALOGUES: Record<AppLocale, Record<string, unknown>> = { en, fr, de };
 
 export function renderWithIntl(
   ui: ReactElement,

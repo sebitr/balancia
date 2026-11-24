@@ -8,6 +8,7 @@ import {
   groupMembers,
   users,
 } from "@/lib/db/schema";
+import { open } from "@/lib/security/secret-box";
 import { createExpense } from "@/modules/expenses/service";
 import {
   addTestParticipant,
@@ -20,6 +21,7 @@ import { type BackupBundle } from "./bundle";
 import { BackupError } from "./errors";
 import { bundleName, destinationTag } from "./naming";
 import {
+  closeRunsInHand,
   createDestination,
   deleteDestination,
   finishSetup,
@@ -31,6 +33,7 @@ import {
   readBackupFile,
   reapStaleRuns,
   reapStaleSetups,
+  replaceCredentials,
   requestRun,
   runBackup,
   saveBackupKey,
@@ -85,8 +88,21 @@ class FakeCloud implements BackupTransport {
     this.files.delete(name);
   }
   async read(name: string) {
-    return Buffer.from(this.files.get(name) ?? []);
+    const bytes = this.files.get(name) ?? new Uint8Array();
+    return new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes);
+        controller.close();
+      },
+    });
   }
+}
+
+/** A streamed file, whole. */
+async function readAll(stream: ReadableStream<Uint8Array>): Promise<Buffer> {
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  return Buffer.concat(chunks);
 }
 
 let cloud: FakeCloud;
@@ -1007,6 +1023,70 @@ describe("what the person does while a run is going", () => {
     ).resolves.toMatchObject({ status: "succeeded" });
     expect(await listDestinations(owner.userId)).toEqual([]);
   });
+
+  describe("a refresh token the provider rotates during the run", () => {
+    async function sealedRefreshToken(id: string) {
+      const [row] = await getDb()
+        .select({ credentials: backupDestinations.credentials })
+        .from(backupDestinations)
+        .where(eq(backupDestinations.id, id));
+      const plain = open("backup-destination", row?.credentials ?? null);
+      return (
+        JSON.parse(plain ?? "{}") as {
+          credentials?: { refreshToken?: string };
+        }
+      ).credentials?.refreshToken;
+    }
+
+    async function driveDestination() {
+      const { owner } = await setUp();
+      await createTestGroup(owner);
+      const { id } = await createDestination(
+        owner.userId,
+        { provider: "google_drive", credentials: { refreshToken: "rt-0" } },
+        seams(),
+      );
+      return { owner, id };
+    }
+
+    it("is kept for the next run", async () => {
+      const { id } = await driveDestination();
+
+      await runBackup(id, {
+        trigger: "schedule",
+        ...seams(),
+        openTransport: async (_provider, _credentials, options) => {
+          await options?.onRefreshToken?.("rt-1");
+          // A long run refreshes again before a later call, from the new one.
+          await options?.onRefreshToken?.("rt-2");
+          return cloud;
+        },
+      });
+
+      expect(await sealedRefreshToken(id)).toBe("rt-2");
+    });
+
+    it("does not overwrite a reconnect made while the run went on", async () => {
+      const { owner, id } = await driveDestination();
+
+      await runBackup(id, {
+        trigger: "schedule",
+        ...seams(),
+        openTransport: async (_provider, _credentials, options) => {
+          await replaceCredentials(
+            owner.userId,
+            id,
+            { refreshToken: "rt-reconnected" },
+            seams(),
+          );
+          await options?.onRefreshToken?.("rt-1");
+          return cloud;
+        },
+      });
+
+      expect(await sealedRefreshToken(id)).toBe("rt-reconnected");
+    });
+  });
 });
 
 describe("the schedule", () => {
@@ -1107,8 +1187,114 @@ describe("the schedule", () => {
     expect(await reapStaleRuns(clock)).toBe(1);
     expect((await listRuns(owner.userId, id))[0]).toMatchObject({
       status: "failed",
-      errorCode: "unknown",
+      errorCode: "interrupted",
     });
+  });
+
+  it("counts a queued run's two hours from when a worker picks it up, not from when it was queued", async () => {
+    const { owner } = await setUp();
+    await createTestGroup(owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    const queued = await requestRun(owner.userId, id, seams());
+    if (queued.status !== "queued") throw new Error("not queued");
+
+    // A busy night: the worker reaches it an hour and a half later.
+    clock = new Date(clock.getTime() + 90 * 60_000);
+    const pickedUp = clock;
+    const put = cloud.put.bind(cloud);
+    let reaped = -1;
+    cloud.put = async (name, bytes) => {
+      // Forty minutes into the work, two hours and ten since it was queued.
+      reaped = await reapStaleRuns(new Date(pickedUp.getTime() + 40 * 60_000));
+      await put(name, bytes);
+    };
+
+    const outcome = await runBackup(id, {
+      trigger: "manual",
+      runId: queued.runId,
+      ...seams(),
+    });
+
+    expect(reaped).toBe(0);
+    expect(outcome?.status).toBe("succeeded");
+    expect((await listRuns(owner.userId, id))[0]).toMatchObject({
+      id: queued.runId,
+      status: "succeeded",
+      startedAt: pickedUp,
+    });
+  });
+
+  it("does nothing with a job whose run was given up on while it waited", async () => {
+    const { owner } = await setUp();
+    await createTestGroup(owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    const queued = await requestRun(owner.userId, id, seams());
+    if (queued.status !== "queued") throw new Error("not queued");
+    clock = new Date(clock.getTime() + 2 * 3_600_000 + 60_000);
+    // Reaps the run that never started, and queues its replacement.
+    expect((await sweepDueBackups({ now: clock })).queued).toBe(1);
+
+    // The worker reaches the old job at last.
+    const outcome = await runBackup(id, {
+      trigger: "manual",
+      runId: queued.runId,
+      ...seams(),
+    });
+
+    expect(outcome).toBeNull();
+    expect(cloud.files.size).toBe(0);
+    const runs = await listRuns(owner.userId, id);
+    expect(runs.find((run) => run.id === queued.runId)).toMatchObject({
+      status: "failed",
+      errorCode: "interrupted",
+    });
+    // The replacement is left to its own job.
+    expect(runs.filter((run) => run.status === "running")).toHaveLength(1);
+    expect((await listDestinations(owner.userId))[0]?.lastRunAt).toBeNull();
+  });
+
+  it("closes the run it was in the middle of when the server stops, and the late finish does not reopen it", async () => {
+    const { owner } = await setUp();
+    await createTestGroup(owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    const put = cloud.put.bind(cloud);
+    let closedByStop = -1;
+    cloud.put = async (name, bytes) => {
+      // The queue has stopped and given up on this job; the upload, already
+      // under way, carries on for a moment.
+      closedByStop = await closeRunsInHand(clock);
+      await put(name, bytes);
+    };
+
+    await runBackup(id, { trigger: "schedule", ...seams() });
+
+    expect(closedByStop).toBe(1);
+    expect((await listRuns(owner.userId, id))[0]).toMatchObject({
+      status: "failed",
+      errorCode: "interrupted",
+    });
+    // Not the destination's fault, and not its success either: nothing is
+    // counted, and the run that was due is still due.
+    const [view] = await listDestinations(owner.userId);
+    expect(view).toMatchObject({
+      lastSuccessAt: null,
+      consecutiveFailures: 0,
+      status: "active",
+    });
+    expect(await closeRunsInHand(clock)).toBe(0);
+    expect((await sweepDueBackups({ now: clock })).queued).toBe(1);
   });
 
   it("resumes a paused destination straight away", async () => {
@@ -1363,7 +1549,9 @@ describe("reading backups back", () => {
     await runBackup(id, { trigger: "manual", ...seams() });
     const name = nameAt(id, clock);
 
-    const bytes = await readBackupFile(owner.userId, id, name, seams());
+    const bytes = await readAll(
+      await readBackupFile(owner.userId, id, name, seams()),
+    );
 
     expect(
       Buffer.from(bytes).equals(Buffer.from(cloud.files.get(name) ?? [])),

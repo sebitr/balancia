@@ -13,11 +13,11 @@ account, sits behind a session or an invitation, and is kept out of every index
 
 ## 1. The public pages
 
-| Page                  | English                  | French                      |
-| --------------------- | ------------------------ | --------------------------- |
-| Homepage              | `/`                      | `/fr`                       |
-| Balancia vs Splitwise | `/splitwise-alternative` | `/fr/alternative-splitwise` |
-| Balancia vs tricount  | `/tricount-alternative`  | `/fr/alternative-tricount`  |
+| Page                  | English                  | French                      | German                      |
+| --------------------- | ------------------------ | --------------------------- | --------------------------- |
+| Homepage              | `/`                      | `/fr`                       | `/de`                       |
+| Balancia vs Splitwise | `/splitwise-alternative` | `/fr/alternative-splitwise` | `/de/splitwise-alternative` |
+| Balancia vs tricount  | `/tricount-alternative`  | `/fr/alternative-tricount`  | `/de/tricount-alternative`  |
 
 One table in the source says what they are: `src/lib/public-pages.ts`. The
 proxy, the `<link rel="alternate">` tags, the sitemap, `/llms.txt` and the test
@@ -30,17 +30,17 @@ quietly disagree with the code.
 Inside the application a reader's language comes from their cookie, then their
 browser. That is right for a private screen and wrong for a public one: a
 crawler sends neither, so while the homepage chose its language that way it was
-only ever read in English, and the French copy — written for French searches,
-with its own questions — was in no index at all.
+only ever read in English, and the translated copies — written for searches
+in their own languages — were in no index at all.
 
 So a public page has one address per language, and the address decides. `/fr`
-is French to everybody. `proxy.ts` reads the language off the path and hands it
-to the render in a request header, which the root layout reads too — that is
-where `<html lang>` is written. English has no prefix: it is the language those
-addresses were already indexed in.
+is French and `/de` German to everybody. `proxy.ts` reads the language off the
+path and hands it to the render in a request header, which the root layout
+reads too — that is where `<html lang>` is written. English has no prefix: it
+is the language those addresses were already indexed in.
 
 English pages are a folder each under `src/app`, named after the page. Every
-other language is a folder named after itself — `src/app/fr/` — holding two
+other language is a folder named after itself — `src/app/fr/` or `src/app/de/` — holding two
 small files: its homepage, which re-exports the English one, and a `[slug]`
 route that looks the address up in the table and renders the same component.
 
@@ -56,7 +56,8 @@ Two things follow from "one address, one page":
   under its English slug — goes to `/fr/alternative-splitwise`. Nothing is
   ever readable at two URLs.
 - **`/` sends a reader on, once.** Somebody whose cookie or browser asks for
-  French and who opens `/` is redirected to `/fr`. It is the one address that
+  whose language Balancia supports and who opens `/` is redirected to that
+  language's homepage. It is the one address that
   does this, because it is the one people type; a crawler states no preference
   and reads English there. Choosing a language from the menu writes the cookie
   first, so choosing English from `/fr` is not undone by the page it leads to.

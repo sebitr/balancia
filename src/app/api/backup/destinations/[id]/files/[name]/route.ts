@@ -55,11 +55,15 @@ async function handleGet(
   }
 
   try {
-    const bytes = await readBackupFile(user.userId, id, name);
-    return new NextResponse(new Uint8Array(bytes), {
+    // Passed through as it arrives, never held: the file is ciphertext this
+    // server cannot open, and holding it whole cost the web process up to three
+    // copies of it. No length is promised, since none is known until the end;
+    // a file cut short errors the response rather than ending it, so the
+    // browser sees a failed download and never a short one.
+    const body = await readBackupFile(user.userId, id, name);
+    return new NextResponse(body, {
       headers: {
         "Content-Type": "application/octet-stream",
-        "Content-Length": String(bytes.length),
         "Content-Disposition": `attachment; filename="${name}"`,
         "Cache-Control": "no-store",
         "X-Content-Type-Options": "nosniff",

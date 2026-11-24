@@ -182,6 +182,13 @@ const ALLOCATION_MESSAGE_KEYS = {
   percentageSumMismatch: "percentageSumMismatch",
   shareNegative: "shareNegative",
   sharesAllZero: "sharesAllZero",
+  // The preview never checks payers, and offers each person once; these come
+  // from the APIs only, and would be a bug here.
+  participantDuplicate: "invalid",
+  payerRequired: "invalid",
+  payerDuplicate: "invalid",
+  payerNegative: "invalid",
+  payerSumMismatch: "invalid",
   internal: "invalid",
 } as const satisfies Record<AllocationErrorCode, SplitMessageKey>;
 

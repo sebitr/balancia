@@ -33,7 +33,8 @@ vi.mock("@/components/ui/sheet", () => ({
 function renderPicker({
   value = "CHF",
   favorites = [],
-}: { value?: string; favorites?: string[] } = {}) {
+  suggested,
+}: { value?: string; favorites?: string[]; suggested?: string[] } = {}) {
   const onSelect = vi.fn();
   const onBack = vi.fn();
   const view = renderWithIntl(
@@ -43,6 +44,7 @@ function renderPicker({
         title="Currency"
         onSelect={onSelect}
         onBack={onBack}
+        suggested={suggested}
       />
     </CurrencyFavoritesProvider>,
   );
@@ -94,6 +96,31 @@ describe("the currency picker", () => {
     expect(
       screen.getByRole("heading", { name: "All currencies" }),
     ).toBeInTheDocument();
+  });
+
+  it("leads with the group's currencies, in the order given, listed once", () => {
+    renderPicker({ suggested: ["JPY", "EUR"], favorites: ["JPY", "THB"] });
+
+    const group = section("In this group");
+    expect(
+      group.getAllByRole("button", { name: /^(JPY|EUR)/ }).map(codeOf),
+    ).toEqual(["JPY", "EUR"]);
+    // A starred currency the group also holds stays in the group's section.
+    expect(
+      section("Favourites").queryByRole("button", { name: /^JPY/ }),
+    ).toBeNull();
+    expect(
+      section("All currencies").queryByRole("button", { name: /^EUR/ }),
+    ).toBeNull();
+    const headings = screen
+      .getAllByRole("heading", { level: 3 })
+      .map((heading) => heading.textContent);
+    expect(headings.slice(0, 2)).toEqual(["In this group", "Favourites"]);
+  });
+
+  it("leaves the group section out when it has nothing to show", () => {
+    renderPicker({ suggested: [] });
+    expect(screen.queryByRole("heading", { name: "In this group" })).toBeNull();
   });
 
   it("marks the currency already chosen without moving it", () => {

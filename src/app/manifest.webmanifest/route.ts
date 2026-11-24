@@ -18,7 +18,8 @@ export function GET() {
     start_url: "/dashboard",
     scope: "/",
     display: "standalone",
-    orientation: "portrait-primary",
+    // No `orientation`: a manifest that sets one locks the installed app to
+    // it, which fails WCAG 1.3.4 for anyone whose device is fixed in landscape.
     // The same two values the root layout tints the browser chrome with,
     // rather than a second copy that can disagree with it.
     background_color: themeColorFor("cream"),

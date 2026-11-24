@@ -1,6 +1,7 @@
 import { createTranslator } from "use-intl/core";
 import en from "../../messages/en.json";
 import fr from "../../messages/fr.json";
+import de from "../../messages/de.json";
 import { DEFAULT_LOCALE, isAppLocale, type AppLocale } from "./locales";
 
 /**
@@ -22,7 +23,7 @@ import { DEFAULT_LOCALE, isAppLocale, type AppLocale } from "./locales";
  * with — next-intl only passes it through — and its `core` entry touches no
  * React at all.
  */
-const CATALOGUES: Record<AppLocale, Record<string, unknown>> = { en, fr };
+const CATALOGUES: Record<AppLocale, Record<string, unknown>> = { en, fr, de };
 
 /** The locale a background translator will actually use. */
 export function resolveLocale(locale: string | null | undefined): AppLocale {

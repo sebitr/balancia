@@ -25,10 +25,21 @@ import { MoneyDecimal } from "@/modules/currencies/money";
  * `code` is what the UI translates. Everything a user can actually trigger by
  * typing into the expense form has its own code — `internal` covers the
  * defensive invariants, which are bugs rather than input problems.
+ *
+ * The payer codes and `participantDuplicate` cannot come from the form, which
+ * offers each person once and fills the payer's amount itself. They have codes
+ * because the APIs can send them, and the MCP server has to say what went wrong
+ * in its own words: in major units with a currency, and with a name rather than
+ * an id — never the minor units and UUIDs these messages carry.
  */
 export type AllocationErrorCode =
   | "internal"
   | "participantsRequired"
+  | "participantDuplicate"
+  | "payerRequired"
+  | "payerDuplicate"
+  | "payerNegative"
+  | "payerSumMismatch"
   | "valueRequired"
   | "valueNotDecimal"
   | "valueNotInteger"

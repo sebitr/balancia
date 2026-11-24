@@ -25,6 +25,12 @@ export interface RecurringRowView {
    * Null while paused, and for a series that has no date left.
    */
   readonly next: string | null;
+  /**
+   * Whether that date has already passed: the server's daily job has not run
+   * since, as on a demo server, which runs none. A past date under "Next" is
+   * a promise that has visibly been broken, so the row says it is due.
+   */
+  readonly overdue: boolean;
   readonly paused: boolean;
   readonly generatedCount: number;
 }
@@ -91,7 +97,9 @@ export function RecurringTable({
     row.paused
       ? t("pausedNote")
       : row.next !== null
-        ? t("next", { date: row.next })
+        ? row.overdue
+          ? t("due")
+          : t("next", { date: row.next })
         : t("noFurther");
 
   const generatedOf = (row: RecurringRowView): string | null =>
@@ -197,7 +205,9 @@ export function RecurringTable({
                           in it; the two sentences that are not a date say
                           what they say on the phone. */}
                       {!row.paused && row.next !== null
-                        ? row.next
+                        ? row.overdue
+                          ? t("dueShort")
+                          : row.next
                         : nextOf(row)}
                     </span>
                     {generated && (

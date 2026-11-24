@@ -50,6 +50,25 @@ function directionFrom(pathname: string, tab: string): string | null {
     .getAttribute("data-transition");
 }
 
+describe("GroupNav at 320px", () => {
+  it("lets every tab shrink and truncate instead of running off the bar", () => {
+    // jsdom has no layout, so what is held is the classes that make the five
+    // tabs share 304px: sized by their words, allowed to shrink below them,
+    // and a label that truncates rather than overflows. The reasoned widths
+    // are in the comment in `group-nav.tsx`.
+    cleanup();
+    nav.pathname = "/groups/g1";
+    renderWithIntl(<GroupNav groupId="g1" />);
+    for (const link of screen.getAllByRole("link")) {
+      expect(link.parentElement?.className).toContain("min-w-0");
+      expect(link.parentElement?.className).toContain("flex-auto");
+      expect(link.className).toContain("min-w-0");
+      expect(link.className).toContain("text-2xs");
+      expect(link.querySelector(".truncate")).not.toBeNull();
+    }
+  });
+});
+
 describe("GroupNav", () => {
   it("slides forward towards a tab further along the bar", () => {
     expect(directionFrom("/groups/g1", "Transactions")).toBe("switch-forward");

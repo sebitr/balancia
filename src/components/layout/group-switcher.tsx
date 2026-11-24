@@ -19,7 +19,8 @@ import {
   type SwitcherGroup,
 } from "@/modules/balances/actions";
 import { BalanciaMark } from "@/components/brand/wordmark";
-import { equivalentPath, GroupRow, useKnownGroups } from "./sidebar-groups";
+import { useKnownGroups } from "./known-groups";
+import { equivalentPath, GroupRow } from "./sidebar-groups";
 
 export { equivalentPath };
 

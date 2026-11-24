@@ -601,7 +601,7 @@ export function SplitSheet({
   if (inline) return <div className="flex flex-col gap-4">{body}</div>;
 
   return (
-    <div className="flex min-h-0 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       {/* Held above the scroll, so the total every share is a part of stays
           in sight while the shares are typed. */}
       <div className="mb-4 flex shrink-0 items-baseline justify-between gap-3">
@@ -613,7 +613,11 @@ export function SplitSheet({
         </span>
       </div>
 
-      <PinnedBody>{body}</PinnedBody>
+      {/* `flex-1`: the sheet has a height of its own (see the form's
+          `sheet === "split"` class), and the body takes all of it that the
+          title and the button leave, so rows appearing or going under the
+          chips never move the chips. */}
+      <PinnedBody className="flex-1">{body}</PinnedBody>
 
       {/* Pinned rather than last. At the end of the sheet it was below the
           edge on any split worth opening this for, and the exact amounts put

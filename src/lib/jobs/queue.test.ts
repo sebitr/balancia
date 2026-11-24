@@ -151,6 +151,57 @@ describe("stopBoss", () => {
   });
 });
 
+describe("after the queue has stopped", () => {
+  it("runs each hook once, after pg-boss has let go of the jobs in hand", async () => {
+    const { getBoss, stopBoss, onQueueStopped } = await loadQueue();
+    await getBoss();
+    const order: string[] = [];
+    pgBoss.state.stop = async () => {
+      order.push("pg-boss stopped");
+    };
+    const hook = vi.fn(async () => {
+      order.push("hook");
+    });
+    onQueueStopped(hook);
+    onQueueStopped(hook);
+
+    await stopBoss();
+
+    expect(order).toEqual(["pg-boss stopped", "hook"]);
+  });
+
+  it("still stops when a hook fails", async () => {
+    const { getBoss, stopBoss, onQueueStopped } = await loadQueue();
+    await getBoss();
+    const later = vi.fn(async () => {});
+    onQueueStopped(async () => {
+      throw new Error("database gone");
+    });
+    onQueueStopped(later);
+
+    await expect(stopBoss()).resolves.toBeUndefined();
+    expect(later).toHaveBeenCalled();
+  });
+
+  it("stops waiting for the hooks once their budget is spent", async () => {
+    const { getBoss, stopBoss, onQueueStopped, SETTLE_MS } = await loadQueue();
+    await getBoss();
+    onQueueStopped(() => new Promise(() => {}));
+    vi.useFakeTimers();
+
+    let stopped = false;
+    const stopping = stopBoss().then(() => {
+      stopped = true;
+    });
+
+    await vi.advanceTimersByTimeAsync(SETTLE_MS - 1);
+    expect(stopped).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    await stopping;
+    expect(stopped).toBe(true);
+  });
+});
+
 /**
  * The seconds a Compose file allows between SIGTERM and SIGKILL, for one
  * service. Read as text, like env.test.ts reads compose.yaml: the files are
@@ -180,11 +231,12 @@ describe("the drain fits inside every grace period", () => {
   ])("%s gives %s long enough to drain and close", async (file, service) => {
     // Past the grace period Docker sends SIGKILL, and a job still running
     // then is neither finished nor handed back: it sits as active until it
-    // expires. The drain and pg-boss's own close must both fit, with time
-    // left over for the process to exit.
-    const { SHUTDOWN_DRAIN_MS, STOP_SLACK_MS } = await loadQueue();
+    // expires. The drain, pg-boss's own close and the hooks that tidy up
+    // after a cut job must all fit, with time left over for the process to
+    // exit.
+    const { SHUTDOWN_DRAIN_MS, STOP_SLACK_MS, SETTLE_MS } = await loadQueue();
     expect(gracePeriodSeconds(file, service) * 1000).toBeGreaterThan(
-      SHUTDOWN_DRAIN_MS + STOP_SLACK_MS,
+      SHUTDOWN_DRAIN_MS + STOP_SLACK_MS + SETTLE_MS,
     );
   });
 });

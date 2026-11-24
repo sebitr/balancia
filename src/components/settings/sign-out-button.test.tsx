@@ -36,6 +36,11 @@ vi.mock("@/lib/offline/outbox", () => ({
 vi.mock("@/lib/offline/forget", () => ({
   forgetDevice: () => forgetDevice(),
 }));
+// The list of groups the sidebar keeps for the length of the page: nothing
+// reloads it on the way out, so the next account to sign in would be drawn it.
+vi.mock("@/components/layout/known-groups", () => ({
+  forgetKnownGroups: () => steps.push("forget groups"),
+}));
 vi.mock("@/modules/auth/actions", () => ({
   signOutAction: () => signOutAction(),
   deleteAccountAction: (input: unknown) => deleteAccountAction(input),
@@ -109,6 +114,28 @@ async function openSheet() {
 }
 
 describe("SignOutButton", () => {
+  it("promises the usual return on a real instance", async () => {
+    await openSheet();
+    expect(
+      within(screen.getByRole("alertdialog")).getByText(
+        /You will need your passkey or password to come back/,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says the visit ends, on the demo, where there is no passkey to come back with", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<SignOutButton demo />);
+    await user.click(screen.getByRole("button", { name: "Sign out" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(
+      within(dialog).getByText(
+        "This demo ends when you sign out. Create an account to keep a group.",
+      ),
+    ).toBeInTheDocument();
+    expect(dialog).not.toHaveTextContent("passkey");
+  });
+
   it("asks plainly when nothing is waiting to be sent", async () => {
     await openSheet();
 
@@ -155,6 +182,7 @@ describe("SignOutButton", () => {
 
     await waitFor(() =>
       expect(steps).toEqual([
+        "forget groups",
         "forget",
         // While the session still exists: the server's record of this device
         // is removed as the account that owns it.
@@ -210,7 +238,12 @@ describe("SignOutButton", () => {
     );
 
     await waitFor(() =>
-      expect(steps).toEqual(["forget", "DELETE /api/auth/session", "action"]),
+      expect(steps).toEqual([
+        "forget groups",
+        "forget",
+        "DELETE /api/auth/session",
+        "action",
+      ]),
     );
   });
 });
@@ -246,6 +279,7 @@ describe("DangerCard", () => {
     // nothing to do, and the browser's half is what kills the endpoint.
     await waitFor(() =>
       expect(steps).toEqual([
+        "forget groups",
         "forget",
         "DELETE /api/push/subscriptions",
         "unsubscribe",

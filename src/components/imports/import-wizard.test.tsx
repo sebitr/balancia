@@ -42,12 +42,21 @@ function exportOf(bytes: number): File {
 async function choose(file: File) {
   const user = userEvent.setup();
   renderWithIntl(<ImportWizard groupId="group-1" />);
-  const input = screen.getByLabelText<HTMLInputElement>("Backup or export");
+  const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
   await user.upload(input, file);
   return { user, input };
 }
 
 describe("ImportWizard upload", () => {
+  it("shows its own button and the chosen file's name, not the browser's wording", async () => {
+    await choose(exportOf(10));
+    expect(
+      screen.getByRole("button", { name: "Choose a file" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("No file chosen")).not.toBeInTheDocument();
+    expect(screen.getByText("splitwise.csv")).toBeInTheDocument();
+  });
+
   it("says how large a file it takes", () => {
     renderWithIntl(<ImportWizard groupId="group-1" />);
     expect(screen.getByText(/up to 1 MB/)).toBeInTheDocument();

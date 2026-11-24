@@ -85,9 +85,9 @@ export const UNCHOSEN_ACCOUNT_ACCENT: AccentColor = "coral";
  *
  * One seed per accent rather than a light one and a dark one, because
  * `--primary` has always been the same in both themes here — see the `:root`
- * and `.dark` blocks in `globals.css`. Every one of these sits between 0.70
- * and 0.78 lightness, which is what keeps the plum `--primary-foreground`
- * readable on all seven without a second table.
+ * and `.dark` blocks in `globals.css`. Six of these sit between 0.70 and 0.78
+ * lightness, which keeps the deep plum `--primary-foreground` readable on
+ * them; plum is darker and has its own foreground, `ACCENT_FOREGROUNDS`.
  *
  * Three of them are a near neighbour of a money colour: coral is two degrees
  * from the "you owe" red, mint is the "gets back" green to the last digit,
@@ -102,7 +102,30 @@ export const ACCENT_SEEDS: Record<AccentColor, Oklch> = {
   ocean: { l: 0.71, c: 0.12, h: 235 },
   lavender: { l: 0.72, c: 0.13, h: 300 },
   raspberry: { l: 0.7, c: 0.17, h: 350 },
-  plum: { l: 0.71, c: 0.048, h: 319 },
+  plum: { l: 0.52, c: 0.09, h: 319 },
+};
+
+/**
+ * The text on each accent's fill — what `--primary-foreground` becomes.
+ *
+ * Six of the seven fills are light (L 0.70–0.78) and carry the deep plum ink,
+ * the same literal `globals.css` declares. Plum, the default, is the exception:
+ * its fill used to sit at L 0.71 with near-grey chroma, which measured 2.5:1
+ * on the cream page and made a ready "Add expense" look the same as a disabled
+ * one. It now has real weight (L 0.52, C 0.09), and cream reads on that at
+ * 5:1 in both themes, so it carries cream.
+ */
+const DEEP_PLUM_INK: Oklch = { l: 0.226, c: 0.072, h: 319 };
+const CREAM_INK: Oklch = { l: 0.977, c: 0.007, h: 85 };
+
+export const ACCENT_FOREGROUNDS: Record<AccentColor, Oklch> = {
+  coral: DEEP_PLUM_INK,
+  amber: DEEP_PLUM_INK,
+  mint: DEEP_PLUM_INK,
+  ocean: DEEP_PLUM_INK,
+  lavender: DEEP_PLUM_INK,
+  raspberry: DEEP_PLUM_INK,
+  plum: CREAM_INK,
 };
 
 /**
@@ -189,8 +212,10 @@ export function tonePair(fill: Oklch, theme: Theme): TonePair {
 }
 
 export interface AccentPalette {
-  /** The accent itself; `--primary` and the ring. */
+  /** The accent itself; `--primary`. */
   readonly fill: Oklch;
+  /** The text on that fill; `--primary-foreground`. */
+  readonly foreground: Oklch;
   /** The accent as text, per theme. */
   readonly ink: Record<Theme, Oklch>;
   /** The same at 7:1, for the increased-contrast setting. */
@@ -237,6 +262,7 @@ export function accentPalette(accent: AccentColor): AccentPalette {
   const own = { light: tonePair(seed, "light"), dark: tonePair(seed, "dark") };
   const palette: AccentPalette = {
     fill: seed,
+    foreground: ACCENT_FOREGROUNDS[accent],
     ink: { light: own.light.ink, dark: own.dark.ink },
     inkMore: { light: own.light.inkMore, dark: own.dark.inkMore },
   };
@@ -250,15 +276,16 @@ export function accentCss(accent: AccentColor): string {
 }
 
 /**
- * The variables the accent actually lives in — six, and no more.
+ * The variables the accent actually lives in — seven.
  *
- * `--primary` and `--ring` are the same colour by definition; leaving one
- * behind would give a coral focus ring on a mint button, which reads as a bug
- * rather than as a palette. The sidebar pair is no longer written here: the
- * stylesheet points `--sidebar-primary` and `--sidebar-ring` at these two, so
- * they follow without being said twice. Both are literal values, so every
- * parser that reads a bare `oklch()` — the email test, the token test, the
- * iOS drift script — keeps working.
+ * `--primary` and the text on it, `--primary-foreground` and the sidebar's
+ * copy of it, plus the two inks in each theme. The focus ring is not painted
+ * here any more: `globals.css` points `--ring` at `--primary-ink`, because the
+ * fill is a graphical object that owes only itself and a ring owes the page
+ * 3:1 (WCAG 2.2 1.4.11), which plum's fill never gave. The ink is already held
+ * to 4.5:1 on every surface, so the ring inherits that and follows the
+ * increased-contrast setting for free. Both are literal values, so every
+ * parser that reads a bare `oklch()` keeps working.
  *
  * The inks come in a light and a dark form, because an inline declaration
  * cannot tell which theme it is in and the two need different lightness.
@@ -278,7 +305,8 @@ export function accentTokens(accent: AccentColor): Record<string, string> {
   const fill = formatOklch(palette.fill);
   const tokens: Record<string, string> = {
     "--primary": fill,
-    "--ring": fill,
+    "--primary-foreground": formatOklch(palette.foreground),
+    "--sidebar-primary-foreground": formatOklch(palette.foreground),
   };
   for (const theme of THEMES) {
     tokens[`--accent-ink-${theme}`] = formatOklch(palette.ink[theme]);

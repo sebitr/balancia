@@ -39,6 +39,10 @@ vi.mock("next/link", () => ({
 const { SidebarGroups, SidebarGroupsFallback } =
   await import("./sidebar-groups");
 const { SidebarFrame } = await import("./sidebar-context");
+const { KnownGroupsOwner, forgetKnownGroups } = await import("./known-groups");
+
+/** The account every screen in this file is drawn for, unless it says. */
+const ADA = "user-ada";
 
 function group(
   id: string,
@@ -88,11 +92,13 @@ function renderList(
     pathname = "/dashboard",
     collapsed = false,
     failed = false,
+    owner = ADA,
   }: {
     groupId?: string | null;
     pathname?: string;
     collapsed?: boolean;
     failed?: boolean;
+    owner?: string | null;
   } = {},
 ) {
   cleanup();
@@ -101,31 +107,79 @@ function renderList(
     ? "balancia_sidebar=collapsed; path=/"
     : "balancia_sidebar=; path=/; max-age=0";
   renderWithIntl(
-    <SidebarFrame initialCollapsed={collapsed}>
-      <SidebarGroups groups={groups} groupId={groupId} failed={failed} />
-    </SidebarFrame>,
+    <KnownGroupsOwner userId={owner}>
+      <SidebarFrame initialCollapsed={collapsed}>
+        <SidebarGroups groups={groups} groupId={groupId} failed={failed} />
+      </SidebarFrame>
+    </KnownGroupsOwner>,
   );
+}
+
+function renderFallback(groupId: string | null, owner: string | null = ADA) {
+  cleanup();
+  renderWithIntl(
+    <KnownGroupsOwner userId={owner}>
+      <SidebarGroupsFallback groupId={groupId} />
+    </KnownGroupsOwner>,
+  );
+}
+
+function hrefs() {
+  return screen.queryAllByRole("link").map((link) => link.getAttribute("href"));
 }
 
 describe("SidebarGroupsFallback", () => {
   // First in the file: nothing has been drawn on this "page" yet.
   it("draws placeholder rows before any list has arrived", () => {
-    cleanup();
-    renderWithIntl(<SidebarGroupsFallback groupId={null} />);
+    renderFallback(null);
     expect(screen.queryAllByRole("link")).toHaveLength(0);
   });
 
   it("draws the last list instead, once there has been one", () => {
     renderList([LISBON, FLAT]);
-    cleanup();
-    renderWithIntl(<SidebarGroupsFallback groupId="g2" />);
-    expect(
-      screen.getAllByRole("link").map((link) => link.getAttribute("href")),
-    ).toEqual(["/groups/g1", "/groups/g2"]);
+    renderFallback("g2");
+    expect(hrefs()).toEqual(["/groups/g1", "/groups/g2"]);
     expect(screen.getByRole("link", { name: /Flat 4B/ })).toHaveAttribute(
       "aria-current",
       "true",
     );
+  });
+
+  // Signing out and back in reloads nothing, so the list outlives the
+  // session it was read in. The next account must never be drawn it.
+  it("never draws one account's list for another", () => {
+    renderList([LISBON, FLAT]);
+    renderFallback(null, "user-ben");
+    expect(hrefs()).toEqual([]);
+    // Nor for a screen that does not say whose it is, or for a guest.
+    renderFallback(null, null);
+    expect(hrefs()).toEqual([]);
+    // It is still Ada's, for Ada.
+    renderFallback(null);
+    expect(hrefs()).toEqual(["/groups/g1", "/groups/g2"]);
+  });
+
+  it("keeps the new account's list once it arrives, in place of the old", () => {
+    renderList([LISBON, FLAT]);
+    renderList([BOOKS], { owner: "user-ben" });
+    renderFallback(null, "user-ben");
+    expect(hrefs()).toEqual(["/groups/g3"]);
+    renderFallback(null);
+    expect(hrefs()).toEqual([]);
+  });
+
+  it("keeps nothing drawn for a screen that does not say whose it is", () => {
+    forgetKnownGroups();
+    renderList([LISBON], { owner: null });
+    renderFallback(null);
+    expect(hrefs()).toEqual([]);
+  });
+
+  it("forgets the list when the device is left", () => {
+    renderList([LISBON, FLAT]);
+    forgetKnownGroups();
+    renderFallback(null);
+    expect(hrefs()).toEqual([]);
   });
 });
 

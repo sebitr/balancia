@@ -114,7 +114,10 @@ import { AmountCard } from "./amount-card";
 import { AttachFile, type EntryAttachment } from "./attach-file";
 import { CategorySheet } from "./category-sheet";
 import { useVocabulary } from "./vocabulary";
-import { CurrencyPicker } from "@/components/money/currency-picker";
+import {
+  CurrencyPicker,
+  openOnCurrencySearch,
+} from "@/components/money/currency-picker";
 import {
   confirmationKey,
   directionOf,
@@ -549,6 +552,13 @@ export interface AddEntryFormProps {
   /** Dismisses the drawer. Supplied by the shell, never by a route. */
   onClose?: () => void;
   /**
+   * Told whether closing now would lose something the reader typed: a change
+   * to an entry that already exists, to a recurring rule, or a repayment —
+   * the three the form keeps no draft of (see `draftable`). The shell uses it
+   * to keep a stray click beside the desk's dialog from closing it.
+   */
+  onUnkeptChange?: (unkept: boolean) => void;
+  /**
    * Dismisses it too, but on a saved entry.
    *
    * Separate from `onClose` because the group behind is now out of date, and
@@ -655,6 +665,7 @@ export function AddEntryForm({
   editing,
   prefill,
   onClose,
+  onUnkeptChange,
   onSaved,
   onRemoved,
   onReload,
@@ -1655,6 +1666,18 @@ export function AddEntryForm({
     });
   }, [draftable, groupId, owner, settledDraft]);
 
+  /*
+   * What the draft cannot keep: everything typed into a form that is not
+   * draftable, measured against what it opened on. A form opened on an entry
+   * and left as it was has nothing to lose, and closes however it is closed.
+   */
+  const work = JSON.stringify([draftSnapshot, rate, settleTo, methodLabel]);
+  const [openedOn] = useState(work);
+  const unkept = !draftable && work !== openedOn;
+  useEffect(() => {
+    onUnkeptChange?.(unkept);
+  }, [unkept, onUnkeptChange]);
+
   const settledAmount = useDebounced(amountText, DUPLICATE_DEBOUNCE_MS);
   const settledDescription = useDebounced(description, DUPLICATE_DEBOUNCE_MS);
   const duplicate = useMemo(() => {
@@ -1737,14 +1760,12 @@ export function AddEntryForm({
         currency !== row.currency &&
         needsRate &&
         row.currency === baseCurrency,
-      hasMethod: methodLabel !== "",
     });
   }, [
     selectedPair,
     settlePairs,
     outstandingIndex,
     totalMinor,
-    methodLabel,
     currency,
     baseCurrency,
     needsRate,
@@ -2393,10 +2414,23 @@ export function AddEntryForm({
    * was pressed for; a picker open over the form is what the keys are for
    * while it is open. And it is the button, pressed: nothing the button would
    * refuse to do.
+   *
+   * Only for a key pressed in the form itself. React carries an event up
+   * through a portal to the component that rendered it, so "Delete this
+   * entry?" — drawn over the form, from inside it — sent its ⌘↵ here, and the
+   * question about deleting the entry was answered by saving the edit
+   * instead. A dialog or a popover over the form is not in its DOM, and is
+   * what the keys are for while it is open.
    */
   const saveFromKeyboard = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "Enter" || !(event.metaKey || event.ctrlKey)) return;
-    if (event.defaultPrevented || sheet !== null) return;
+    if (event.defaultPrevented || sheet !== null || confirmDelete) return;
+    if (
+      !(event.target instanceof Node) ||
+      !event.currentTarget.contains(event.target)
+    ) {
+      return;
+    }
     event.preventDefault();
     if (canSave && !pending) void onSubmit();
   };
@@ -2543,9 +2577,34 @@ export function AddEntryForm({
     />
   );
 
+  /*
+   * The currencies this group already deals in, for the top of the picker: its
+   * own money first, then the ones its debts are held in (most rows first),
+   * then whatever this entry is in now. The form has no usage counts, so
+   * "most used" is the nearest thing it knows.
+   */
+  const groupCurrencies = useMemo(() => {
+    const held = new Map<string, number>();
+    for (const row of outstanding) {
+      held.set(row.currency, (held.get(row.currency) ?? 0) + 1);
+    }
+    const byRows = [...held.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([code]) => code);
+    return [
+      ...new Set([
+        baseCurrency ?? defaultCurrency,
+        ...byRows,
+        defaultCurrency,
+        currency,
+      ]),
+    ];
+  }, [outstanding, baseCurrency, defaultCurrency, currency]);
+
   const currencyPicker = (
     <CurrencyPicker
       value={currency}
+      suggested={groupCurrencies}
       title={t("currency.title")}
       // What is already typed has to survive the new currency's rules:
       // 84.60 picked up again as yen is ¥84, not an amount the server
@@ -3142,6 +3201,9 @@ export function AddEntryForm({
     <div
       className="flex min-h-0 flex-1 flex-col"
       onKeyDown={desk ? saveFromKeyboard : undefined}
+      // A sheet over the form owns the keyboard: nothing typed while it is
+      // open can reach a field behind it.
+      inert={sheetShown || undefined}
     >
       {/*
        * The header holds *how* the entry is being filled in; the body holds the
@@ -3405,7 +3467,11 @@ export function AddEntryForm({
           // Every one of these sheets opens on what it has to show — the
           // category chips, the currency list, who is in the split — and none
           // of them wants a keyboard over it before anybody has asked to type.
-          onOpenAutoFocus={openOnContent}
+          onOpenAutoFocus={
+            // The currency list is searched: focus goes to its field, or to
+            // the sheet on a touch screen. Never left on the field behind.
+            sheet === "currency" ? openOnCurrencySearch : openOnContent
+          }
           className={cn(
             "gap-0 rounded-t-[26px]",
             // The currency list is the one sheet here that is a whole screen
@@ -3420,7 +3486,17 @@ export function AddEntryForm({
             // which is over the indicator and leaves nothing to clear.
             sheet === "currency"
               ? "h-[min(800px,calc(100dvh-48px-env(safe-area-inset-top)))] max-h-[calc(100%-48px-env(safe-area-inset-top))] overflow-hidden p-0"
-              : "max-h-[86vh] overflow-y-auto px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] data-[keyboard]:pb-5",
+              : cn(
+                  "max-h-[86vh] overflow-y-auto px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] data-[keyboard]:pb-5",
+                  // The split sheet has a height of its own. Sized by its
+                  // content it grew upward by a row or two with every tap on
+                  // a payer or a share ("Always split like this", "still to
+                  // assign"), and the next tap landed on the chip that had
+                  // moved into the finger's place. Fixed, the chips stay put
+                  // and the body scrolls inside.
+                  sheet === "split" &&
+                    "h-[min(86dvh,44rem)] max-h-[86dvh] overflow-y-hidden",
+                ),
           )}
         >
           {/* The room above the contents on a desk, where the grabber that
@@ -3584,7 +3660,6 @@ function SettleOutcomeLine({
   const t = useTranslations("addEntry.settle");
 
   if (outcome.kind === "noPair") return t("outcomeNoPair");
-  if (outcome.kind === "noMethod") return t("outcomeNoMethod");
   if (outcome.kind === "zeroAmount") return t("outcomeZero");
   if (outcome.kind === "awaitingRate") return t("outcomeAwaitingRate");
   if (outcome.kind === "exact") {

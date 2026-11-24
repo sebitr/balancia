@@ -23,6 +23,8 @@ import {
 const SAM = "8f0b6e3c-9a4d-4e0a-b9a1-000000000001";
 const MARTA = "8f0b6e3c-9a4d-4e0a-b9a1-000000000002";
 const ADA = "8f0b6e3c-9a4d-4e0a-b9a1-000000000003";
+const OTTO = "8f0b6e3c-9a4d-4e0a-b9a1-000000000004";
+const NINA = "8f0b6e3c-9a4d-4e0a-b9a1-000000000005";
 
 const NAMES = new Map([
   [SAM, "Sam"],
@@ -56,7 +58,7 @@ function repayment(
     },
     actorLabel: "Ada",
     actorType: "user",
-    actorParticipantId: ADA,
+    actorParticipantId: OTTO,
     createdAt: new Date("2026-09-01T10:00:00Z"),
     ...overrides,
   };
@@ -90,7 +92,7 @@ function typeset(text: string): string {
 
 describe("a recorded repayment", () => {
   it("names who paid whom, and how much", () => {
-    expect(line(repayment(), reader(ADA))).toBe(
+    expect(line(repayment(), reader(NINA))).toBe(
       "recorded Sam's repayment of €30.00 to Marta",
     );
   });
@@ -111,16 +113,17 @@ describe("a recorded repayment", () => {
   it("says their when the payer recorded it themselves", () => {
     const own = repayment({ actorLabel: "Sam", actorParticipantId: SAM });
 
-    expect(line(own, reader(ADA))).toBe(
+    expect(line(own, reader(NINA))).toBe(
       "recorded their repayment of €30.00 to Marta",
     );
     expect(line(own, reader(MARTA))).toBe(
       "recorded their repayment of €30.00 to you",
     );
-    // The feed names the reader in front of the line too, so their own
-    // repayment reads "Sam recorded their repayment", not "…your repayment".
+    // The reader is "You" in front of the line, so their own repayment reads
+    // "You recorded your repayment", never "Sam recorded their repayment"
+    // beside a "You" everywhere else.
     expect(line(own, reader(SAM))).toBe(
-      "recorded their repayment of €30.00 to Marta",
+      "recorded your repayment of €30.00 to Marta",
     );
   });
 
@@ -128,7 +131,7 @@ describe("a recorded repayment", () => {
     const own = repayment({ actorLabel: "Sam", actorParticipantId: SAM });
     const amount = "30,00 €";
 
-    expect(line(repayment(), reader(ADA, "fr"), "fr")).toBe(
+    expect(line(repayment(), reader(NINA, "fr"), "fr")).toBe(
       `a enregistré un remboursement de ${amount} versé par Sam à Marta`,
     );
     expect(line(repayment(), reader(MARTA, "fr"), "fr")).toBe(
@@ -137,7 +140,7 @@ describe("a recorded repayment", () => {
     expect(line(repayment(), reader(SAM, "fr"), "fr")).toBe(
       `a enregistré un remboursement de ${amount} que tu as versé à Marta`,
     );
-    expect(line(own, reader(ADA, "fr"), "fr")).toBe(
+    expect(line(own, reader(NINA, "fr"), "fr")).toBe(
       `a enregistré avoir remboursé ${amount} à Marta`,
     );
     expect(line(own, reader(MARTA, "fr"), "fr")).toBe(
@@ -151,14 +154,14 @@ describe("a recorded repayment", () => {
       { to: "8f0b6e3c-9a4d-4e0a-b9a1-0000000000ff" },
     );
 
-    expect(line(stranger, reader(ADA))).toBe("recorded a repayment");
+    expect(line(stranger, reader(NINA))).toBe("recorded a repayment");
   });
 
   it("keeps the short line when the amount will not read", () => {
-    expect(line(repayment({}, { amount: 30 }), reader(ADA))).toBe(
+    expect(line(repayment({}, { amount: 30 }), reader(NINA))).toBe(
       "recorded a repayment",
     );
-    expect(line(repayment({}, { currency: "QQQ" }), reader(ADA))).toBe(
+    expect(line(repayment({}, { currency: "QQQ" }), reader(NINA))).toBe(
       "recorded a repayment",
     );
   });
@@ -166,7 +169,7 @@ describe("a recorded repayment", () => {
   it("keeps the short line for an event that never recorded the two people", () => {
     const old = repayment({ metadata: { amount: "3000", currency: "EUR" } });
 
-    expect(line(old, reader(ADA))).toBe("recorded a repayment");
+    expect(line(old, reader(NINA))).toBe("recorded a repayment");
   });
 
   /**
@@ -174,9 +177,9 @@ describe("a recorded repayment", () => {
    * gives every repayment event its two people, so every one names them.
    */
   it("names the people on an edit, a deletion and a restore too", () => {
-    expect(line(repayment({ action: "settlement.updated" }), reader(ADA))).toBe(
-      "edited Sam's repayment of €30.00 to Marta",
-    );
+    expect(
+      line(repayment({ action: "settlement.updated" }), reader(NINA)),
+    ).toBe("edited Sam's repayment of €30.00 to Marta");
     expect(
       line(repayment({ action: "settlement.deleted" }), reader(MARTA)),
     ).toBe("deleted Sam's repayment of €30.00 to you");
@@ -191,10 +194,10 @@ describe("a recorded repayment", () => {
       { amount: "4000", before: { amount: "3000", currency: "EUR" } },
     );
 
-    expect(line(edited, reader(ADA))).toBe(
+    expect(line(edited, reader(NINA))).toBe(
       "edited Sam's repayment of €40.00 to Marta (was €30.00)",
     );
-    expect(line(edited, reader(ADA, "fr"), "fr")).toBe(
+    expect(line(edited, reader(NINA, "fr"), "fr")).toBe(
       typeset(
         "a modifié le remboursement de 40,00 € versé par Sam à Marta (avant : 30,00 €)",
       ),
@@ -207,7 +210,7 @@ describe("a recorded repayment", () => {
       { before: { amount: "3000", currency: "EUR" } },
     );
 
-    expect(line(touched, reader(ADA))).toBe(
+    expect(line(touched, reader(NINA))).toBe(
       "edited Sam's repayment of €30.00 to Marta",
     );
   });
@@ -218,7 +221,7 @@ describe("a recorded repayment", () => {
       metadata: { amount: "3000", currency: "EUR" },
     });
 
-    expect(line(old, reader(ADA))).toBe("deleted a repayment");
+    expect(line(old, reader(NINA))).toBe("deleted a repayment");
   });
 
   it("says the three of them in French", () => {
@@ -240,7 +243,7 @@ describe("a recorded repayment", () => {
           actorLabel: "Sam",
           actorParticipantId: SAM,
         }),
-        reader(ADA, "fr"),
+        reader(NINA, "fr"),
         "fr",
       ),
     ).toBe(typeset("a rétabli son remboursement de 30,00 € à Marta"));
@@ -394,7 +397,7 @@ describe("a change of type", () => {
   it("says an expense became a repayment, and between whom", () => {
     const folded = repayment({ replaces: dinner });
 
-    expect(line(folded, reader(ADA))).toBe(
+    expect(line(folded, reader(NINA))).toBe(
       "turned “Dinner” into Sam's repayment of €30.00 to Marta",
     );
     expect(line(folded, reader(MARTA))).toBe(
@@ -408,7 +411,7 @@ describe("a change of type", () => {
   it("says it in French, with the entry's name set off", () => {
     const folded = repayment({ replaces: dinner });
 
-    expect(line(folded, reader(ADA, "fr"), "fr")).toBe(
+    expect(line(folded, reader(NINA, "fr"), "fr")).toBe(
       typeset(
         "a transformé « Dinner » en un remboursement de 30,00 € versé par Sam à Marta",
       ),
@@ -434,10 +437,10 @@ describe("a change of type", () => {
       },
     );
 
-    expect(line(folded, reader(ADA))).toBe(
+    expect(line(folded, reader(NINA))).toBe(
       "turned a repayment of €30.00 into “Taxi” (€25.00)",
     );
-    expect(line(folded, reader(ADA, "fr"), "fr")).toBe(
+    expect(line(folded, reader(NINA, "fr"), "fr")).toBe(
       typeset("a transformé un remboursement de 30,00 € en « Taxi » (25,00 €)"),
     );
   });
@@ -454,8 +457,8 @@ describe("a change of type", () => {
       },
     });
 
-    expect(line(salary, reader(ADA))).toContain("“Salary”");
-    expect(line(salary, reader(ADA))).not.toContain("expense");
+    expect(line(salary, reader(NINA))).toContain("“Salary”");
+    expect(line(salary, reader(NINA))).not.toContain("expense");
   });
 
   it("still says it when the two people cannot be named", () => {
@@ -464,7 +467,7 @@ describe("a change of type", () => {
       { to: "8f0b6e3c-9a4d-4e0a-b9a1-0000000000ff" },
     );
 
-    expect(line(folded, reader(ADA))).toBe("turned “Dinner” into a repayment");
+    expect(line(folded, reader(NINA))).toBe("turned “Dinner” into a repayment");
   });
 });
 
@@ -488,11 +491,15 @@ describe("an edited expense", () => {
   const was = { description: "Dinner", amount: "3000", currency: "EUR" };
 
   it("quotes the figure when the amount is all that moved", () => {
-    expect(line(edit({ changed: ["amount"], before: was }), reader(ADA))).toBe(
+    expect(line(edit({ changed: ["amount"], before: was }), reader(NINA))).toBe(
       "changed the amount of “Dinner” from €30.00 to €36.00",
     );
     expect(
-      line(edit({ changed: ["amount"], before: was }), reader(ADA, "fr"), "fr"),
+      line(
+        edit({ changed: ["amount"], before: was }),
+        reader(NINA, "fr"),
+        "fr",
+      ),
     ).toBe(typeset("a changé le montant de « Dinner » de 30,00 € à 36,00 €"));
   });
 
@@ -504,7 +511,7 @@ describe("an edited expense", () => {
           changed: ["description"],
           before: was,
         }),
-        reader(ADA),
+        reader(NINA),
       ),
     ).toBe("renamed “Dinner” to “Dinner at Luigi's”");
   });
@@ -515,27 +522,27 @@ describe("an edited expense", () => {
       before: was,
     });
 
-    expect(line(several, { ...reader(ADA), language: "en" })).toBe(
+    expect(line(several, { ...reader(NINA), language: "en" })).toBe(
       "edited “Dinner”: the amount, the date, and who paid",
     );
-    expect(line(several, { ...reader(ADA, "fr"), language: "fr" }, "fr")).toBe(
+    expect(line(several, { ...reader(NINA, "fr"), language: "fr" }, "fr")).toBe(
       typeset("a modifié « Dinner » : le montant, la date et qui a payé"),
     );
   });
 
   it("keeps to the plain line, with the amount, for an edit that recorded nothing", () => {
-    expect(line(edit({}), reader(ADA))).toBe(
+    expect(line(edit({}), reader(NINA))).toBe(
       "edited an expense: Dinner (€36.00)",
     );
-    expect(line(edit({ changed: [] }), reader(ADA))).toBe(
+    expect(line(edit({ changed: [] }), reader(NINA))).toBe(
       "edited an expense: Dinner (€36.00)",
     );
   });
 
   it("ignores a field a newer version recorded and this one cannot word", () => {
-    expect(line(edit({ changed: ["somethingNew", "date"] }), reader(ADA))).toBe(
-      "edited “Dinner”: the date",
-    );
+    expect(
+      line(edit({ changed: ["somethingNew", "date"] }), reader(NINA)),
+    ).toBe("edited “Dinner”: the date");
   });
 });
 
@@ -543,22 +550,22 @@ describe("what an entry came to", () => {
   it("says the amount on an added, deleted and restored expense", () => {
     const meta = { description: "Dinner", amount: "3000", currency: "EUR" };
 
-    expect(line(event("expense.created", meta), reader(ADA))).toBe(
+    expect(line(event("expense.created", meta), reader(NINA))).toBe(
       "added an expense: Dinner (€30.00)",
     );
-    expect(line(event("expense.deleted", meta), reader(ADA))).toBe(
+    expect(line(event("expense.deleted", meta), reader(NINA))).toBe(
       "deleted an expense: Dinner (€30.00)",
     );
-    expect(line(event("expense.restored", meta), reader(ADA, "fr"), "fr")).toBe(
-      typeset("a rétabli une dépense : Dinner (30,00 €)"),
-    );
+    expect(
+      line(event("expense.restored", meta), reader(NINA, "fr"), "fr"),
+    ).toBe(typeset("a rétabli une dépense : Dinner (30,00 €)"));
   });
 
   it("keeps the description alone when the amount will not read", () => {
     expect(
       line(
         event("expense.created", { description: "Dinner", amount: "x" }),
-        reader(ADA),
+        reader(NINA),
       ),
     ).toBe("added an expense: Dinner");
   });
@@ -571,16 +578,16 @@ describe("what an entry came to", () => {
       direction: "in",
     };
 
-    expect(line(event("expense.created", meta), reader(ADA))).toBe(
+    expect(line(event("expense.created", meta), reader(NINA))).toBe(
       "added an income: Salary (€3,000.00)",
     );
-    expect(line(event("expense.deleted", meta), reader(ADA, "fr"), "fr")).toBe(
+    expect(line(event("expense.deleted", meta), reader(NINA, "fr"), "fr")).toBe(
       typeset("a supprimé un revenu : Salary (3 000,00 €)"),
     );
     expect(
       line(
         event("recurring.generated", meta, { actorType: "system" }),
-        reader(ADA),
+        reader(NINA),
       ),
     ).toBe("added an income automatically: Salary (€3,000.00)");
   });
@@ -591,13 +598,13 @@ describe("the same action id, said for what it was", () => {
     expect(
       line(
         event("recurring.updated", { description: "Rent", paused: true }),
-        reader(ADA),
+        reader(NINA),
       ),
     ).toBe("paused a recurring expense: Rent");
     expect(
       line(
         event("recurring.updated", { description: "Rent", paused: false }),
-        reader(ADA, "fr"),
+        reader(NINA, "fr"),
         "fr",
       ),
     ).toBe(typeset("a repris une dépense récurrente : Rent"));
@@ -605,21 +612,21 @@ describe("the same action id, said for what it was", () => {
 
   it("still words a pause that never recorded the name", () => {
     expect(
-      line(event("recurring.updated", { paused: true }), reader(ADA)),
+      line(event("recurring.updated", { paused: true }), reader(NINA)),
     ).toBe("paused a recurring expense");
   });
 
   it("does not say a group was archived when it was taken out of the archive", () => {
-    expect(line(event("group.archived", { archived: true }), reader(ADA))).toBe(
-      "archived the group",
-    );
     expect(
-      line(event("group.archived", { archived: false }), reader(ADA)),
+      line(event("group.archived", { archived: true }), reader(NINA)),
+    ).toBe("archived the group");
+    expect(
+      line(event("group.archived", { archived: false }), reader(NINA)),
     ).toBe("took the group out of the archive");
     expect(
       line(
         event("group.archived", { archived: false }),
-        reader(ADA, "fr"),
+        reader(NINA, "fr"),
         "fr",
       ),
     ).toBe("a sorti le groupe des archives");
@@ -628,10 +635,10 @@ describe("the same action id, said for what it was", () => {
 
 describe("the group's own lines", () => {
   it("names the group it created", () => {
-    expect(line(event("group.created", { name: "Lisbon" }), reader(ADA))).toBe(
+    expect(line(event("group.created", { name: "Lisbon" }), reader(NINA))).toBe(
       "created the group “Lisbon”",
     );
-    expect(line(event("group.created", null), reader(ADA))).toBe(
+    expect(line(event("group.created", null), reader(NINA))).toBe(
       "created the group",
     );
   });
@@ -645,7 +652,7 @@ describe("the group's own lines", () => {
           changed: ["name"],
           previousName: "Lisbon",
         }),
-        reader(ADA),
+        reader(NINA),
       ),
     ).toBe("renamed the group from “Lisbon” to “Lisbon 2027”");
     expect(
@@ -655,7 +662,7 @@ describe("the group's own lines", () => {
           timezone: "Europe/Lisbon",
           changed: ["timezone"],
         }),
-        reader(ADA),
+        reader(NINA),
       ),
     ).toBe("set the group's time zone to Europe/Lisbon");
   });
@@ -668,10 +675,10 @@ describe("the group's own lines", () => {
           timezone: "Europe/Lisbon",
           changed: ["name", "icon"],
         }),
-        { ...reader(ADA), language: "en" },
+        { ...reader(NINA), language: "en" },
       ),
     ).toBe("updated the group: the name and the icon");
-    expect(line(event("group.updated", { name: "Lisbon" }), reader(ADA))).toBe(
+    expect(line(event("group.updated", { name: "Lisbon" }), reader(NINA))).toBe(
       "updated the group",
     );
   });
@@ -684,15 +691,15 @@ describe("a person's line", () => {
       previousName: "Bob",
     });
 
-    expect(line(renamed, reader(ADA))).toBe("renamed Bob to Robert");
-    expect(line(renamed, reader(ADA, "fr"), "fr")).toBe(
+    expect(line(renamed, reader(NINA))).toBe("renamed Bob to Robert");
+    expect(line(renamed, reader(NINA, "fr"), "fr")).toBe(
       "a renommé Bob en Robert",
     );
   });
 
   it("keeps 'updated their details' for an edit that did not rename", () => {
     expect(
-      line(event("participant.updated", { displayName: "Bob" }), reader(ADA)),
+      line(event("participant.updated", { displayName: "Bob" }), reader(NINA)),
     ).toBe("updated Bob's details");
   });
 
@@ -703,9 +710,9 @@ describe("a person's line", () => {
       { entityType: "participant", entityId: MARTA },
     );
 
-    expect(line(reminded, reader(ADA))).toBe("sent Marta a reminder");
+    expect(line(reminded, reader(NINA))).toBe("sent Marta a reminder");
     expect(line(reminded, reader(MARTA))).toBe("sent you a reminder");
-    expect(line(reminded, reader(ADA, "fr"), "fr")).toBe(
+    expect(line(reminded, reader(NINA, "fr"), "fr")).toBe(
       "a envoyé une relance à Marta",
     );
   });
@@ -717,7 +724,7 @@ describe("a person's line", () => {
       { entityType: "participant", entityId: MARTA },
     );
 
-    expect(line(reminded, reader(ADA))).toBe("sent Marta a reminder");
+    expect(line(reminded, reader(NINA))).toBe("sent Marta a reminder");
   });
 });
 
@@ -732,20 +739,23 @@ describe("an import", () => {
     expect(
       line(
         run({ fileName: "trip.csv", imported: 42, skipped: 0, failed: 0 }),
-        reader(ADA),
+        reader(NINA),
       ),
     ).toBe("imported 42 entries from “trip.csv”");
     expect(
-      line(run({ fileName: "trip.csv", imported: 1, failed: 0 }), reader(ADA)),
+      line(run({ fileName: "trip.csv", imported: 1, failed: 0 }), reader(NINA)),
     ).toBe("imported 1 entry from “trip.csv”");
   });
 
   it("says what could not be imported, and when nothing could", () => {
     expect(
-      line(run({ fileName: "trip.csv", imported: 40, failed: 2 }), reader(ADA)),
+      line(
+        run({ fileName: "trip.csv", imported: 40, failed: 2 }),
+        reader(NINA),
+      ),
     ).toBe("imported 40 entries from “trip.csv”, 2 could not be imported");
     expect(
-      line(run({ fileName: "trip.csv", imported: 0, failed: 0 }), reader(ADA)),
+      line(run({ fileName: "trip.csv", imported: 0, failed: 0 }), reader(NINA)),
     ).toBe("imported nothing from “trip.csv”");
   });
 
@@ -753,7 +763,7 @@ describe("an import", () => {
     expect(
       line(
         run({ fileName: "voyage.csv", imported: 40, failed: 1 }),
-        reader(ADA, "fr"),
+        reader(NINA, "fr"),
         "fr",
       ),
     ).toBe(
@@ -764,7 +774,7 @@ describe("an import", () => {
   });
 
   it("keeps the plain phrase for one that never recorded its file", () => {
-    expect(line(run({ imported: 12 }), reader(ADA))).toBe(
+    expect(line(run({ imported: 12 }), reader(NINA))).toBe(
       "completed an import",
     );
   });
@@ -826,5 +836,43 @@ describe("who did it", () => {
     });
 
     expect(actorOf(generated, t, NAMES)).toBe("Balancia");
+  });
+});
+
+describe("a line the reader wrote", () => {
+  const mine = (overrides: Partial<ActivityEntry> = {}) =>
+    repayment({ actorLabel: "Sam", actorParticipantId: SAM, ...overrides });
+
+  it("is called You and worded for it", () => {
+    const t = translator("en");
+    expect(actorOf(mine(), t, NAMES, SAM)).toBe("You");
+    expect(actorOf(mine(), t, NAMES, ADA)).toBe("Sam");
+    expect(line(mine(), reader(SAM))).toBe(
+      "recorded your repayment of €30.00 to Marta",
+    );
+  });
+
+  it("takes the second person in French, where the verb agrees", () => {
+    const t = translator("fr");
+    expect(actorOf(mine(), t, NAMES, SAM)).toBe("Tu");
+    expect(line(mine(), reader(SAM, "fr"), "fr")).toBe(
+      "as enregistré ton remboursement de 30,00\u00a0€ à Marta",
+    );
+    const lunch: ActivityEntry = {
+      ...mine({ action: "expense.created", entityType: "expense" }),
+      metadata: { description: "Lunch" },
+    };
+    expect(line(lunch, reader(SAM, "fr"), "fr")).toBe(
+      "as ajouté une dépense\u00a0: Lunch",
+    );
+    // Somebody else's, told to the same reader, stays in the third person.
+    expect(
+      line({ ...lunch, actorParticipantId: ADA }, reader(SAM, "fr"), "fr"),
+    ).toBe("a ajouté une dépense\u00a0: Lunch");
+  });
+
+  it("is never You for the app's own work", () => {
+    const system = mine({ actorType: "system" });
+    expect(actorOf(system, translator("en"), NAMES, SAM)).toBe("Balancia");
   });
 });

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { DESK_QUERY } from "@/components/ui/use-desk-width";
 import { listQuery, withQuery } from "@/components/expenses/list-query";
 import { AddEntryForm, type AddEntryFormProps } from "./add-entry-form";
 import { draftFields, type EntryDraftFields } from "./draft-fields";
@@ -101,6 +102,12 @@ export function AddEntryDrawer({
    * what asks: see `onReload` on the form.
    */
   const [reloads, setReloads] = useState(0);
+  /*
+   * Whether the form holds something closing would lose — a changed entry, a
+   * changed rule, a repayment being typed — which no draft keeps. See
+   * `onUnkeptChange` on the form.
+   */
+  const [unkept, setUnkept] = useState(false);
 
   useEffect(() => {
     if (exit === null) return;
@@ -236,6 +243,18 @@ export function AddEntryDrawer({
             event.preventDefault();
           }
         }}
+        // On a desk, a click beside the dialog does not close it over work
+        // that no draft keeps. A new expense goes as its draft and can go on
+        // any click; an edit or a repayment would be gone without a word, and
+        // a pointer drifting off a 720px dialog is not a decision to drop it.
+        // Esc, ✕ and Cancel still close — those are. A phone's sheet is
+        // pushed away on purpose, by a swipe or a tap above it, and keeps
+        // doing so.
+        onInteractOutside={(event) => {
+          if (unkept && window.matchMedia(DESK_QUERY).matches) {
+            event.preventDefault();
+          }
+        }}
       >
         {draft !== undefined && (
           <AddEntryForm
@@ -250,6 +269,7 @@ export function AddEntryDrawer({
             openSheet={reloads === 0 ? openSheet : undefined}
             onReload={() => setReloads((count) => count + 1)}
             onClose={() => setExit({ kind: "dismiss" })}
+            onUnkeptChange={setUnkept}
             // A saved entry leaves the same way a dismissed one does — the
             // confirmation is a toast, which outlives the drawer.
             onSaved={() => setExit({ kind: "saved" })}

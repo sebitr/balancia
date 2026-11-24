@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { PUSH } from "@/components/motion/transitions";
+import { DESK_QUERY } from "@/components/ui/use-desk-width";
 import { readSingleKeys } from "./single-keys";
 
 /**
@@ -44,9 +45,6 @@ import { readSingleKeys } from "./single-keys";
  * for. A second listener here would close the palette under an open menu.
  */
 
-/** `lg`, 64rem: where the sidebar, and with it every shortcut, begins. */
-export const DESK_QUERY = "(min-width: 64rem)";
-
 /** A Mac's ⌘ rather than everybody else's Ctrl. */
 export function isApplePlatform(): boolean {
   return /Mac|iPhone|iPad/.test(navigator.platform);
@@ -60,6 +58,22 @@ export function isApplePlatform(): boolean {
  */
 export function commandHeld(event: KeyboardEvent): boolean {
   return isApplePlatform() ? event.metaKey : event.ctrlKey;
+}
+
+/**
+ * AltGr is held, off a Mac: the key that types a character, not a command.
+ *
+ * Windows reports AltGr as Ctrl and Alt together, so to `commandHeld` it is
+ * Ctrl — and on a German, French or Spanish board `\` is typed with AltGr.
+ * Taking it for ⌘\ folded the sidebar and swallowed the character. A Mac has
+ * no AltGr; its ⌥ is how a French board types `\` with ⌘ held, and stays.
+ */
+export function altGraphHeld(event: KeyboardEvent): boolean {
+  if (isApplePlatform()) return false;
+  return (
+    event.getModifierState?.("AltGraph") === true ||
+    (event.ctrlKey && event.altKey)
+  );
 }
 
 /** No modifier at all: the bare letter. */
@@ -171,9 +185,11 @@ export function useShortcuts({
 
       // By the character, whatever else it took to type it — a French Mac
       // keyboard's backslash is ⌥⇧/ — and by the key's place on the board
-      // where the layout puts something else there.
+      // where the layout puts something else there. Never through AltGr,
+      // which is typing a `\`, not asking for the sidebar.
       if (
         commandHeld(event) &&
+        !altGraphHeld(event) &&
         (event.key === "\\" || event.code === "Backslash")
       ) {
         if (isLayerOpen()) return;

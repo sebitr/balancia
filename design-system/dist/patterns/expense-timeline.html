@@ -50,8 +50,8 @@
   --payer-ink: oklch(0.534 0.145 70);
   --border: oklch(0.9 0.012 82);
   --input: oklch(0.88 0.016 82);
-  --ring: oklch(0.712 0.168 30);
-  --chart-1: oklch(0.47 0.085 319);
+  --ring: var(--primary-ink);
+  --chart-1: oklch(0.33 0.075 319);
   --chart-2: var(--primary);
   --chart-3: oklch(0.6 0.1 205);
   --chart-4: oklch(0.62 0.05 250);
@@ -122,12 +122,12 @@
   --payer-ink: oklch(0.82 0.14 78);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.712 0.168 30);
+  --ring: var(--primary-ink);
   --chart-1: oklch(0.84 0.035 319);
   --chart-2: var(--primary);
   --chart-3: oklch(0.84 0.08 205);
   --chart-4: oklch(0.86 0.06 267);
-  --chart-5: oklch(0.55 0.09 319);
+  --chart-5: oklch(0.4 0.08 319);
   --sidebar: oklch(0.27 0.068 319);
   --sidebar-foreground: oklch(0.977 0.007 85);
   --sidebar-primary: var(--primary);
@@ -192,12 +192,13 @@
    through the `var(--accent-ink-…)` it is declared with above.
    src/app/design-system-kit.test.ts holds this block to the app's default. */
 html:root {
-  --primary: oklch(0.71 0.048 319);
-  --ring: oklch(0.71 0.048 319);
-  --accent-ink-light: oklch(0.535 0.048 319);
-  --accent-ink-more-light: oklch(0.43 0.048 319);
-  --accent-ink-dark: oklch(0.725 0.048 319);
-  --accent-ink-more-dark: oklch(0.85 0.048 319);
+  --primary: oklch(0.52 0.09 319);
+  --primary-foreground: oklch(0.977 0.007 85);
+  --sidebar-primary-foreground: oklch(0.977 0.007 85);
+  --accent-ink-light: oklch(0.52 0.09 319);
+  --accent-ink-more-light: oklch(0.415 0.09 319);
+  --accent-ink-dark: oklch(0.69 0.09 319);
+  --accent-ink-more-dark: oklch(0.81 0.09 319);
 }
 
 /* ── base ── */
@@ -447,7 +448,9 @@ code {
 }
 .btn:focus-visible {
   border-color: var(--ring);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent);
+  box-shadow:
+    0 0 0 2px var(--background),
+    0 0 0 4px var(--ring);
 }
 .btn svg {
   width: 1rem;
@@ -466,6 +469,14 @@ code {
 }
 .btn--default:hover {
   background: color-mix(in oklch, var(--primary) 80%, transparent);
+}
+/* Disabled is a wash and a hairline with muted text, not a fainter fill. */
+.btn--default[disabled],
+.btn--default[aria-disabled="true"] {
+  background: var(--muted);
+  border-color: var(--border);
+  color: var(--muted-foreground);
+  opacity: 1;
 }
 .btn--outline {
   border-color: var(--border);
@@ -988,6 +999,106 @@ a.list-row:focus-visible {
   margin-top: 0.125rem;
   font-size: 0.75rem;
   color: var(--muted-foreground);
+}
+
+/* ── transactions, on a phone: a card per day, two lines per row ── */
+.tx-days {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 24rem;
+}
+.tx-day {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.tx-day > h3 {
+  margin: 0;
+  padding: 0 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+.tx-card {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: var(--card);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground) 10%, transparent);
+}
+.tx-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-left: 0.875rem;
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 150ms ease;
+}
+a.tx-row:hover {
+  background: color-mix(in oklch, var(--muted) 60%, transparent);
+}
+.tx-tile {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  background: var(--muted);
+  color: var(--foreground);
+}
+.tx-tile svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+.tx-body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.875rem 0.875rem 0.875rem 0;
+}
+.tx-card > li + li .tx-body {
+  border-top: 1px solid var(--border);
+}
+.tx-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+.tx-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 1rem;
+  line-height: 1.375;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.tx-amount {
+  flex-shrink: 0;
+  font-size: 1rem;
+  line-height: 1.375;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tx-sub {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  overflow-wrap: anywhere;
+}
+.tx-pos {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
 }
 .tbl {
   width: 100%;
@@ -2252,156 +2363,248 @@ a[aria-current="page"] .nav-icon--primary {
   <section>
     <h2>The list</h2>
     <div class="spec">
-      <!-- Read as Ravi. Under each total, what the row left him holding, in
-           words: no sign, the tone's ink, nothing on a row he is not in. -->
-      <ul class="list">
-        <li>
-          <a class="list-row" href="#">
-            <span class="list-main">
-              <span class="list-title">Dinner at Trattoria Il Ponte</span>
-              <span class="list-sub">2026-08-12 · Amélie · 2 receipts</span>
-            </span>
-            <span
-              style="
-                display: flex;
-                flex-direction: column;
-                align-items: flex-end;
-                gap: 3px;
-              "
-            >
-              <span class="tabular-nums" style="font-weight: 500">€128.40</span>
-              <span
-                class="tabular-nums"
-                style="
-                  font-size: 0.75rem;
-                  font-weight: 500;
-                  white-space: nowrap;
-                  color: var(--negative-ink);
-                "
-                >You owe €32.10</span
-              >
-            </span>
-          </a>
-        </li>
-        <li>
-          <a class="list-row" href="#">
-            <span class="list-main">
-              <span class="list-title">
-                Amélie paid you back
-                <span class="badge badge--outline">Repayment</span>
-              </span>
-              <span class="list-sub">2026-08-11 · Settling the taxi</span>
-            </span>
-            <span
-              style="
-                display: flex;
-                flex-direction: column;
-                align-items: flex-end;
-                gap: 3px;
-              "
-            >
-              <span
-                class="tabular-nums"
-                style="font-weight: 500; color: var(--muted-foreground)"
-                >€120.00</span
-              >
-              <span
-                class="tabular-nums"
-                style="
-                  font-size: 0.75rem;
-                  font-weight: 500;
-                  white-space: nowrap;
-                  color: var(--neutral-balance-ink);
-                "
-                >You received €120.00</span
-              >
-            </span>
-          </a>
-        </li>
-        <li>
-          <a class="list-row" href="#">
-            <span class="list-main">
-              <span class="list-title">
-                Apartment cleaning
-                <span class="badge badge--secondary">Recurring</span>
-              </span>
-              <span class="list-sub">2026-08-09 · Ravi</span>
-            </span>
-            <span
-              style="
-                display: flex;
-                flex-direction: column;
-                align-items: flex-end;
-                gap: 3px;
-              "
-            >
-              <span class="tabular-nums" style="font-weight: 500">€65.00</span>
-              <span
-                class="tabular-nums"
-                style="
-                  font-size: 0.75rem;
-                  font-weight: 500;
-                  white-space: nowrap;
-                  color: var(--positive-ink);
-                "
-                >You get back €48.75</span
-              >
-            </span>
-          </a>
-        </li>
-        <li>
-          <a class="list-row" href="#">
-            <span class="list-main">
-              <span class="list-title">Airport transfer</span>
-              <span class="list-sub"
-                >2026-08-08 · Jonas, Chloé · 1 receipt</span
-              >
-            </span>
-            <span class="tabular-nums" style="font-weight: 500">CHF 96.00</span>
-          </a>
-        </li>
-      </ul>
+      <!-- Read as Ravi. Each day once, above its own card; under each title,
+           who paid; beside it, what the row left him holding, in words: no
+           sign, the tone's ink, nothing on a row he is not in. -->
+      <div class="tx-days">
+        <div class="tx-day">
+          <h3>Aug 12</h3>
+          <ul class="tx-card">
+            <li>
+              <a class="tx-row" href="#">
+                <span
+                  class="tx-tile"
+                  aria-hidden="true"
+                  style="
+                    background: color-mix(
+                      in oklch,
+                      var(--chart-3) 25%,
+                      transparent
+                    );
+                  "
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8"
+                    />
+                    <path
+                      d="M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7"
+                    />
+                    <path d="m2.1 21.8 6.4-6.3" />
+                    <path d="m19 5-7 7" />
+                  </svg>
+                </span>
+                <span class="tx-body">
+                  <span class="tx-line">
+                    <span class="tx-title">Dinner at Trattoria Il Ponte</span>
+                    <span class="tx-amount tabular-nums">€128.40</span>
+                  </span>
+                  <span class="tx-line">
+                    <span class="tx-sub">Amélie paid</span>
+                    <span
+                      class="tx-pos tabular-nums"
+                      style="color: var(--negative-ink)"
+                      >You owe €32.10</span
+                    >
+                  </span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a class="tx-row" href="#">
+                <span
+                  class="tx-tile"
+                  aria-hidden="true"
+                  style="
+                    background: color-mix(
+                      in oklch,
+                      var(--chart-2) 25%,
+                      transparent
+                    );
+                  "
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"
+                    />
+                    <circle cx="7" cy="17" r="2" />
+                    <path d="M9 17h6" />
+                    <circle cx="17" cy="17" r="2" />
+                  </svg>
+                </span>
+                <span class="tx-body">
+                  <span class="tx-line">
+                    <span class="tx-title">Airport transfer</span>
+                    <span class="tx-amount tabular-nums">CHF 96.00</span>
+                  </span>
+                  <span class="tx-line">
+                    <span class="tx-sub">Jonas and Chloé paid</span>
+                  </span>
+                </span>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <div class="tx-day">
+          <h3>Aug 11</h3>
+          <ul class="tx-card">
+            <li>
+              <a class="tx-row" href="#">
+                <span class="tx-tile" aria-hidden="true">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m8 3-4 4 4 4" />
+                    <path d="M4 7h16" />
+                    <path d="m16 21 4-4-4-4" />
+                    <path d="M20 17H4" />
+                  </svg>
+                </span>
+                <span class="tx-body">
+                  <span class="tx-line">
+                    <span class="tx-title">Amélie paid you back</span>
+                    <span
+                      class="tx-amount tabular-nums"
+                      style="font-weight: 500; color: var(--muted-foreground)"
+                      >€120.00</span
+                    >
+                  </span>
+                  <span class="tx-line">
+                    <span class="tx-sub">Repayment · Settling the taxi</span>
+                    <span
+                      class="tx-pos tabular-nums"
+                      style="color: var(--neutral-balance-ink)"
+                      >You received €120.00</span
+                    >
+                  </span>
+                </span>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <div class="tx-day">
+          <h3>Aug 9</h3>
+          <ul class="tx-card">
+            <li>
+              <a class="tx-row" href="#">
+                <span
+                  class="tx-tile"
+                  aria-hidden="true"
+                  style="
+                    background: color-mix(
+                      in oklch,
+                      var(--chart-1) 25%,
+                      transparent
+                    );
+                  "
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M2 4v16" />
+                    <path d="M2 8h18a2 2 0 0 1 2 2v10" />
+                    <path d="M2 17h20" />
+                    <path d="M6 8v9" />
+                  </svg>
+                </span>
+                <span class="tx-body">
+                  <span class="tx-line">
+                    <span class="tx-title">Apartment cleaning</span>
+                    <span class="tx-amount tabular-nums">€65.00</span>
+                  </span>
+                  <span class="tx-line">
+                    <span class="tx-sub">Recurring · You paid</span>
+                    <span
+                      class="tx-pos tabular-nums"
+                      style="color: var(--positive-ink)"
+                      >You get back €48.75</span
+                    >
+                  </span>
+                </span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
   </section>
 
   <section>
     <h2>Row grammar</h2>
     <dl class="dl">
-      <dt>title</dt>
+      <dt>day</dt>
       <dd>
-        The expense description, or who paid whom for a repayment — from the
-        reader's side when they are one of the two:
-        <em>"You paid Marta back"</em>, <em>"Sam paid you back"</em>, and
-        <em>"Sam paid Marta"</em>
-        only between two others. The repayment's own screen and the search use
-        the same sentence. Truncates before the badges do.
+        In date order the rows stand under the day they happened, one card per
+        day: day and month, the year only on another year's, in
+        <code>text-xs</code> semibold muted above the card. Rows inside it part
+        with a hairline that starts where the text does, so the tiles stand in
+        an unbroken column. Sorted by amount there are no days — neighbours
+        share none — and each row's second line starts with its own date.
       </dd>
-      <dt>your line</dt>
+      <dt>tile</dt>
       <dd>
-        Under the total, what the row left the reader holding, as a sentence in
-        <code>text-xs</code>: <em>"You get back €60.00"</em>,
-        <em>"You owe €30.00"</em>, <em>"You paid your share"</em>. On a
-        repayment, which way the money went — <em>"You received €30.00"</em>,
-        <em>"You paid €30.00"</em> — in the neutral ink. No sign: the words
-        carry the direction, the colour comes from <code>TONE</code>. Nothing at
-        all on a row the reader is not in.
+        The category's glyph, 20px in <code>foreground</code>, on a 40px tile
+        tinted with a quarter of the band it falls in on the spine above —
+        <code>muted</code> for the spine's remainder and for a repayment, whose
+        glyph is the two arrows.
       </dd>
-      <dt>Repayment badge</dt>
+      <dt>first line</dt>
       <dd>
-        <code>outline</code> — marks the row as a repayment rather than a cost.
+        The title, and the amount beside it. The title is the expense
+        description, or who paid whom for a repayment — from the reader's side
+        when they are one of the two: <em>"You paid Marta back"</em>,
+        <em>"Sam paid you back"</em>, and <em>"Sam paid Marta"</em> only between
+        two others. It takes every pixel the amount leaves and wraps rather than
+        being cut: it is how a reader finds the row they came for. The amount is
+        plain, tabular, semibold — a cost has no direction, so it takes no
+        balance tone; a repayment's is medium and muted.
       </dd>
-      <dt>Recurring badge</dt>
-      <dd><code>secondary</code> — this row was generated from a rule.</dd>
-      <dt>metadata</dt>
+      <dt>second line</dt>
       <dd>
-        <code>date · payers · N receipts</code>, middle-dot separated, text-xs
-        muted. Receipts only appear when there are some.
+        Who paid — <em>"Amélie paid"</em>, <em>"You paid"</em>,
+        <em>"You and Grace paid"</em> — and beside it, what the row left the
+        reader holding, as a sentence: <em>"You get back €60.00"</em>,
+        <em>"You owe €30.00"</em>. On a repayment the title has already named
+        the two people, so its line says what it was for, and which way the
+        money went: <em>"You received €30.00"</em>, in the neutral ink. No sign:
+        the words carry the direction, the colour comes from <code>TONE</code>.
+        Nothing beside it on a row the reader is not in.
       </dd>
-      <dt>amount</dt>
+      <dt>kind</dt>
       <dd>
-        Right, tabular, font-medium. Plain <code>Amount</code> — a cost has no
-        direction, so it takes no balance tone. The reader's line sits under it,
-        never in place of it.
+        <em>Repayment</em>, <em>Income</em> or <em>Recurring</em> as the first
+        word of the second line, where a badge on a line of its own used to be.
+      </dd>
+      <dt>no chevron</dt>
+      <dd>
+        The whole row is the link and answers the press itself; an arrow on
+        every row said so thirty times.
       </dd>
       <dt>sort</dt>
       <dd>
@@ -2410,9 +2613,12 @@ a[aria-current="page"] .nav-icon--primary {
       </dd>
     </dl>
     <p class="note" style="margin-top: 0.75rem">
-      Multiple payers are joined with commas: an expense can be split across
-      people who paid, not just people who owe. Mixed currencies live in the
-      same list and each row shows its own — the list is a history, not a total.
+      Each figure sits on the line its words are on. The reader's sentence used
+      to stand in a column under the amount, and
+      <em>"You get back €22.50"</em> was wide enough to cut
+      <em>"Taxi to the airport"</em> down to <em>"Taxi to the…"</em>. Mixed
+      currencies live in the same list and each row shows its own — the list is
+      a history, not a total.
     </p>
   </section>
 

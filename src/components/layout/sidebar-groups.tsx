@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -13,6 +13,11 @@ import { useNumberLocale } from "@/i18n/format-context";
 import { formatMoney, money } from "@/modules/currencies/money";
 import type { NavigationGroup } from "@/modules/balances/navigation";
 import { cn } from "@/lib/utils";
+import {
+  rememberGroups,
+  useKnownGroups,
+  useKnownGroupsOwner,
+} from "./known-groups";
 import { SidebarTip, useSidebar } from "./sidebar-context";
 
 /**
@@ -254,43 +259,6 @@ export function GroupRow({
   );
 }
 
-/*
- * The last list the sidebar drew, kept for the length of the page.
- *
- * Home and a group are two layouts, so moving between them mounts a new
- * sidebar whose list is still on its way. Rather than blank the column for
- * that moment, the waiting sidebar draws what the last one had — the same
- * groups, at most a navigation old — and the fresh list replaces it as soon
- * as it lands. Written only from an effect, so a render never mutates it.
- */
-let knownGroups: readonly NavigationGroup[] | null = null;
-const knownListeners = new Set<() => void>();
-
-function subscribeToKnown(listener: () => void) {
-  knownListeners.add(listener);
-  return () => {
-    knownListeners.delete(listener);
-  };
-}
-
-/**
- * The groups the sidebar last received, or null before any have. Also what
- * the sidebar's Add asks "which group?" from, outside a group.
- */
-export function useKnownGroups(): readonly NavigationGroup[] | null {
-  return useSyncExternalStore(
-    subscribeToKnown,
-    () => knownGroups,
-    () => null,
-  );
-}
-
-function rememberGroups(groups: readonly NavigationGroup[]) {
-  if (knownGroups === groups) return;
-  knownGroups = groups;
-  for (const listener of knownListeners) listener();
-}
-
 /**
  * The sidebar's list of groups, in Home's order.
  *
@@ -311,16 +279,18 @@ export function SidebarGroups({
   /** The list could not be read; say so rather than show an empty sidebar. */
   failed?: boolean;
 }) {
+  const owner = useKnownGroupsOwner();
   useEffect(() => {
-    if (!failed) rememberGroups(groups);
-  }, [groups, failed]);
+    if (!failed && owner !== null) rememberGroups(owner, groups);
+  }, [groups, failed, owner]);
 
   return <GroupList groups={groups} groupId={groupId} failed={failed} />;
 }
 
 /**
- * What stands in while the list streams in: the last list drawn, if this page
- * has drawn one, and otherwise rows the shape of the ones on their way.
+ * What stands in while the list streams in: the last list drawn for this
+ * account, if this page has drawn one, and otherwise rows the shape of the
+ * ones on their way. See `known-groups.tsx`.
  */
 export function SidebarGroupsFallback({ groupId }: { groupId: string | null }) {
   const known = useKnownGroups();

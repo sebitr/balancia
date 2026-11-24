@@ -23,6 +23,7 @@ const MESSAGE_LOADERS: Record<AppLocale, () => Promise<{ default: unknown }>> =
   {
     en: () => import("../../messages/en.json"),
     fr: () => import("../../messages/fr.json"),
+    de: () => import("../../messages/de.json"),
   };
 
 /**
@@ -50,7 +51,7 @@ export async function resolveRequestLocale(): Promise<AppLocale> {
  * cookie, then their browser's `Accept-Language`, then English.
  *
  * Everything outside the public pages is rendered in it. The homepage asks
- * separately, to send a French reader who opened `/` on to `/fr`.
+ * separately, to send a reader who opened `/` on to their preferred language.
  */
 export async function resolvePreferredLocale(): Promise<AppLocale> {
   const cookieStore = await cookies();
