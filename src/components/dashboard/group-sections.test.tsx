@@ -209,9 +209,10 @@ describe("GroupList from lg", () => {
     expect(owed).toHaveClass("text-positive-ink");
     expect(owe).toHaveClass("text-negative-ink");
     expect(owed.className).not.toMatch(/primary/);
-    // Only where there is room to draw it; the figure's own word still says
-    // it to a screen reader at every width.
-    expect(owed).toHaveClass("hidden", "lg:inline");
+    // Drawn at every width — under the figure on a phone — and never read
+    // twice: the figure's own word says it to a screen reader.
+    expect(owed).not.toHaveClass("hidden");
+    expect(owed.parentElement).toHaveClass("flex-col", "lg:flex-row");
     expect(owed).toHaveAttribute("aria-hidden", "true");
     expect(screen.getByText("gets back")).toHaveClass("sr-only");
     // Each beside its own figure.

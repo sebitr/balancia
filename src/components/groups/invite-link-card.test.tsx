@@ -81,6 +81,8 @@ describe("a live link", () => {
     renderCard();
 
     expect(screen.getByText("Active")).toBeInTheDocument();
+    // A state, not money: never the green that means somebody owes you.
+    expect(screen.getByText("Active").className).not.toMatch(/positive/);
     // Shown without the scheme, which is noise nobody reads out loud.
     expect(
       screen.getByText("balancia.test/join/g/SECRET-TOKEN"),

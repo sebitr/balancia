@@ -50,7 +50,7 @@ import {
 } from "./list-filter";
 import { FilterSheet } from "./filter-sheet";
 import { FilterRow } from "./filter-row";
-import { badgeOf, Position, TypeBadge } from "./row-parts";
+import { badgeOf, Position, TypeBadge, usePaidBy } from "./row-parts";
 import { SwipeToDelete } from "./swipe-to-delete";
 import { TransactionsTable, useDeskWidth } from "./transactions-table";
 import { forgetPlace, readPlace, rememberPlace } from "./list-place";
@@ -872,6 +872,7 @@ export function Transactions({
                       rail={railOf(row.category)}
                       name={row.category === null ? null : nameOf(row.category)}
                       query={filterQuery}
+                      self={self}
                       onOpen={remember}
                     />
                   </SwipeToDelete>
@@ -1377,6 +1378,7 @@ function Row({
   rail,
   name,
   query,
+  self,
   onOpen,
 }: {
   row: RowView;
@@ -1385,9 +1387,14 @@ function Row({
   name: string | null;
   /** The list's filters, so the screen this opens can hand them back. */
   query: string;
+  /** The reader's participant id, so "You paid" is said as the reader's own. */
+  self: string | null;
   onOpen: () => void;
 }) {
   const dates = useDateFormatter();
+  // A repayment's title is already the two names; "X paid" would repeat it.
+  const payer = usePaidBy(row, self);
+  const paidBy = row.kind === "settlement" ? null : payer;
   const Glyph = hasGlyph(row.category)
     ? CATEGORY_GLYPHS[row.category]
     : FALLBACK_GLYPH;
@@ -1408,10 +1415,17 @@ function Row({
           {name && <span className="sr-only">{name}</span>}
           <span className="truncate text-sm font-medium">{row.title}</span>
         </span>
-        <span className="mt-[3px] block truncate text-2xs text-muted-foreground">
-          {row.note
-            ? `${dates.plain(row.date)} · ${row.note}`
-            : dates.plain(row.date)}
+        <span className="mt-[3px] block truncate text-xs text-muted-foreground">
+          {dates.plain(row.date)}
+          {/* Who put the money in, in the payer's amber — the same cue as
+              "Paid by" in the entry form, and never a money colour. */}
+          {paidBy && (
+            <>
+              {" · "}
+              <span className="text-payer-ink">{paidBy}</span>
+            </>
+          )}
+          {row.note ? ` · ${row.note}` : null}
         </span>
         {badge && (
           <span className="mt-[5px] flex">

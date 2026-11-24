@@ -528,6 +528,33 @@ describe("Transactions", () => {
     expect(screen.getByText(/\u00b7 Bus tickets$/)).toBeVisible();
   });
 
+  it("says who paid beside the date, in the payer's colour", () => {
+    renderList([
+      row({ id: "p1", payers: ["padi", "seb"], payerNames: ["Padi", "Seb"] }),
+      row({ id: "p2", payers: ["seb"], payerNames: ["Seb"] }),
+    ]);
+
+    const both = screen.getByText("Padi and Seb paid");
+    expect(both).toHaveClass("text-payer-ink");
+    expect(both.parentElement).toHaveTextContent(
+      /Aug 2026 · Padi and Seb paid|· Padi and Seb paid/,
+    );
+    expect(screen.getByText("Seb paid")).toBeVisible();
+  });
+
+  it("does not repeat the payer on a repayment, whose title is the two names", () => {
+    renderList([
+      row({
+        kind: "settlement",
+        id: "s1",
+        title: "Seb paid Padi",
+        category: null,
+      }),
+    ]);
+
+    expect(screen.queryByText("Seb paid")).not.toBeInTheDocument();
+  });
+
   it("leaves the line to the date when nobody said what it was for", () => {
     renderList([
       row({

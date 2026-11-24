@@ -3,6 +3,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { formatMoney, money } from "@/modules/currencies/money";
+import type { RemindRecipient } from "@/modules/reminders/types";
 import { PositionHero, type PositionHeroView } from "./position-hero";
 
 /**
@@ -307,5 +308,89 @@ describe("the hero at width", () => {
     expect(
       container.querySelector('[data-slot="position-strip"] > div'),
     ).toHaveClass("lg:max-w-(--app-content-max)", "lg:px-6", "xl:px-10");
+  });
+});
+
+/**
+ * Which way each line runs, and who there is to remind.
+ */
+describe("the hero's lines and reminder", () => {
+  const owed: PositionHeroView = {
+    ...CHALET,
+    currency: "EUR",
+    minorUnits: "4200",
+  };
+  const owes: PositionHeroView = {
+    ...CHALET,
+    currency: "JPY",
+    minorUnits: "-4500",
+    counterparties: [
+      { participantId: "p2", name: "Hervé", minorUnits: "4500" },
+    ],
+  };
+  const recipient: RemindRecipient = {
+    participantId: "p2",
+    name: "Hervé",
+    debts: [{ amount: "4200", currency: "EUR" }],
+    channel: "push",
+    lastRemindedAt: null,
+    locked: true,
+    muted: false,
+    payWith: [],
+    link: { kind: "group" },
+  };
+
+  function renderHero(
+    positions: PositionHeroView[],
+    recipients: RemindRecipient[] = [],
+  ) {
+    return renderWithIntl(
+      <PositionHero
+        positions={positions}
+        groupId="g1"
+        groupName="Chalet"
+        senderName="Seb"
+        recipients={recipients}
+        canArchive={false}
+      />,
+    );
+  }
+
+  it("gives each line its own word when a group runs both ways", () => {
+    renderHero([owed, owes]);
+
+    const words = screen
+      .getAllByText(/^(gets back|owes)$/)
+      .map((word) => word.textContent);
+    expect(words).toEqual(["gets back", "owes"]);
+  });
+
+  it("gives each line its word when the reader owes in several currencies", () => {
+    renderHero([owes, { ...owes, currency: "CHF", minorUnits: "-1000" }]);
+
+    expect(screen.getAllByText("owes")).toHaveLength(2);
+  });
+
+  it("leaves a single line to the sentence under it", () => {
+    renderHero([owes]);
+
+    expect(screen.queryByText("owes")).toBeNull();
+  });
+
+  it("offers no reminder, not even a spent one, when the reader owes everywhere", () => {
+    renderHero(
+      [owes, { ...owes, currency: "CHF", minorUnits: "-1000" }],
+      [recipient],
+    );
+
+    expect(screen.queryByText("Reminded")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Remind/ })).toBeNull();
+    expect(screen.getByRole("link", { name: "Settle up" })).toBeVisible();
+  });
+
+  it("still shows the spent reminder when the reader is owed", () => {
+    renderHero([owed, owes], [recipient]);
+
+    expect(screen.getByText("Reminded")).toBeVisible();
   });
 });

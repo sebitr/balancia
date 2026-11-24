@@ -97,10 +97,14 @@ interface CurrencyNet {
  * them.
  *
  * What the reader owes comes first — a debt is the fact they can act on, and
- * the header leads on it — and within a direction the largest amount comes
- * first. That size comparison is not a real one: there is no rate here, which
- * is the whole reason this header exists. It decides the order of the rows and
- * nothing else, and no figure derived for it is ever shown.
+ * the header leads on it. Within a direction the reader's own display currency
+ * comes next, then the largest amount. The size comparison is not a real one:
+ * there is no rate here, which is the whole reason this header exists, and it
+ * puts ¥4,500 (about €27) ahead of €176.10 because 4,500 is the bigger
+ * number. So it is only the tie-break, after the one currency the reader has
+ * said they think in. The first row is also the large lead figure, so this
+ * order decides what the header leads on, not only how the rows stack; no
+ * figure derived for it is ever shown.
  *
  * The magnitudes are scaled to the widest exponent in the set before they are
  * compared, because minor units are not a common unit either: ¥1000 and €10.00
@@ -113,6 +117,7 @@ interface CurrencyNet {
  */
 function outstandingByCurrency(
   totals: PositionWidgetProps["currencyTotals"],
+  preferred: string | null = null,
 ): CurrencyNet[] {
   const outstanding = totals
     .map((total) => ({
@@ -132,6 +137,8 @@ function outstandingByCurrency(
 
   return outstanding.sort((a, b) => {
     if (owing(a) !== owing(b)) return owing(a) - owing(b);
+    const home = (entry: CurrencyNet) => (entry.currency === preferred ? 0 : 1);
+    if (home(a) !== home(b)) return home(a) - home(b);
     const difference = size(b) - size(a);
     return difference === 0n ? 0 : difference < 0n ? -1 : 1;
   });
@@ -389,7 +396,7 @@ export function PositionWidget({
   const netUnits = net ? BigInt(net.minorUnits) : null;
   const positive = netUnits !== null && netUnits > 0n;
 
-  const outstanding = outstandingByCurrency(currencyTotals);
+  const outstanding = outstandingByCurrency(currencyTotals, displayCurrency);
   const [lead, ...rest] = outstanding;
 
   /*

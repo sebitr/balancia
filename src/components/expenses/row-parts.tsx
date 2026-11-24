@@ -1,6 +1,7 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useMemo } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { useNumberLocale } from "@/i18n/format-context";
 import {
   TONE,
@@ -130,4 +131,39 @@ export function Position({
       {words}
     </span>
   );
+}
+
+/**
+ * Who put the money in, as one phrase: "You paid", "Katherine paid",
+ * "Jonas and Ravi paid". Null when the row records no payer.
+ *
+ * The phone's meta line and the desk table's folded line both say it, in the
+ * one sentence the language joins its names with, so it is built here.
+ */
+export function usePaidBy(
+  row: Pick<RowView, "payers" | "payerNames">,
+  self: string | null,
+): string | null {
+  const t = useTranslations("expensesList.table");
+  const locale = useLocale();
+  const list = useMemo(
+    () => new Intl.ListFormat(locale, { style: "long", type: "conjunction" }),
+    [locale],
+  );
+  if (row.payers.length === 0) return null;
+  const names = list.format(
+    row.payers.map((payer, index) =>
+      payer === self ? t("you") : (row.payerNames[index] ?? ""),
+    ),
+  );
+  return t("paidByLine", {
+    who:
+      self !== null && row.payers.length === 1 && row.payers[0] === self
+        ? "you"
+        : self !== null && row.payers.includes(self)
+          ? "withYou"
+          : "other",
+    names,
+    count: row.payers.length,
+  });
 }
