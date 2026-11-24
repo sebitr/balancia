@@ -822,6 +822,130 @@
       "reminder": {
         "sent": ""
       }
+    },
+    "today": "",
+    "yesterday": "",
+    "you": "",
+    "self": {
+      "actions": {
+        "expense": {
+          "created": "",
+          "updated": "",
+          "deleted": "",
+          "restored": ""
+        },
+        "settlement": {
+          "created": "",
+          "updated": "",
+          "deleted": "",
+          "restored": ""
+        },
+        "member": {
+          "added": "",
+          "removed": "",
+          "role_changed": ""
+        },
+        "participant": {
+          "created": "",
+          "updated": "",
+          "removed": "",
+          "restored": ""
+        },
+        "guest_link": {
+          "created": "",
+          "revoked": "",
+          "redeemed": ""
+        },
+        "recurring": {
+          "created": "",
+          "updated": "",
+          "deleted": "",
+          "restored": "",
+          "generated": "",
+          "paused": "",
+          "resumed": ""
+        },
+        "import": {
+          "completed": ""
+        },
+        "group": {
+          "created": "",
+          "updated": "",
+          "archived": "",
+          "unarchived": ""
+        },
+        "reminder": {
+          "sent": ""
+        },
+        "income": {
+          "created": "",
+          "updated": "",
+          "deleted": "",
+          "restored": "",
+          "generated": ""
+        }
+      },
+      "actionsNamed": {
+        "participant": {
+          "created": "",
+          "updated": "",
+          "removed": "",
+          "restored": ""
+        },
+        "guest_link": {
+          "created": "",
+          "revoked": ""
+        },
+        "reminder": {
+          "sent": ""
+        }
+      },
+      "repaymentRecorded": {
+        "between": "",
+        "toYou": "",
+        "yours": ""
+      },
+      "repaymentEdited": {
+        "between": "",
+        "toYou": "",
+        "yours": ""
+      },
+      "repaymentDeleted": {
+        "between": "",
+        "toYou": "",
+        "yours": ""
+      },
+      "repaymentRestored": {
+        "between": "",
+        "toYou": "",
+        "yours": ""
+      },
+      "participantRenamed": "",
+      "groupCreated": "",
+      "groupChanged": {
+        "renamed": "",
+        "timezone": "",
+        "fields": ""
+      },
+      "expenseChanged": {
+        "amount": "",
+        "renamed": "",
+        "fields": ""
+      },
+      "left": "",
+      "joinedWithGroupLink": "",
+      "claimedPersonalLink": "",
+      "importCompleted": "",
+      "convertedToRepayment": {
+        "between": "",
+        "toYou": "",
+        "yours": "",
+        "plain": ""
+      },
+      "convertedToExpense": {
+        "full": "",
+        "plain": ""
+      }
     }
   },
   "recurring": {
@@ -1874,7 +1998,10 @@
     "recordSquareSub": "",
     "days": "",
     "percent": "",
-    "method": ""
+    "method": "",
+    "you": "",
+    "netAbove": "",
+    "netBelow": ""
   },
   "recurringPage": {
     "title": "",
@@ -1888,7 +2015,9 @@
     "generatedSoFar": "",
     "weekly": "",
     "monthly": "",
-    "yearly": ""
+    "yearly": "",
+    "due": "",
+    "dueShort": ""
   },
   "settingsPage": {
     "title": "",
@@ -1977,7 +2106,8 @@
       "title": "",
       "body": "",
       "action": ""
-    }
+    },
+    "you": ""
   },
   "emails": {
     "fallbackLabel": "",

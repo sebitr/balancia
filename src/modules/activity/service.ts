@@ -1,5 +1,14 @@
 import "server-only";
-import { and, desc, eq, inArray, isNotNull, or, sql } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  or,
+  sql,
+} from "drizzle-orm";
 import type { Database } from "@/lib/db/client";
 import { getDb } from "@/lib/db/client";
 import {
@@ -529,4 +538,64 @@ export async function findRestorableDeletions(
     );
 
   return new Set(rows.map((row) => row.id));
+}
+
+/**
+ * Which of the entries the feed mentions can still be opened.
+ *
+ * A row about an expense or a repayment links to its detail page, and that
+ * page is a 404 once the entry is deleted. An event only says what happened at
+ * the time, so whether the thing is still there is a question for the table:
+ * one query for the page, scoped to the authorized group, returning the ids
+ * of the expenses and repayments that exist and are not deleted.
+ */
+export async function findOpenableEntries(
+  groupId: string,
+  entries: readonly ActivityEntry[],
+  options: { db?: Database } = {},
+): Promise<Set<string>> {
+  const idsOf = (type: string): string[] => [
+    ...new Set(
+      entries.flatMap((entry) =>
+        entry.entityType === type &&
+        entry.entityId !== null &&
+        UUID.test(entry.entityId)
+          ? [entry.entityId]
+          : [],
+      ),
+    ),
+  ];
+  const expenseIds = idsOf("expense");
+  const settlementIds = idsOf("settlement");
+  if (expenseIds.length === 0 && settlementIds.length === 0) return new Set();
+
+  const db = options.db ?? getDb();
+  const [expenseRows, settlementRows] = await Promise.all([
+    expenseIds.length === 0
+      ? []
+      : db
+          .select({ id: expenses.id })
+          .from(expenses)
+          .where(
+            and(
+              eq(expenses.groupId, groupId),
+              inArray(expenses.id, expenseIds),
+              isNull(expenses.deletedAt),
+            ),
+          ),
+    settlementIds.length === 0
+      ? []
+      : db
+          .select({ id: settlements.id })
+          .from(settlements)
+          .where(
+            and(
+              eq(settlements.groupId, groupId),
+              inArray(settlements.id, settlementIds),
+              isNull(settlements.deletedAt),
+            ),
+          ),
+  ]);
+
+  return new Set([...expenseRows, ...settlementRows].map((row) => row.id));
 }

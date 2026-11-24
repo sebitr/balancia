@@ -1106,6 +1106,130 @@
     "convertedToExpense": {
       "full": "turned a repayment of {before} into “{description}” ({amount})",
       "plain": "turned a repayment into “{description}”"
+    },
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "you": "You",
+    "self": {
+      "actions": {
+        "expense": {
+          "created": "added an expense",
+          "updated": "edited an expense",
+          "deleted": "deleted an expense",
+          "restored": "restored an expense"
+        },
+        "settlement": {
+          "created": "recorded a repayment",
+          "updated": "edited a repayment",
+          "deleted": "deleted a repayment",
+          "restored": "restored a repayment"
+        },
+        "member": {
+          "added": "added someone to the group",
+          "removed": "removed someone from the group",
+          "role_changed": "changed someone's role"
+        },
+        "participant": {
+          "created": "added someone to the group",
+          "updated": "updated someone's details",
+          "removed": "removed someone from the group",
+          "restored": "put someone back in the group"
+        },
+        "guest_link": {
+          "created": "sent someone a personal link",
+          "revoked": "revoked a personal link",
+          "redeemed": "opened their personal link"
+        },
+        "recurring": {
+          "created": "set up a recurring expense",
+          "updated": "changed a recurring expense",
+          "deleted": "removed a recurring expense",
+          "restored": "restored a recurring expense",
+          "generated": "added an expense automatically",
+          "paused": "paused a recurring expense",
+          "resumed": "resumed a recurring expense"
+        },
+        "import": {
+          "completed": "completed an import"
+        },
+        "group": {
+          "created": "created the group",
+          "updated": "updated the group",
+          "archived": "archived the group",
+          "unarchived": "took the group out of the archive"
+        },
+        "reminder": {
+          "sent": "sent a reminder"
+        },
+        "income": {
+          "created": "added an income",
+          "updated": "edited an income",
+          "deleted": "deleted an income",
+          "restored": "restored an income",
+          "generated": "added an income automatically"
+        }
+      },
+      "actionsNamed": {
+        "participant": {
+          "created": "added {name} to the group",
+          "updated": "updated {name}'s details",
+          "removed": "removed {name} from the group",
+          "restored": "put {name} back in the group"
+        },
+        "guest_link": {
+          "created": "sent {name} a personal link",
+          "revoked": "revoked the personal link for {name}"
+        },
+        "reminder": {
+          "sent": "sent {name} a reminder"
+        }
+      },
+      "repaymentRecorded": {
+        "between": "recorded {from}'s repayment of {amount} to {to}",
+        "toYou": "recorded {from}'s repayment of {amount} to you",
+        "yours": "recorded your repayment of {amount} to {to}"
+      },
+      "repaymentEdited": {
+        "between": "edited {from}'s repayment of {amount} to {to}",
+        "toYou": "edited {from}'s repayment of {amount} to you",
+        "yours": "edited your repayment of {amount} to {to}"
+      },
+      "repaymentDeleted": {
+        "between": "deleted {from}'s repayment of {amount} to {to}",
+        "toYou": "deleted {from}'s repayment of {amount} to you",
+        "yours": "deleted your repayment of {amount} to {to}"
+      },
+      "repaymentRestored": {
+        "between": "restored {from}'s repayment of {amount} to {to}",
+        "toYou": "restored {from}'s repayment of {amount} to you",
+        "yours": "restored your repayment of {amount} to {to}"
+      },
+      "participantRenamed": "renamed {before} to {name}",
+      "groupCreated": "created the group “{name}”",
+      "groupChanged": {
+        "renamed": "renamed the group from “{before}” to “{name}”",
+        "timezone": "set the group's time zone to {timezone}",
+        "fields": "updated the group: {fields}"
+      },
+      "expenseChanged": {
+        "amount": "changed the amount of “{description}” from {before} to {after}",
+        "renamed": "renamed “{before}” to “{description}”",
+        "fields": "edited “{description}”: {fields}"
+      },
+      "left": "left the group",
+      "joinedWithGroupLink": "joined with the group link",
+      "claimedPersonalLink": "turned their personal link into an account",
+      "importCompleted": "{imported, plural, =0 {imported nothing from “{file}”} one {imported # entry from “{file}”} other {imported # entries from “{file}”}}{failed, plural, =0 {} one {, # could not be imported} other {, # could not be imported}}",
+      "convertedToRepayment": {
+        "between": "turned “{description}” into {from}'s repayment of {amount} to {to}",
+        "toYou": "turned “{description}” into {from}'s repayment of {amount} to you",
+        "yours": "turned “{description}” into your repayment of {amount} to {to}",
+        "plain": "turned “{description}” into a repayment"
+      },
+      "convertedToExpense": {
+        "full": "turned a repayment of {before} into “{description}” ({amount})",
+        "plain": "turned a repayment into “{description}”"
+      }
     }
   },
   "recurring": {
@@ -2806,7 +2930,10 @@
     "recordSquareSub": "Everyone at zero, {from} to {to}",
     "days": "{count, plural, one {# day} other {# days}}",
     "percent": "{percent, number, ::.0}%",
-    "method": "Shares use the split ratios recorded on each entry, not today's. Repayments move money between people and are never counted as spend. Amounts in other currencies are listed separately and never summed."
+    "method": "Shares use the split ratios recorded on each entry, not today's. Repayments move money between people and are never counted as spend. Amounts in other currencies are listed separately and never summed.",
+    "you": "You",
+    "netAbove": "above share",
+    "netBelow": "below share"
   },
   "recurringPage": {
     "title": "Recurring expenses",
@@ -2827,7 +2954,9 @@
       "actions": "Actions",
       "footer": "{running, plural, one {# running} other {# running}}{paused, plural, =0 {} one { · # paused} other { · # paused}}",
       "footerNote": "Editing a rule changes the expenses it adds from now on. The ones it has already added stay as they are."
-    }
+    },
+    "due": "Due · added when the server’s daily job runs",
+    "dueShort": "Due"
   },
   "settingsPage": {
     "title": "Group settings",
@@ -2944,7 +3073,8 @@
       "paidYou": "You paid",
       "received": "{count, plural, one {{name} received it} other {# people received it}}",
       "receivedYou": "You received it"
-    }
+    },
+    "you": "You"
   },
   "emails": {
     "codeLabel": "Your code — tap or click it to select",

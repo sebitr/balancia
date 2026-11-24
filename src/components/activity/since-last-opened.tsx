@@ -85,7 +85,7 @@ export async function SinceLastOpened({
         {unseen.map((entry) => {
           // Named on every line, as in the full history: a line that begins
           // with a verb reads as if its subject had been dropped.
-          const actor = actorOf(entry, translate, people.names);
+          const actor = actorOf(entry, translate, people.names, people.you);
 
           return (
             <li

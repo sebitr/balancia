@@ -506,6 +506,8 @@ function Flows({
   const t = useTranslations("groupStats");
   const { flows } = entry;
 
+  const nothingCame = flows.revenueCount === 0 && BigInt(flows.revenue) === 0n;
+
   const rows = [
     {
       key: "flowExpenses",
@@ -522,8 +524,12 @@ function Flows({
       key: "flowRevenue",
       sub: t("flowRevenueSub", { count: flows.revenueCount }),
       minorUnits: flows.revenue,
-      tone: "text-positive-ink",
-      chip: "bg-positive/15 text-positive-ink",
+      // A zero is not money in, and green is for money that is: with nothing
+      // recorded the row goes neutral and the subtitle says so.
+      tone: nothingCame ? "text-muted-foreground" : "text-positive-ink",
+      chip: nothingCame
+        ? "bg-wash-2 text-muted-foreground"
+        : "bg-positive/15 text-positive-ink",
       icon: ArrowDownLeft,
     },
     {
@@ -573,15 +579,17 @@ function Flows({
                 {row.sub}
               </dd>
             </div>
-            <span className={cn("shrink-0 text-sm font-semibold", row.tone)}>
-              <Amount
-                minorUnits={row.minorUnits}
-                currency={entry.currency}
-                signDisplay={
-                  row.key === "flowSettlements" ? "auto" : "exceptZero"
-                }
-              />
-            </span>
+            {row.key === "flowRevenue" && nothingCame ? null : (
+              <span className={cn("shrink-0 text-sm font-semibold", row.tone)}>
+                <Amount
+                  minorUnits={row.minorUnits}
+                  currency={entry.currency}
+                  signDisplay={
+                    row.key === "flowSettlements" ? "auto" : "exceptZero"
+                  }
+                />
+              </span>
+            )}
           </div>
         ))}
       </dl>
@@ -757,6 +765,12 @@ function WhoCarries({
 }) {
   const t = useTranslations("groupStats");
   const signed = SIGNED[metric];
+  // Only Open is a balance. Net is what somebody put in beyond their share —
+  // a payment habit, which the note under the list says is not a debt — so it
+  // is drawn in the neutral ink, unsigned, and says which way in words. Red
+  // and green on it would give one person two figures in debt colours that
+  // disagree with the overview.
+  const balance = metric === "open";
   const metricPanel = useId();
   const metricKeys = rovingChoice({
     values: METRICS,
@@ -850,7 +864,7 @@ function WhoCarries({
                     {member.name.trim().charAt(0).toUpperCase()}
                   </span>
                   <span className="truncate text-sm font-medium">
-                    {member.name}
+                    {member.isSelf ? t("you") : member.name}
                   </span>
                 </span>
 
@@ -865,8 +879,12 @@ function WhoCarries({
                     className={cn(
                       "absolute inset-y-0 rounded-full",
                       !signed && "left-0 bg-[var(--chart-1)]",
-                      signed && value >= 0n && `left-1/2 ${TONE.positive.fill}`,
-                      signed && value < 0n && `right-1/2 ${TONE.negative.fill}`,
+                      signed &&
+                        value >= 0n &&
+                        `left-1/2 ${balance ? TONE.positive.fill : "bg-[var(--chart-1)]"}`,
+                      signed &&
+                        value < 0n &&
+                        `right-1/2 ${balance ? TONE.negative.fill : "bg-foreground/30"}`,
                     )}
                     style={{ width: `${width}%` }}
                   />
@@ -874,15 +892,24 @@ function WhoCarries({
 
                 <span
                   className={cn(
-                    "text-right text-sm font-semibold tabular-nums",
-                    signed && value !== 0n && TONE[toneFor(value)].ink,
+                    "flex flex-col items-end text-right text-sm font-semibold tabular-nums",
+                    balance && value !== 0n && TONE[toneFor(value)].ink,
                   )}
                 >
                   <Amount
-                    minorUnits={value.toString()}
+                    minorUnits={
+                      signed && !balance
+                        ? magnitude.toString()
+                        : value.toString()
+                    }
                     currency={entry.currency}
-                    signDisplay={signed ? "exceptZero" : "auto"}
+                    signDisplay={balance ? "exceptZero" : "auto"}
                   />
+                  {signed && !balance && value !== 0n && (
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {t(value > 0n ? "netAbove" : "netBelow")}
+                    </span>
+                  )}
                 </span>
               </li>
             );

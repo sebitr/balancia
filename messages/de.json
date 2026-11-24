@@ -1177,6 +1177,130 @@
     "convertedToExpense": {
       "full": "hat eine Rückzahlung über {before} in die Ausgabe „{description}“ ({amount}) umgewandelt",
       "plain": "hat eine Rückzahlung in die Ausgabe „{description}“ umgewandelt"
+    },
+    "today": "Heute",
+    "yesterday": "Gestern",
+    "you": "Du",
+    "self": {
+      "actions": {
+        "expense": {
+          "created": "",
+          "updated": "",
+          "deleted": "",
+          "restored": ""
+        },
+        "settlement": {
+          "created": "",
+          "updated": "",
+          "deleted": "",
+          "restored": ""
+        },
+        "member": {
+          "added": "",
+          "removed": "",
+          "role_changed": ""
+        },
+        "participant": {
+          "created": "",
+          "updated": "",
+          "removed": "",
+          "restored": ""
+        },
+        "guest_link": {
+          "created": "",
+          "revoked": "",
+          "redeemed": ""
+        },
+        "recurring": {
+          "created": "",
+          "updated": "",
+          "deleted": "",
+          "restored": "",
+          "generated": "",
+          "paused": "",
+          "resumed": ""
+        },
+        "import": {
+          "completed": ""
+        },
+        "group": {
+          "created": "",
+          "updated": "",
+          "archived": "",
+          "unarchived": ""
+        },
+        "reminder": {
+          "sent": ""
+        },
+        "income": {
+          "created": "",
+          "updated": "",
+          "deleted": "",
+          "restored": "",
+          "generated": ""
+        }
+      },
+      "actionsNamed": {
+        "participant": {
+          "created": "",
+          "updated": "",
+          "removed": "",
+          "restored": ""
+        },
+        "guest_link": {
+          "created": "",
+          "revoked": ""
+        },
+        "reminder": {
+          "sent": ""
+        }
+      },
+      "repaymentRecorded": {
+        "between": "",
+        "toYou": "",
+        "yours": ""
+      },
+      "repaymentEdited": {
+        "between": "",
+        "toYou": "",
+        "yours": ""
+      },
+      "repaymentDeleted": {
+        "between": "",
+        "toYou": "",
+        "yours": ""
+      },
+      "repaymentRestored": {
+        "between": "",
+        "toYou": "",
+        "yours": ""
+      },
+      "participantRenamed": "",
+      "groupCreated": "",
+      "groupChanged": {
+        "renamed": "",
+        "timezone": "",
+        "fields": ""
+      },
+      "expenseChanged": {
+        "amount": "",
+        "renamed": "",
+        "fields": ""
+      },
+      "left": "",
+      "joinedWithGroupLink": "",
+      "claimedPersonalLink": "",
+      "importCompleted": "",
+      "convertedToRepayment": {
+        "between": "",
+        "toYou": "",
+        "yours": "",
+        "plain": ""
+      },
+      "convertedToExpense": {
+        "full": "",
+        "plain": ""
+      }
     }
   },
   "recurring": {
@@ -2410,7 +2534,10 @@
     "recordSquareSub": "Für niemanden war etwas offen, von {from} bis {to}",
     "days": "{count, plural, one {# Tag} other {# Tage}}",
     "percent": "{percent, number, ::.0}%",
-    "method": "Für Anteile gelten die bei jedem Eintrag gespeicherten Aufteilungsverhältnisse, nicht die heutigen. Rückzahlungen verschieben Geld zwischen Personen und zählen niemals zu den Ausgaben. Beträge in anderen Währungen werden separat aufgeführt und niemals addiert."
+    "method": "Für Anteile gelten die bei jedem Eintrag gespeicherten Aufteilungsverhältnisse, nicht die heutigen. Rückzahlungen verschieben Geld zwischen Personen und zählen niemals zu den Ausgaben. Beträge in anderen Währungen werden separat aufgeführt und niemals addiert.",
+    "you": "Du",
+    "netAbove": "über dem Anteil",
+    "netBelow": "unter dem Anteil"
   },
   "recurringPage": {
     "title": "Wiederkehrende Ausgaben",
@@ -2434,7 +2561,9 @@
       "actions": "Aktionen",
       "footer": "{running, plural, one {# aktiv} other {# aktiv}}{paused, plural, =0 {} one { · # pausiert} other { · # pausiert}}",
       "footerNote": "Wenn du eine Regel bearbeitest, ändern sich nur die Ausgaben, die ab jetzt hinzugefügt werden. Bereits hinzugefügte Ausgaben bleiben unverändert."
-    }
+    },
+    "due": "Fällig · wird mit dem täglichen Serverjob hinzugefügt",
+    "dueShort": "Fällig"
   },
   "settingsPage": {
     "title": "Gruppeneinstellungen",
@@ -2559,7 +2688,8 @@
       "paidYou": "Du hast bezahlt",
       "received": "{count, plural, one {{name} hat es erhalten} other {# Personen haben es erhalten}}",
       "receivedYou": "Du hast es erhalten"
-    }
+    },
+    "you": "Du"
   },
   "emails": {
     "fallbackLabel": "Oder füge diesen Link in deinen Browser ein",

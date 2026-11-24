@@ -4,6 +4,7 @@ import { ActivityFeed } from "@/components/activity/activity-feed";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireGroupAccess } from "@/lib/actions";
 import {
+  findOpenableEntries,
   findRestorableDeletions,
   listGroupActivity,
   namesInActivity,
@@ -42,9 +43,10 @@ export default async function GroupActivityPage({
   ]);
   // After the list rather than beside it: which deletions can still be taken
   // back, and whom a repayment names, are questions about exactly these rows.
-  const [restorable, names] = await Promise.all([
+  const [restorable, names, openable] = await Promise.all([
     findRestorableDeletions(access, entries),
     namesInActivity(access.groupId, entries),
+    findOpenableEntries(access.groupId, entries),
   ]);
 
   return (
@@ -57,6 +59,7 @@ export default async function GroupActivityPage({
         entries={entries}
         groupId={access.groupId}
         restorable={restorable}
+        openable={openable}
         timeZone={access.group.timezone}
         people={{ you: access.participantId, names }}
       />

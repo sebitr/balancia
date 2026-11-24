@@ -154,6 +154,7 @@ export async function SplitCard({
             <SplitRow
               key={share.participantId}
               name={share.displayName}
+              label={you ? t("you") : share.displayName}
               tone={you ? "self" : "other"}
               minorUnits={share.amount.toString()}
               currency={currency}
@@ -232,6 +233,7 @@ export async function SplitTable({
           <SplitTableRow
             key={id}
             name={names.get(id) ?? ""}
+            label={you ? t("you") : (names.get(id) ?? "")}
             // You, whoever put the money in, or anybody else — the list's
             // faces, with the payer's amber the phone shows under "Paid by",
             // since the table is both.

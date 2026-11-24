@@ -31,6 +31,7 @@ const CLEANING: RecurringRowView = {
   currency: "EUR",
   schedule: "Every week on Saturday",
   next: "15 Aug 2026",
+  overdue: false,
   paused: false,
   generatedCount: 1,
 };
@@ -42,6 +43,7 @@ const SURF: RecurringRowView = {
   currency: "EUR",
   schedule: "Every week on Thursday",
   next: null,
+  overdue: false,
   paused: true,
   generatedCount: 0,
 };
@@ -87,6 +89,20 @@ describe("the recurring table", () => {
     expect(
       within(cells.Description).queryByText("Paused"),
     ).not.toBeInTheDocument();
+  });
+
+  it("says a date already past is due, not a Next that has gone by", () => {
+    // A demo server runs no daily job, so the date never moves on.
+    render([{ ...CLEANING, overdue: true }]);
+    const cells = cellsOf("Apartment cleaning");
+
+    expect(cells.Next).toHaveTextContent("Due");
+    expect(cells.Next).not.toHaveTextContent("15 Aug 2026");
+    expect(
+      within(cells.Description).getByText(
+        /Due · added when the server’s daily job runs/,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("says a paused rule is paused where the next date would be", () => {

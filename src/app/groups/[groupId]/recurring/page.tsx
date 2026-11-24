@@ -23,6 +23,7 @@ import {
 import { PageHeader } from "@/components/ui/page-header";
 import { requireGroupAccess } from "@/lib/actions";
 import { listRecurringExpenses } from "@/modules/recurring/service";
+import { todayIn } from "@/modules/recurring/schedule";
 import { listParticipants } from "@/modules/groups/service";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -93,6 +94,12 @@ export default async function RecurringPage({
           // clock put a Sydney group's 09:00 on the evening before.
           dates.at(template.nextRunAt, { timeZone: access.group.timezone })
         : null,
+    // Before today on the group's calendar. Not "before now": a date later
+    // today is still to come, and the job waits for nine in the morning.
+    overdue:
+      template.nextRunAt !== null &&
+      todayIn(access.group.timezone, template.nextRunAt) <
+        todayIn(access.group.timezone),
     paused: template.pausedAt !== null,
     generatedCount: template.generatedCount,
   }));
@@ -179,7 +186,9 @@ export default async function RecurringPage({
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {row.next !== null
-                      ? t("next", { date: row.next })
+                      ? row.overdue
+                        ? t("due")
+                        : t("next", { date: row.next })
                       : row.paused
                         ? t("pausedNote")
                         : t("noFurther")}

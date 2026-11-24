@@ -358,6 +358,11 @@ export default async function TransactionDetailPage({
                   <PartyRow
                     key={payer.participantId}
                     name={payer.displayName}
+                    label={
+                      payer.participantId === self
+                        ? t("you")
+                        : payer.displayName
+                    }
                     // Amber marks whoever put the money in, here as on the split
                     // sheet — the one role coral cannot carry, because the payer
                     // is usually in the split as well.
