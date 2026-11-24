@@ -36,7 +36,7 @@ export function Chip({
       disabled={disabled}
       className={cn(
         "tap-target h-8 min-w-16 rounded-full px-3.5 text-xs font-semibold transition-colors",
-        "focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+        "focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none",
         "disabled:pointer-events-none disabled:opacity-50",
         selected
           ? "bg-primary text-primary-foreground"

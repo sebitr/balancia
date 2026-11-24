@@ -134,7 +134,7 @@ export function BackupHistory({
                   aria-expanded={isOpen}
                   aria-controls={panel}
                   onClick={() => onOpenChange(isOpen ? null : run.id)}
-                  className="flex min-h-11 w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:-outline-offset-2 focus-visible:outline-none"
+                  className="flex min-h-11 w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring focus-visible:-outline-offset-2 focus-visible:outline-none"
                 >
                   {body}
                 </button>
@@ -177,7 +177,7 @@ export function BackupHistory({
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="flex min-h-11 w-full items-center border-t border-border px-4 py-3 text-xs font-semibold text-primary-ink transition-colors hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:-outline-offset-2 focus-visible:outline-none lg:hidden"
+          className="flex min-h-11 w-full items-center border-t border-border px-4 py-3 text-xs font-semibold text-primary-ink transition-colors hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring focus-visible:-outline-offset-2 focus-visible:outline-none lg:hidden"
         >
           {t("overview.historyMore", { count: hidden })}
         </button>

@@ -75,7 +75,7 @@ export function SwatchCards<T extends string>({
             value={item.value}
             className={cn(
               "flex flex-col gap-2.25 rounded-2xl bg-card px-2.75 pt-2.75 pb-3 text-left",
-              "transition-shadow focus-visible:ring-3 focus-visible:ring-ring/50",
+              "transition-shadow focus-visible:ring-3 focus-visible:ring-ring",
               "focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
               value === item.value
                 ? "ring-[1.5px] ring-primary/65"

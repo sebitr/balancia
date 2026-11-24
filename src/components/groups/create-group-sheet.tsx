@@ -529,7 +529,7 @@ function Participants({
 
       {/* The row is the field's edge, so the row is what shows it has the
           caret: the input inside draws no box of its own to ring. */}
-      <div className="flex h-12 items-center gap-2.5 rounded-[14px] pr-2 pl-2.5 inset-ring inset-ring-foreground/12 has-[input:focus-visible]:ring-3 has-[input:focus-visible]:ring-ring/50">
+      <div className="flex h-12 items-center gap-2.5 rounded-[14px] pr-2 pl-2.5 inset-ring inset-ring-foreground/12 has-[input:focus-visible]:ring-3 has-[input:focus-visible]:ring-ring">
         <span
           aria-hidden="true"
           className="flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground inset-ring inset-ring-foreground/18"

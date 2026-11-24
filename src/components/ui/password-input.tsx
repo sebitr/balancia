@@ -59,7 +59,7 @@ function PasswordInput({
         disabled={disabled}
         onMouseDown={(event) => event.preventDefault()}
         onClick={() => setShown((current) => !current)}
-        className="tap-target absolute top-1/2 right-1.5 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 aria-pressed:text-foreground"
+        className="tap-target absolute top-1/2 right-1.5 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 aria-pressed:text-foreground"
       >
         {shown ? (
           <EyeOff aria-hidden="true" className="size-4" />

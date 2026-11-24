@@ -60,7 +60,7 @@ export default async function HelpSettingsPage() {
               href={href}
               target="_blank"
               rel="noreferrer"
-              className="flex min-h-11 items-center gap-3 px-4 py-3.5 transition-colors not-first:border-t not-first:border-border hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:-outline-offset-2 focus-visible:outline-none"
+              className="flex min-h-11 items-center gap-3 px-4 py-3.5 transition-colors not-first:border-t not-first:border-border hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring focus-visible:-outline-offset-2 focus-visible:outline-none"
             >
               <span
                 aria-hidden="true"

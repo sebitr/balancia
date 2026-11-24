@@ -138,7 +138,7 @@ export function KeyStep({
             <button
               type="button"
               onClick={() => setOwn(false)}
-              className="tap-target text-xs font-medium text-primary-ink underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+              className="tap-target text-xs font-medium text-primary-ink underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none"
             >
               {t("key.makeOwn")}
             </button>
@@ -199,7 +199,7 @@ export function KeyStep({
           <button
             type="button"
             onClick={() => setOwn(true)}
-            className="tap-target text-xs font-medium text-primary-ink underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+            className="tap-target text-xs font-medium text-primary-ink underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none"
           >
             {t("key.ownLink")}
           </button>

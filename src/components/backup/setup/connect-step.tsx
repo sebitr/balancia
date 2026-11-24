@@ -359,7 +359,7 @@ function InfomaniakChoice({
               {...roving(service)}
               className={cn(
                 "tap-target relative flex min-h-14 w-full items-center gap-3 border-t border-border px-4 py-3 text-left transition-colors first:border-t-0",
-                "focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:-outline-offset-2 focus-visible:outline-none",
+                "focus-visible:ring-3 focus-visible:ring-ring focus-visible:-outline-offset-2 focus-visible:outline-none",
                 selected ? "bg-primary/10" : "hover:bg-wash-1",
               )}
             >

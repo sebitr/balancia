@@ -131,7 +131,7 @@ function RowBody({
 const ROW = cn(
   "flex min-h-11 w-full items-center gap-3 px-4 py-3.5 text-left",
   "transition-colors hover:bg-wash-1 focus-visible:ring-3",
-  "focus-visible:ring-ring/50 focus-visible:outline-none focus-visible:-outline-offset-2",
+  "focus-visible:ring-ring focus-visible:outline-none focus-visible:-outline-offset-2",
 );
 
 /**
