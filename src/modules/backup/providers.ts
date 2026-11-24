@@ -230,7 +230,18 @@ export const credentialSchemas = {
   s3: z.object({
     /** Empty means AWS itself. */
     endpoint: z.union([z.literal(""), httpUrl]),
-    region: z.string().trim().max(60),
+    /**
+     * Letters, digits and hyphens, as every provider's regions are. With no
+     * endpoint, rclone builds the AWS address out of this, so anything more —
+     * a dot, a slash, an `@` — would let the text choose the host the worker
+     * connects to, past the check the endpoint itself gets.
+     */
+    region: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .max(60)
+      .regex(/^[a-z0-9-]*$/, "not a region"),
     flavour: z.enum(S3_FLAVOURS),
     bucket: z
       .string()

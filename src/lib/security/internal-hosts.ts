@@ -52,7 +52,7 @@ function isInternalIpv4(parts: readonly number[]): boolean {
 }
 
 /** Parses dotted-quad IPv4, or null if `value` is not one. */
-function parseIpv4(value: string): number[] | null {
+export function parseIpv4(value: string): number[] | null {
   const parts = value.split(".");
   if (parts.length !== 4) return null;
 
@@ -80,8 +80,10 @@ function parseIpv4(value: string): number[] | null {
  * `new URL()` rewrites an IPv6 host into its own canonical form before this
  * ever sees it: `https://[::ffff:127.0.0.1]/` reaches us as `[::ffff:7f00:1]`,
  * and a pattern written for the dotted spelling waves that straight through.
+ *
+ * Expects lowercase hex.
  */
-function parseIpv6(value: string): number[] | null {
+export function parseIpv6(value: string): number[] | null {
   // A zone ("%eth0") says which interface to use, not which address.
   const address = value.replace(/%.*$/, "");
 

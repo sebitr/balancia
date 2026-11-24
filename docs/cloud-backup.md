@@ -417,7 +417,12 @@ setting on, any account can make this server connect to any address it can reach
 Off, such an address is refused, and so is a public-looking name that resolves
 into a private range. Plain `http://` is accepted only for addresses that are
 private; the password would otherwise cross the internet unencrypted. The platform
-metadata address (`169.254.169.254`) is refused either way.
+metadata addresses are refused either way: the whole link-local range
+(`169.254.0.0/16`, `fe80::/10`), AWS's `fd00:ec2::254` and Alibaba's
+`100.100.100.200`. They are compared as numbers, not as text, so an IPv6 spelling
+that carries one of them (`[::ffff:a9fe:a9fe]`, `[64:ff9b::a9fe:a9fe]`) is
+refused like the address itself. An S3 region is letters, digits and hyphens only,
+since with no endpoint rclone builds the host name out of it.
 
 One thing this check cannot do: a name that answers differently between the check
 and rclone's own lookup a moment later (DNS rebinding) is not caught, because
