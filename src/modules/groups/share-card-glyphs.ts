@@ -148,9 +148,12 @@ export const SHARE_CARD_GLYPHS: Record<GroupIcon, readonly GlyphShape[]> = {
     ["rect", { x: "3", y: "7", width: "18", height: "4", rx: "1" }],
   ],
   music: [
-    ["path", { d: "M9 18V5l12-2v13" }],
-    ["circle", { cx: "6", cy: "18", r: "3" }],
+    [
+      "path",
+      { d: "M21 16V3a1 1 0 0 0-1.28-.96l-10 2.917a1 1 0 0 0-.72.96V19" },
+    ],
     ["circle", { cx: "18", cy: "16", r: "3" }],
+    ["circle", { cx: "6", cy: "19", r: "3" }],
   ],
   sport: [
     ["path", { d: "M11 7a16 16 20 0 1 10.98 4.362" }],

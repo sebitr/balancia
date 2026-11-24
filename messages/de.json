@@ -4768,7 +4768,9 @@
       "unknown": "Etwas ist schiefgelaufen.",
       "invalidKey": "Das ist kein gültiger Wiederherstellungsschlüssel.",
       "tooMany": "Du hast die maximale Anzahl an Backup-Zielen erreicht. Deaktiviere zuerst ein Ziel.",
-      "invalidDetails": "Einige Angaben sind ungültig. Prüfe sie und teste erneut."
+      "invalidDetails": "Einige Angaben sind ungültig. Prüfe sie und teste erneut.",
+      "interrupted": "Diese Sicherung wurde abgebrochen, meist weil der Server neu gestartet wurde.",
+      "interruptedHint": "Frühere Sicherungen sind unberührt. Die nächste läuft wie geplant."
     },
     "restore": {
       "title": "Aus einem Backup wiederherstellen",

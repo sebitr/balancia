@@ -282,6 +282,14 @@ describe("the group statistics island", () => {
     });
   });
 
+  it("draws income that came in without the gets-back green", () => {
+    renderWithIntl(<GroupStatistics stats={stats()} />);
+
+    const row = screen.getByText("Income").closest("div")!.parentElement!;
+    expect(row.innerHTML).not.toMatch(/positive/);
+    expect(row.innerHTML).toMatch(/text-foreground/);
+  });
+
   it("keeps repayments in their own row, out of the spending", () => {
     renderWithIntl(<GroupStatistics stats={stats()} />);
 
