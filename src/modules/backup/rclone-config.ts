@@ -58,6 +58,15 @@ export interface RcloneRemote {
   readonly env: Readonly<Record<string, string>>;
   /** The directory inside the remote that holds the backups, without the remote's name. */
   readonly directory: string;
+  /**
+   * Every secret this remote holds, by value, for `scrub` to take out of
+   * anything rclone says: passwords and keys as typed and as obscured, client
+   * secrets, and tokens whole and in part. Only those. A host name, a region,
+   * a user name or a scope is what the person needs to read in an error to
+   * see what went wrong, and blanking them as if they were passwords left
+   * "dial tcp ••• : no such host" where the address should have been.
+   */
+  readonly secrets: readonly string[];
 }
 
 /**
@@ -77,7 +86,7 @@ export function inFolder(
   if (!(BACKUP_SUBFOLDERS as readonly string[]).includes(folder)) {
     throw new Error(`Unknown backup folder ${String(folder)}.`);
   }
-  return { env: remote.env, directory: `${remote.directory}/${folder}` };
+  return { ...remote, directory: `${remote.directory}/${folder}` };
 }
 
 const PREFIX = `RCLONE_CONFIG_${REMOTE}_`;
@@ -114,9 +123,33 @@ export async function buildRemote(
   context: BuildContext,
 ): Promise<RcloneRemote> {
   const options: Record<string, string> = {};
+  const secrets: string[] = [];
   const set = (name: string, value: string | undefined) => {
     if (value === undefined || value === "") return;
     options[`${PREFIX}${name.toUpperCase()}`] = value;
+  };
+  /**
+   * An option whose value is a secret. `plain` is the value as typed, where
+   * rclone is handed an obscured one: obscuring is reversible and rclone
+   * reveals it before use, so either spelling could come back in its words.
+   */
+  const setSecret = (
+    name: string,
+    value: string | undefined,
+    plain?: string,
+  ) => {
+    if (value === undefined || value === "") return;
+    set(name, value);
+    secrets.push(value);
+    if (plain) secrets.push(plain);
+  };
+  const obscured = async (name: string, plain: string | undefined) => {
+    if (plain === undefined || plain === "") return;
+    setSecret(name, await context.obscure(plain), plain);
+  };
+  const setToken = (token: OAuthToken) => {
+    setSecret("token", tokenJson(token));
+    secrets.push(token.accessToken, token.refreshToken);
   };
   let directory = BACKUP_FOLDER;
 
@@ -125,8 +158,10 @@ export async function buildRemote(
       const c = credentials as CredentialsOf<"s3">;
       set("type", "s3");
       set("provider", c.flavour);
-      set("access_key_id", c.accessKeyId);
-      set("secret_access_key", c.secretAccessKey);
+      // The key's ID is half of a credential, and kept out of messages with
+      // the secret half.
+      setSecret("access_key_id", c.accessKeyId);
+      setSecret("secret_access_key", c.secretAccessKey);
       set("endpoint", c.endpoint);
       set("region", c.region);
       set("env_auth", "false");
@@ -147,7 +182,7 @@ export async function buildRemote(
       set("url", c.url);
       set("vendor", c.vendor);
       set("user", c.username);
-      set("pass", await context.obscure(c.password));
+      await obscured("pass", c.password);
       directory = join(c.folder, BACKUP_FOLDER);
       break;
     }
@@ -155,11 +190,11 @@ export async function buildRemote(
       const { app, token } = requireOAuth(context);
       set("type", "drive");
       set("client_id", app.clientId);
-      set("client_secret", app.clientSecret);
+      setSecret("client_secret", app.clientSecret);
       // Files this app made, and no others. Balancia can neither read the
       // person's documents nor list them.
       set("scope", "drive.file");
-      set("token", tokenJson(token));
+      setToken(token);
       // Retention deletes our own old backups; leave them in the trash and
       // they go on counting against the person's quota for another month.
       set("use_trash", "false");
@@ -169,8 +204,8 @@ export async function buildRemote(
       const { app, token } = requireOAuth(context);
       set("type", "dropbox");
       set("client_id", app.clientId);
-      set("client_secret", app.clientSecret);
-      set("token", tokenJson(token));
+      setSecret("client_secret", app.clientSecret);
+      setToken(token);
       break;
     }
     case "onedrive": {
@@ -178,8 +213,8 @@ export async function buildRemote(
       const { app, token } = requireOAuth(context);
       set("type", "onedrive");
       set("client_id", app.clientId);
-      set("client_secret", app.clientSecret);
-      set("token", tokenJson(token));
+      setSecret("client_secret", app.clientSecret);
+      setToken(token);
       set("drive_id", c.driveId);
       set("drive_type", c.driveType);
       // The app folder, by id. Microsoft's narrow scope cannot see the rest of
@@ -191,22 +226,18 @@ export async function buildRemote(
       const c = credentials as CredentialsOf<"proton_drive">;
       set("type", "protondrive");
       set("username", c.username);
-      set("password", await context.obscure(c.password));
-      if (c.mailboxPassword) {
-        set("mailbox_password", await context.obscure(c.mailboxPassword));
-      }
-      if (c.otpSecret) {
-        set("otp_secret_key", await context.obscure(c.otpSecret));
-      }
+      await obscured("password", c.password);
+      await obscured("mailbox_password", c.mailboxPassword);
+      await obscured("otp_secret_key", c.otpSecret);
       break;
     }
     case "icloud_drive": {
       const c = credentials as CredentialsOf<"icloud_drive">;
       set("type", "iclouddrive");
       set("apple_id", c.appleId);
-      set("password", await context.obscure(c.password));
-      set("trust_token", c.trustToken);
-      set("cookies", c.cookies);
+      await obscured("password", c.password);
+      setSecret("trust_token", c.trustToken);
+      setSecret("cookies", c.cookies);
       break;
     }
   }
@@ -216,5 +247,5 @@ export async function buildRemote(
       throw new Error(`${key} contains a NUL byte.`);
     }
   }
-  return { env: options, directory };
+  return { env: options, directory, secrets };
 }

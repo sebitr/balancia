@@ -25,7 +25,12 @@ import { BackupError } from "./errors";
  *    domain. What remains is a name that changes its answer between this check
  *    and rclone's own lookup a moment later (DNS rebinding); closing that needs
  *    the connection pinned to the address checked, which rclone cannot do. It
- *    is named here so it is not mistaken for solved;
+ *    is named here so it is not mistaken for solved. So is its cousin: rclone
+ *    follows a redirect to any address and has no option not to, so a public
+ *    server can send the worker on to one this check would refuse. The
+ *    credentials stay behind (rclone drops them when a redirect leaves the
+ *    host, and `auth_redirect` is never set); the request does not. See
+ *    `docs/cloud-backup.md` § Local-network destinations;
  *  - the operator can **allow the local network** (`BACKUP_ALLOW_PRIVATE_ENDPOINTS`),
  *    because backing up to a NAS is the commonest reason to self-host in the
  *    first place. Even then the platform's metadata addresses stay refused:

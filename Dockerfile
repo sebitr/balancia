@@ -22,7 +22,7 @@ ARG NODE_VERSION=24-alpine
 # this file. Raising it is a deliberate act: read rclone's changelog for the
 # backends in src/modules/backup/providers.ts first, because two of them
 # (Proton Drive and iCloud Drive) track undocumented interfaces.
-ARG RCLONE_VERSION=1.75.2
+ARG RCLONE_VERSION=1.76.0
 FROM rclone/rclone:${RCLONE_VERSION} AS rclone
 
 # ── Stage: dependencies ──────────────────────────────────────────────────────

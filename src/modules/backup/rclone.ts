@@ -36,12 +36,22 @@ import { REMOTE, type RcloneRemote } from "./rclone-config";
 const MAX_OUTPUT_BYTES = 4 * 1024 * 1024;
 
 /**
- * The most a file read back may be, held in memory on its way to the browser.
- * Generous for what a backup is — JSON, compressed — and a ceiling rather than
- * a target: past it the read fails, because a backup quietly cut short is the
- * worst thing this feature could hand someone.
+ * The most a file read back may be, streamed on its way to the browser.
+ *
+ * A backup is every group its owner has, as JSON, gzipped: a busy account is a
+ * few hundred kilobytes and years of history a few megabytes. The worker
+ * builds the whole JSON in memory before it compresses it, so a file anywhere
+ * near this would have been several hundred megabytes of JSON on the way in;
+ * 64 MiB is a ceiling well clear of anything that could be written, not a
+ * target. It used to be 256 MiB, buffered — and then copied twice more on the
+ * way out, so one restore could hold three quarters of a gigabyte in the web
+ * process. The bytes now pass straight through, and the ceiling bounds how
+ * long one download holds a child process and a connection to somebody's
+ * cloud. Past it the download fails, because a backup quietly cut short is the
+ * worst thing this feature could hand someone. A file that big is still the
+ * owner's: they can download it from their cloud and open it with `age`.
  */
-export const MAX_READ_BYTES = 256 * 1024 * 1024;
+export const MAX_READ_BYTES = 64 * 1024 * 1024;
 
 /** Settings the operator may have made for outbound connections. */
 const PASSTHROUGH = [
@@ -87,39 +97,17 @@ interface RunOptions {
   readonly timeoutMs?: number;
   /** Extra values to remove from anything reported, beyond the remote's own. */
   readonly secrets?: readonly string[];
-  /** How much standard output to accept before refusing, rather than truncating. */
-  readonly maxStdoutBytes?: number;
 }
 
-/** Every string a remote holds that must not appear in a message about it. */
-function secretsOf(remote: RcloneRemote | undefined): string[] {
-  if (!remote) return [];
-  const found: string[] = [];
-  for (const value of Object.values(remote.env)) {
-    found.push(value);
-    if (value.startsWith("{")) {
-      try {
-        const parsed: unknown = JSON.parse(value);
-        if (parsed && typeof parsed === "object") {
-          for (const inner of Object.values(parsed)) {
-            if (typeof inner === "string") found.push(inner);
-          }
-        }
-      } catch {
-        // Not JSON after all; the whole value is already in the list.
-      }
-    }
-  }
-  return found;
-}
-
-async function run(
-  args: readonly string[],
-  options: RunOptions = {},
-): Promise<Result> {
-  const scratch = await mkdtemp(join(tmpdir(), "balancia-rclone-"));
-  const secrets = [...secretsOf(options.remote), ...(options.secrets ?? [])];
-
+/**
+ * The whole of the child's environment, built from nothing: a `PATH`, the
+ * scratch directory as its home, the operator's proxy and certificate
+ * settings, and the one remote.
+ */
+function childEnvironment(
+  scratch: string,
+  remote: RcloneRemote | undefined,
+): NodeJS.ProcessEnv {
   const env: Record<string, string> = {
     PATH: process.env.PATH ?? "/usr/local/bin:/usr/bin:/bin",
     HOME: scratch,
@@ -131,14 +119,48 @@ async function run(
     const value = process.env[name];
     if (value) env[name] = value;
   }
-  Object.assign(env, options.remote?.env);
+  Object.assign(env, remote?.env);
+  // Cast, not widened: `ProcessEnv` insists on a `NODE_ENV` that this
+  // environment is deliberately built without.
+  return env as NodeJS.ProcessEnv;
+}
+
+/** Why a child that exited badly failed, scrubbed of what it was given. */
+function failureOf(stderr: string, secrets: readonly string[]): BackupError {
+  return new BackupError(classify(stderr), scrub(stderr, secrets));
+}
+
+function timeoutFailure(): BackupError {
+  return new BackupError(
+    "unreachable",
+    "The cloud did not answer in time and the attempt was stopped.",
+  );
+}
+
+function spawnFailure(
+  error: NodeJS.ErrnoException,
+  secrets: readonly string[],
+): BackupError {
+  return error.code === "ENOENT"
+    ? new BackupError("unavailable", "rclone is not installed on this server.")
+    : new BackupError("unknown", scrub(error.message, secrets));
+}
+
+async function run(
+  args: readonly string[],
+  options: RunOptions = {},
+): Promise<Result> {
+  const scratch = await mkdtemp(join(tmpdir(), "balancia-rclone-"));
+  const secrets = [
+    ...(options.remote?.secrets ?? []),
+    ...(options.secrets ?? []),
+  ];
+  const env = childEnvironment(scratch, options.remote);
 
   try {
     return await new Promise<Result>((resolve, reject) => {
       const child = spawn(binary(), [...args], {
-        // Cast, not widened: `ProcessEnv` insists on a `NODE_ENV` that this
-        // environment is deliberately built without.
-        env: env as NodeJS.ProcessEnv,
+        env,
         stdio: ["pipe", "pipe", "pipe"],
       });
 
@@ -148,7 +170,7 @@ async function run(
       let errSize = 0;
       let timedOut = false;
       let tooLarge = false;
-      const stdoutLimit = options.maxStdoutBytes ?? MAX_OUTPUT_BYTES;
+      const stdoutLimit = MAX_OUTPUT_BYTES;
 
       const timer = setTimeout(
         () => {
@@ -175,14 +197,7 @@ async function run(
 
       child.on("error", (error: NodeJS.ErrnoException) => {
         clearTimeout(timer);
-        reject(
-          error.code === "ENOENT"
-            ? new BackupError(
-                "unavailable",
-                "rclone is not installed on this server.",
-              )
-            : new BackupError("unknown", scrub(error.message, secrets)),
-        );
+        reject(spawnFailure(error, secrets));
       });
 
       child.on("close", (code) => {
@@ -192,18 +207,13 @@ async function run(
           reject(
             new BackupError(
               "unknown",
-              "That file is larger than this server will read back.",
+              "rclone said more than this server will read.",
             ),
           );
         } else if (timedOut) {
-          reject(
-            new BackupError(
-              "unreachable",
-              "The cloud did not answer in time and the attempt was stopped.",
-            ),
-          );
+          reject(timeoutFailure());
         } else if (code !== 0) {
-          reject(new BackupError(classify(stderr), scrub(stderr, secrets)));
+          reject(failureOf(stderr, secrets));
         } else {
           resolve({ stdout: Buffer.concat(out), stderr });
         }
@@ -311,18 +321,143 @@ export async function deleteObject(
   await run([...COMMON_FLAGS, "deletefile", target(remote, name)], { remote });
 }
 
-/** Reads one file back. For restore; the server only ever holds ciphertext. */
+/**
+ * Streams one file back, for restore. The server only ever holds ciphertext,
+ * and now not even all of it at once: each piece goes on as rclone writes it,
+ * and rclone is paused while the reader is behind.
+ *
+ * Resolves once the file has begun to arrive, or rejects if rclone fails
+ * before it does — which is where nearly every failure happens (a refused
+ * password, a missing file, an unreachable host), so a caller can still answer
+ * with a code a screen can word. A failure after that, the deadline, or a file
+ * that runs past `maxBytes` errors the stream instead of ending it: a download
+ * cut short must never read as a whole one. The child gets the same
+ * environment, scratch directory and scrubbing as every other call.
+ */
+export async function streamObject(
+  remote: RcloneRemote,
+  name: string,
+  options: { maxBytes?: number; timeoutMs?: number } = {},
+): Promise<ReadableStream<Uint8Array>> {
+  const path = target(remote, name);
+  const limit = options.maxBytes ?? MAX_READ_BYTES;
+  const secrets = remote.secrets;
+  const scratch = await mkdtemp(join(tmpdir(), "balancia-rclone-"));
+  const cleanUp = () => {
+    void rm(scratch, { recursive: true, force: true }).catch(() => {});
+  };
+
+  const child = spawn(binary(), [...COMMON_FLAGS, "cat", path], {
+    env: childEnvironment(scratch, remote),
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  return new Promise<ReadableStream<Uint8Array>>((resolve, reject) => {
+    let controller!: ReadableStreamDefaultController<Uint8Array>;
+    let started = false;
+    let settled = false;
+    let cancelled = false;
+    let timedOut = false;
+    let tooLarge = false;
+    let size = 0;
+    const err: Buffer[] = [];
+    let errSize = 0;
+
+    const stream = new ReadableStream<Uint8Array>({
+      start(c) {
+        controller = c;
+      },
+      pull() {
+        child.stdout.resume();
+      },
+      cancel() {
+        // The browser went away. Nobody is left to hand the rest to.
+        cancelled = true;
+        child.kill("SIGKILL");
+      },
+    });
+
+    /** Ends the read, once: before the first byte as a refusal, after it as a broken stream. */
+    const fail = (error: BackupError) => {
+      if (settled) return;
+      settled = true;
+      if (started) controller.error(error);
+      else reject(error);
+    };
+
+    const timer = setTimeout(
+      () => {
+        timedOut = true;
+        child.kill("SIGKILL");
+      },
+      options.timeoutMs ?? 10 * 60_000,
+    );
+
+    child.stdout.on("data", (chunk: Buffer) => {
+      if (tooLarge || cancelled) return;
+      size += chunk.length;
+      if (size > limit) {
+        tooLarge = true;
+        child.kill("SIGKILL");
+        return;
+      }
+      controller.enqueue(chunk);
+      if (!started) {
+        started = true;
+        resolve(stream);
+      }
+      if ((controller.desiredSize ?? 1) <= 0) child.stdout.pause();
+    });
+    child.stderr.on("data", (chunk: Buffer) => {
+      errSize += chunk.length;
+      if (errSize <= MAX_OUTPUT_BYTES) err.push(chunk);
+    });
+
+    child.on("error", (error: NodeJS.ErrnoException) => {
+      clearTimeout(timer);
+      cleanUp();
+      fail(spawnFailure(error, secrets));
+    });
+
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      cleanUp();
+      if (cancelled || settled) return;
+      if (tooLarge) {
+        fail(
+          new BackupError(
+            "unknown",
+            "That file is larger than this server will read back.",
+          ),
+        );
+      } else if (timedOut) {
+        fail(timeoutFailure());
+      } else if (code !== 0) {
+        fail(failureOf(Buffer.concat(err).toString("utf8"), secrets));
+      } else {
+        settled = true;
+        // An empty file arrives as no data at all, and is still a file.
+        if (!started) resolve(stream);
+        controller.close();
+      }
+    });
+  });
+}
+
+/** Reads one file back whole. For tests, and anything that needs it in hand. */
 export async function readObject(
   remote: RcloneRemote,
   name: string,
   options: { maxBytes?: number } = {},
 ): Promise<Buffer> {
-  const { stdout } = await run([...COMMON_FLAGS, "cat", target(remote, name)], {
-    remote,
-    timeoutMs: 5 * 60_000,
-    maxStdoutBytes: options.maxBytes ?? MAX_READ_BYTES,
-  });
-  return stdout;
+  const reader = (await streamObject(remote, name, options)).getReader();
+  const chunks: Uint8Array[] = [];
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks);
 }
 
 /**

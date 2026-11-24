@@ -4423,6 +4423,8 @@
       "endpointBlockedHint": "Utilise une adresse publique, ou demande à l’administrateur d’autoriser le réseau local.",
       "unavailable": "La sauvegarde cloud n’est pas installée sur ce serveur. Demande à l’administrateur.",
       "noKey": "Il n’y a pas de clé de récupération, donc rien ne peut être chiffré.",
+      "interrupted": "Cette sauvegarde a été interrompue, en général par un redémarrage du serveur.",
+      "interruptedHint": "Les sauvegardes précédentes sont intactes. La suivante aura lieu comme prévu.",
       "unknown": "Une erreur est survenue.",
       "invalidKey": "Ce n’est pas une clé de récupération valide.",
       "tooMany": "Tu sauvegardes déjà vers le maximum d’endroits permis. Arrête-en un d’abord.",

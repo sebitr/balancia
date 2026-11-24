@@ -35,7 +35,7 @@ const transport: BackupTransport & { failWith?: BackupError } = {
   },
   async remove() {},
   async read() {
-    return Buffer.alloc(0);
+    return new ReadableStream<Uint8Array>({ start: (c) => c.close() });
   },
 };
 const seams: Seams = { openTransport: async () => transport };

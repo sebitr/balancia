@@ -69,9 +69,10 @@ export interface NotificationsDeliverPayload {
  * pg-boss stops fetching at once, waits up to this long for running jobs, then
  * fails whatever is still running back to the queue — where it is retried,
  * which the jobs are written to survive — and closes its pool.
- * `STOP_SLACK_MS` bounds that last part. Twenty plus five leaves five of the
- * app's thirty seconds for the process to exit, and `queue.test.ts` fails the
- * build if a grace period stops covering both.
+ * `STOP_SLACK_MS` bounds that last part, and `SETTLE_MS` the hooks that tidy up
+ * after a job that was cut (`onQueueStopped`). Twenty plus five plus two
+ * leaves three of the app's thirty seconds for the process to exit, and
+ * `queue.test.ts` fails the build if a grace period stops covering all three.
  *
  * Long enough for a recurring-expense run or a typical import commit. A very
  * large import that overruns is cut and retried, which costs delay, not data.
@@ -81,8 +82,55 @@ export const SHUTDOWN_DRAIN_MS = 20_000;
 /** What pg-boss is allowed after the drain to fail the stragglers and close. */
 export const STOP_SLACK_MS = 5_000;
 
+/** What the `onQueueStopped` hooks are allowed after that, together. */
+export const SETTLE_MS = 2_000;
+
 let boss: PgBoss | undefined;
 let starting: Promise<PgBoss> | undefined;
+
+const afterStop = new Set<() => Promise<unknown>>();
+
+/**
+ * Runs `hook` each time the queue has stopped, after pg-boss has failed the
+ * jobs still in hand and before the process exits.
+ *
+ * For a job whose own record outlives it. pg-boss knows a job it cut was cut,
+ * but a cloud backup also keeps a run of its own that a screen shows, and
+ * that would otherwise say "running" until something noticed it was not. The
+ * hooks get `SETTLE_MS` between them; one that fails or overruns is logged and
+ * left, because the process has to exit inside its grace period regardless.
+ * The same function registered twice runs once.
+ */
+export function onQueueStopped(hook: () => Promise<unknown>): void {
+  afterStop.add(hook);
+}
+
+async function settleAfterStop(): Promise<void> {
+  if (afterStop.size === 0) return;
+  let giveUp: NodeJS.Timeout | undefined;
+  try {
+    await Promise.race([
+      Promise.all(
+        [...afterStop].map((hook) =>
+          Promise.resolve()
+            .then(hook)
+            .catch((error: unknown) => {
+              logger.warn(
+                { err: error },
+                "Could not tidy up after a job the queue stopped",
+              );
+            }),
+        ),
+      ),
+      new Promise<void>((resolve) => {
+        giveUp = setTimeout(resolve, SETTLE_MS);
+        giveUp.unref();
+      }),
+    ]);
+  } finally {
+    clearTimeout(giveUp);
+  }
+}
 
 async function start(): Promise<PgBoss> {
   const env = getEnv();
@@ -171,6 +219,7 @@ export async function stopBoss(drainMs = SHUTDOWN_DRAIN_MS): Promise<void> {
     ]);
   } finally {
     clearTimeout(giveUp);
+    await settleAfterStop();
   }
 }
 

@@ -4423,6 +4423,8 @@
       "endpointBlockedHint": "Use a public address, or ask your administrator to allow the local network.",
       "unavailable": "Cloud backup is not installed on this server. Ask your administrator.",
       "noKey": "There is no recovery key, so nothing can be encrypted.",
+      "interrupted": "This backup was cut short, usually by the server restarting.",
+      "interruptedHint": "Earlier backups are untouched. The next one runs as scheduled.",
       "unknown": "Something went wrong.",
       "invalidKey": "That is not a valid recovery key.",
       "tooMany": "You are already backing up to the most places allowed. Stop one first.",

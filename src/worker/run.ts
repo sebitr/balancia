@@ -13,11 +13,13 @@ import { logger } from "@/lib/logger";
 import {
   QUEUES,
   getBoss,
+  onQueueStopped,
   type BackupRunPayload,
   type ImportCommitPayload,
   type NotificationsDeliverPayload,
 } from "@/lib/jobs/queue";
 import {
+  closeRunsInHand,
   pruneRuns,
   runBackup,
   sweepDueBackups,
@@ -250,6 +252,11 @@ export async function startWorker(): Promise<void> {
     if (report.queued > 0) jobLogger.info(report, "Queued cloud backups");
   });
 
+  // A stop that cuts a backup short closes its run as interrupted, once
+  // pg-boss has let go of it, rather than leaving the screen to say "running"
+  // for the reaper's two hours. And `runBackup` takes its run when it starts
+  // (`claimRun`), so the job of a run given up on while it waited does nothing.
+  onQueueStopped(closeRunsInHand);
   await boss.work<BackupRunPayload>(QUEUES.backupRun, async (jobs) => {
     for (const job of jobs) {
       await instrumented(QUEUES.backupRun, () =>
