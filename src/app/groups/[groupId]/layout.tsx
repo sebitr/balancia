@@ -16,6 +16,8 @@ import { OfflineEntryProvider } from "@/components/offline/offline-entry";
 import { OutboxFlusher } from "@/components/offline/outbox-flusher";
 import { PendingStrip } from "@/components/offline/pending-strip";
 import { AreaMessages } from "@/i18n/area-messages";
+import { FaceHuesProvider } from "@/components/ui/face-hues";
+import { listFaceHues } from "@/modules/groups/face-hues";
 import { requireGroupAccess } from "@/lib/actions";
 import {
   AuthenticationRequiredError,
@@ -59,9 +61,12 @@ export default async function GroupLayout({
 }: LayoutProps<"/groups/[groupId]">) {
   const { groupId } = await params;
   const access = await resolveAccess(groupId);
-  const [sidebarCollapsed, narrow] = await Promise.all([
+  const [sidebarCollapsed, narrow, faceHues] = await Promise.all([
     readSidebarCollapsed(),
     readNarrowWindow(),
+    // Read once for the whole group, after the authorization above: which
+    // hue each participant's face wears, by account where they have one.
+    listFaceHues(access.groupId),
   ]);
 
   /*
@@ -77,76 +82,80 @@ export default async function GroupLayout({
    * costs nothing. See `DeviceActorProvider`.
    */
   const shell = (
-    <OfflineEntryProvider
-      groupId={access.groupId}
-      userId={access.actor.kind === "user" ? access.actor.userId : null}
-      participantId={access.participantId}
-    >
-      <AppShell
-        actor={{
-          label:
-            access.actor.kind === "guest"
-              ? access.actor.displayName
-              : access.actor.name,
-          isGuest: access.actor.kind === "guest",
-        }}
-        bottomNav={<GroupNav groupId={access.groupId} />}
-        // From `lg` up the sidebar lights this group and its Add adds to it —
-        // inside the offline provider for the same reason as the bar: Add
-        // opens the local drawer when the routed one cannot load.
-        group={{ id: access.groupId, name: access.group.name }}
-        sidebarAdd={<SidebarGroupAdd groupId={access.groupId} />}
-        sidebarCollapsed={sidebarCollapsed}
-        narrow={narrow}
-        // The same navigation as the bar, as tabs under the group's name,
-        // from `lg` up. The name is drawn at once from the authorization
-        // above; the tile and the counts stream in behind it — unless this
-        // device's window was last a phone's, where the header is not drawn
-        // and its counts are not read (see `narrow-window.ts`).
-        groupHeader={
-          <GroupHeader groupId={access.groupId}>
-            {narrow ? (
-              <GroupHeaderFactsFallback name={access.group.name} />
-            ) : (
-              <Suspense
-                fallback={<GroupHeaderFactsFallback name={access.group.name} />}
-              >
-                <GroupHeaderFacts
-                  groupId={access.groupId}
-                  name={access.group.name}
-                />
-              </Suspense>
-            )}
-          </GroupHeader>
-        }
-        // The name is already resolved by the authorization above, so the header
-        // costs no query of its own; the switcher asks for the rest on opening.
-        leading={
-          <GroupSwitcher
-            groupId={access.groupId}
-            groupName={access.group.name}
-            isGuest={access.actor.kind === "guest"}
-          />
-        }
+    <FaceHuesProvider hues={faceHues}>
+      <OfflineEntryProvider
+        groupId={access.groupId}
+        userId={access.actor.kind === "user" ? access.actor.userId : null}
+        participantId={access.participantId}
       >
-        {/* What has not reached the server yet, above whatever screen of the
+        <AppShell
+          actor={{
+            label:
+              access.actor.kind === "guest"
+                ? access.actor.displayName
+                : access.actor.name,
+            isGuest: access.actor.kind === "guest",
+          }}
+          bottomNav={<GroupNav groupId={access.groupId} />}
+          // From `lg` up the sidebar lights this group and its Add adds to it —
+          // inside the offline provider for the same reason as the bar: Add
+          // opens the local drawer when the routed one cannot load.
+          group={{ id: access.groupId, name: access.group.name }}
+          sidebarAdd={<SidebarGroupAdd groupId={access.groupId} />}
+          sidebarCollapsed={sidebarCollapsed}
+          narrow={narrow}
+          // The same navigation as the bar, as tabs under the group's name,
+          // from `lg` up. The name is drawn at once from the authorization
+          // above; the tile and the counts stream in behind it — unless this
+          // device's window was last a phone's, where the header is not drawn
+          // and its counts are not read (see `narrow-window.ts`).
+          groupHeader={
+            <GroupHeader groupId={access.groupId}>
+              {narrow ? (
+                <GroupHeaderFactsFallback name={access.group.name} />
+              ) : (
+                <Suspense
+                  fallback={
+                    <GroupHeaderFactsFallback name={access.group.name} />
+                  }
+                >
+                  <GroupHeaderFacts
+                    groupId={access.groupId}
+                    name={access.group.name}
+                  />
+                </Suspense>
+              )}
+            </GroupHeader>
+          }
+          // The name is already resolved by the authorization above, so the header
+          // costs no query of its own; the switcher asks for the rest on opening.
+          leading={
+            <GroupSwitcher
+              groupId={access.groupId}
+              groupName={access.group.name}
+              isGuest={access.actor.kind === "guest"}
+            />
+          }
+        >
+          {/* What has not reached the server yet, above whatever screen of the
           group is showing — including the balances it is not in. It renders
           nothing at all with an empty queue and a network. */}
-        <div className="mb-4 empty:mb-0">
-          <PendingStrip />
-        </div>
-        {children}
-        {/* The add-entry drawer, when a navigation into it was intercepted. It
+          <div className="mb-4 empty:mb-0">
+            <PendingStrip />
+          </div>
+          {children}
+          {/* The add-entry drawer, when a navigation into it was intercepted. It
           lives beside the group rather than inside it so that opening it
           leaves the screen underneath mounted, scrolled where it was. */}
-        {entry}
-        {/* Drains the offline queue whenever there is reason to think it can
+          {entry}
+          {/* Drains the offline queue whenever there is reason to think it can
           be drained. Mounted in the group shell rather than the root layout
           because a group is the only place entries are queued from, and the
           only place the refresh it triggers has anything to refresh. */}
-        <OutboxFlusher />
-      </AppShell>
-    </OfflineEntryProvider>
+          <OutboxFlusher />
+        </AppShell>
+      </OfflineEntryProvider>
+    </FaceHuesProvider>
   );
 
   /*

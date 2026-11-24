@@ -13,17 +13,17 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
  */
 export function MemberStack({
   names,
-  ids,
+  hues,
   total,
 }: {
   names: readonly string[];
   /**
-   * Their participant ids, in the same order, for each face's hue. An empty
-   * id is the reader, who keeps the plain "you" face as on every group
-   * screen. Absent, the name is the key — stable, but not the one the rest of
-   * the app uses.
+   * Each face's hue, in the same order, worked out on the server from the
+   * person's account where they have one (`listGroupsForUser`). Null is the
+   * reader, who keeps the plain "you" face as on every group screen. Absent,
+   * the name is the key — stable, but not the one the rest of the app uses.
    */
-  ids?: readonly string[];
+  hues?: readonly (number | null)[];
   total: number;
 }) {
   const t = useTranslations("dashboard");
@@ -48,7 +48,8 @@ export function MemberStack({
       {shown.map((name, index) => (
         <Avatar key={`${name}-${index}`} className="size-5">
           <AvatarFallback
-            hueKey={ids ? ids[index] || undefined : name}
+            hue={hues ? (hues[index] ?? undefined) : undefined}
+            hueKey={hues ? undefined : name}
             className="bg-accent text-2xs font-semibold text-accent-foreground"
           >
             {name.trim().charAt(0).toUpperCase()}
