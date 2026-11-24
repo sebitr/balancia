@@ -106,7 +106,8 @@ add them, and the screen says what that means before it lets them:
                                   export owned groups  (JSON)
                                   gzip
                                   encrypt to `age1…`    ───────►   balancia-backup-
-                                  upload through rclone             20261009T033012Z
+                                  upload through rclone             3f2a9c1b7d4e-
+                                                                    20261009T033012Z
                                                                     .json.gz.age
 ```
 
@@ -127,10 +128,28 @@ add them, and the screen says what that means before it lets them:
   A fresh copy is still written at least once a week, and always when the owner
   presses _Back up now_, so a file deleted from the cloud by hand is not missed
   for long.
+- **Each file says which destination wrote it.** A backup is named
+  `balancia-backup-<tag>-<UTC timestamp>.json.gz.age`, where the tag is the first
+  twelve hex digits of the destination's id: random, fixed for the life of the
+  destination, and telling the cloud nothing about the person. Two owners who
+  point their backups at the same bucket or folder, one owner's two
+  destinations, or two installations sharing a Nextcloud, therefore never write
+  the same name, even in the same second.
 - **Retention** deletes the oldest backups beyond the number the owner chose, and
-  _only_ files whose names match `balancia-backup-<UTC timestamp>.json.gz.age`
-  exactly. A README, a copy made by another tool, a renamed file: none match, none
-  are touched. It runs after the new backup is written, never before.
+  _only this destination's own_: files whose names match the pattern above
+  exactly, with its own tag. A README, a copy made by another tool, a renamed
+  file, another destination's backups in the same folder: none count, none are
+  touched. It runs after the new backup is written, never before. The restore
+  list offers the same files, and never another destination's.
+- **Backups from before the tag** (`balancia-backup-<UTC timestamp>.json.gz.age`,
+  written until November 2026) cannot say whose they are. Retention deletes one
+  only when this destination's own run history records writing it, and no other
+  destination's history records the same name; the history keeps a
+  destination's thirty most recent runs, so older files, files written by a
+  destination since removed, and files from another installation are **left in
+  place for the owner to remove by hand**. They stay on the restore list, since
+  they may be the owner's only copies of those weeks, and open only with the key
+  that wrote them.
 
 ### What leaves the server, and what stays
 
@@ -311,7 +330,7 @@ not come back, are in [data-migration.md](data-migration.md#restoring-a-balancia
 The file is plain age, gzipped JSON inside:
 
 ```bash
-age --decrypt --identity recovery-key.txt balancia-backup-20261009T033012Z.json.gz.age \
+age --decrypt --identity recovery-key.txt balancia-backup-3f2a9c1b7d4e-20261009T033012Z.json.gz.age \
   | gunzip > backup.json
 ```
 

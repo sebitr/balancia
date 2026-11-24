@@ -18,7 +18,7 @@ import {
 import { createRecoveryKey, decryptWith } from "./age";
 import { type BackupBundle } from "./bundle";
 import { BackupError } from "./errors";
-import { bundleName } from "./naming";
+import { bundleName, destinationTag } from "./naming";
 import {
   createDestination,
   deleteDestination,
@@ -109,6 +109,9 @@ const S3 = {
   secretAccessKey: "super-secret-access-key",
   pathStyle: false,
 };
+
+/** The file a run of destination `id` writes at `at`. */
+const nameAt = (id: string, at: Date) => bundleName(at, destinationTag(id));
 
 async function setUp() {
   const owner = await createTestUser({ name: "Amélie" });
@@ -330,9 +333,9 @@ describe("a backup run", () => {
     const outcome = await runBackup(id, { trigger: "manual", ...seams() });
 
     expect(outcome?.status).toBe("succeeded");
-    expect([...cloud.files.keys()]).toEqual([bundleName(clock)]);
+    expect([...cloud.files.keys()]).toEqual([nameAt(id, clock)]);
 
-    const bytes = cloud.files.get(bundleName(clock)) ?? new Uint8Array();
+    const bytes = cloud.files.get(nameAt(id, clock)) ?? new Uint8Array();
     expect(Buffer.from(bytes).toString("latin1")).not.toContain("Lisbon");
     expect(Buffer.from(bytes).toString("latin1")).not.toContain("Dinner");
 
@@ -425,7 +428,7 @@ describe("a backup run", () => {
     expect(view?.latestRun).toMatchObject({
       status: "succeeded",
       groupCount: 1,
-      objectName: bundleName(clock),
+      objectName: nameAt(id, clock),
     });
     expect(view?.latestRun?.bytes).toBeGreaterThan(0);
   });
@@ -509,9 +512,104 @@ describe("a backup run", () => {
     expect([...cloud.files.keys()].sort()).toEqual([
       "README.txt",
       "balancia-backup-20200101T000000Z.json.gz.age.old",
-      "balancia-backup-20261011T033000Z.json.gz.age",
-      "balancia-backup-20261012T033000Z.json.gz.age",
+      nameAt(id, new Date("2026-10-11T03:30:00Z")),
+      nameAt(id, new Date("2026-10-12T03:30:00Z")),
     ]);
+  });
+
+  it("keeps its own newest N in a folder another owner shares, and deletes none of theirs", async () => {
+    // One fake cloud for both: two people who pointed their backups at the
+    // same bucket and prefix.
+    const ada = await setUp();
+    const sam = await setUp();
+    const adaGroup = await createTestGroup(ada.owner);
+    const samGroup = await createTestGroup(sam.owner);
+    const { id: adaId } = await createDestination(
+      ada.owner.userId,
+      { provider: "s3", credentials: S3, keepLast: 2 },
+      seams(),
+    );
+    const { id: samId } = await createDestination(
+      sam.owner.userId,
+      { provider: "s3", credentials: S3, keepLast: 3 },
+      seams(),
+    );
+
+    for (let day = 9; day <= 13; day += 1) {
+      clock = new Date(`2026-10-${String(day).padStart(2, "0")}T03:30:00Z`);
+      await expense(adaGroup, `Ada ${day}`);
+      await expense(samGroup, `Sam ${day}`);
+      // The same second, both of them: neither file may replace the other.
+      await runBackup(adaId, { trigger: "schedule", ...seams() });
+      await runBackup(samId, { trigger: "schedule", ...seams() });
+    }
+
+    expect([...cloud.files.keys()].sort()).toEqual(
+      [
+        nameAt(adaId, new Date("2026-10-12T03:30:00Z")),
+        nameAt(adaId, new Date("2026-10-13T03:30:00Z")),
+        nameAt(samId, new Date("2026-10-11T03:30:00Z")),
+        nameAt(samId, new Date("2026-10-12T03:30:00Z")),
+        nameAt(samId, new Date("2026-10-13T03:30:00Z")),
+      ].sort(),
+    );
+    // And each file is still the one its owner's key opens.
+    const adaBundle = await openFile(
+      ada.key.identity,
+      nameAt(adaId, new Date("2026-10-13T03:30:00Z")),
+    );
+    expect(adaBundle.groups.map((group) => group.group.id)).toEqual([
+      adaGroup.groupId,
+    ]);
+  });
+
+  it("deletes an untagged backup from before the change only when its own history says it wrote it", async () => {
+    const { owner } = await setUp();
+    const other = await setUp();
+    const group = await createTestGroup(owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3, keepLast: 1 },
+      seams(),
+    );
+    const { id: otherId } = await createDestination(
+      other.owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+
+    const mine = "balancia-backup-20261001T033000Z.json.gz.age";
+    const nobodys = "balancia-backup-20261002T033000Z.json.gz.age";
+    const theirs = "balancia-backup-20261003T033000Z.json.gz.age";
+    // Written by both in the same second, back when that meant one file.
+    const shared = "balancia-backup-20261004T033000Z.json.gz.age";
+    for (const name of [mine, nobodys, theirs, shared]) {
+      cloud.files.set(name, new Uint8Array([1]));
+    }
+    const ran = (destinationId: string, objectName: string) => ({
+      destinationId,
+      trigger: "schedule" as const,
+      status: "succeeded" as const,
+      startedAt: new Date("2026-10-01T03:30:00Z"),
+      finishedAt: new Date("2026-10-01T03:31:00Z"),
+      objectName,
+    });
+    await getDb()
+      .insert(backupRuns)
+      .values([
+        ran(id, mine),
+        ran(otherId, theirs),
+        ran(id, shared),
+        ran(otherId, shared),
+      ]);
+
+    await expense(group);
+    const outcome = await runBackup(id, { trigger: "manual", ...seams() });
+
+    expect(outcome?.deleted).toEqual([mine]);
+    expect([...cloud.files.keys()].sort()).toEqual(
+      [nobodys, theirs, shared, nameAt(id, clock)].sort(),
+    );
   });
 
   it("does not lose the new copy if pruning the old ones fails", async () => {
@@ -1038,10 +1136,39 @@ describe("reading backups back", () => {
     const files = await listBackupFiles(owner.userId, id, seams());
 
     expect(files.map((file) => file.name)).toEqual([
-      "balancia-backup-20261010T033000Z.json.gz.age",
-      "balancia-backup-20261009T033000Z.json.gz.age",
+      nameAt(id, new Date("2026-10-10T03:30:00Z")),
+      nameAt(id, new Date("2026-10-09T03:30:00Z")),
     ]);
     expect(files[0]?.takenAt).toEqual(new Date("2026-10-10T03:30:00Z"));
+  });
+
+  it("offers neither another owner's backups in a shared folder nor a way to read them", async () => {
+    const { owner } = await setUp();
+    const other = await setUp();
+    await createTestGroup(owner);
+    await createTestGroup(other.owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    const { id: otherId } = await createDestination(
+      other.owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    await runBackup(id, { trigger: "manual", ...seams() });
+    await runBackup(otherId, { trigger: "manual", ...seams() });
+    const legacy = "balancia-backup-20261001T033000Z.json.gz.age";
+    cloud.files.set(legacy, new Uint8Array([1]));
+
+    const files = await listBackupFiles(owner.userId, id, seams());
+
+    // Its own, and the untagged one from before names said whose they were.
+    expect(files.map((file) => file.name)).toEqual([nameAt(id, clock), legacy]);
+    await expect(
+      readBackupFile(owner.userId, id, nameAt(otherId, clock), seams()),
+    ).rejects.toMatchObject({ code: "notFound" });
   });
 
   it("hands back the ciphertext the worker wrote, byte for byte", async () => {
@@ -1053,7 +1180,7 @@ describe("reading backups back", () => {
       seams(),
     );
     await runBackup(id, { trigger: "manual", ...seams() });
-    const name = bundleName(clock);
+    const name = nameAt(id, clock);
 
     const bytes = await readBackupFile(owner.userId, id, name, seams());
 
@@ -1103,7 +1230,7 @@ describe("reading backups back", () => {
       code: "notFound",
     });
     await expect(
-      readBackupFile(stranger.userId, id, bundleName(clock), seams()),
+      readBackupFile(stranger.userId, id, nameAt(id, clock), seams()),
     ).rejects.toMatchObject({ code: "notFound" });
   });
 });

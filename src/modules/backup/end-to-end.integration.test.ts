@@ -156,7 +156,9 @@ describe.skipIf(!HAVE_RCLONE)("a backup, end to end", () => {
     const folder = join(served, "family", "Balancia Backups");
     const names = await readdir(folder);
     expect(names).toHaveLength(1);
-    expect(names[0]).toMatch(/^balancia-backup-\d{8}T\d{6}Z\.json\.gz\.age$/);
+    expect(names[0]).toMatch(
+      /^balancia-backup-[0-9a-f]{12}-\d{8}T\d{6}Z\.json\.gz\.age$/,
+    );
 
     // What is on the server's disk is ciphertext...
     const onDisk = await readFile(join(folder, names[0] ?? ""));

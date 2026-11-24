@@ -169,7 +169,11 @@ export const backupRuns = pgTable(
     groupCount: integer("group_count").notNull().default(0),
     /** Size of what was written, after encryption. */
     bytes: bigint("bytes", { mode: "number" }).notNull().default(0),
-    /** The file written, e.g. `balancia-backup-20261009T033012Z.json.gz.age`. */
+    /**
+     * The file written, e.g. `balancia-backup-3f2a9c1b7d4e-20261009T033012Z.json.gz.age`.
+     * For a file from before names carried the destination's tag, this is the
+     * only proof of whose it is, which is what lets retention delete it.
+     */
     objectName: text("object_name"),
     /** Receipts uploaded by this run. Each is sent once, ever; see `receipts.ts`. */
     receiptsWritten: integer("receipts_written").notNull().default(0),

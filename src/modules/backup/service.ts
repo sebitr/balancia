@@ -9,7 +9,14 @@ import { open, seal } from "@/lib/security/secret-box";
 import { encryptTo, keyFingerprint, parseRecipient } from "./age";
 import { buildBundle, serialiseBundle } from "./bundle";
 import { BackupError, scrub, type BackupErrorCode } from "./errors";
-import { bundleName, parseBundleName, selectExpired } from "./naming";
+import {
+  bundleName,
+  destinationTag,
+  isListedBy,
+  parseBundle,
+  parseBundleName,
+  selectExpired,
+} from "./naming";
 import {
   credentialSchemas,
   PROVIDER_NAMES,
@@ -687,12 +694,14 @@ export async function listBackupFiles(
   const db = seams.db ?? getDb();
   const dest = await loadOwn(userId, destinationId, db);
   const transport = await transportFor(db, dest, seams);
+  const tag = destinationTag(dest.id);
   const files: BackupFile[] = [];
   for (const name of await transport.list()) {
+    // Only files this feature wrote, and not another destination's that shares
+    // the folder. Whatever else is there is not for a download button to hand
+    // out. `isListedBy` says why an untagged one still is.
     const takenAt = parseBundleName(name);
-    // Only files this feature wrote. Whatever else is in the folder is not for
-    // a download button to hand out.
-    if (takenAt) files.push({ name, takenAt });
+    if (takenAt && isListedBy(name, tag)) files.push({ name, takenAt });
   }
   return files.sort((a, b) => b.takenAt.getTime() - a.takenAt.getTime());
 }
@@ -710,6 +719,9 @@ export async function readBackupFile(
   if (parseBundleName(name) === null) throw new BackupInputError("notFound");
   const db = seams.db ?? getDb();
   const dest = await loadOwn(userId, destinationId, db);
+  if (!isListedBy(name, destinationTag(dest.id))) {
+    throw new BackupInputError("notFound");
+  }
   const transport = await transportFor(db, dest, seams);
   return transport.read(name);
 }
@@ -944,7 +956,8 @@ export async function runBackup(
       key.recipient,
       serialiseBundle(built.bundle),
     );
-    const name = bundleName(startedAt);
+    const tag = destinationTag(dest.id);
+    const name = bundleName(startedAt, tag);
 
     await transport.ensureDirectory();
     await transport.put(name, encrypted);
@@ -953,10 +966,11 @@ export async function runBackup(
     // not cost the new copy, and a failure to write must not cost an old one.
     const deleted: string[] = [];
     try {
-      for (const stale of selectExpired(
-        await transport.list(),
-        dest.keepLast,
-      )) {
+      const names = await transport.list();
+      for (const stale of selectExpired(names, dest.keepLast, {
+        tag,
+        legacyOwned: await legacyNamesWrittenBy(db, dest.id, names),
+      })) {
         await transport.remove(stale);
         deleted.push(stale);
       }
@@ -1015,6 +1029,40 @@ export async function runBackup(
     await markFailure(db, dest, finishedAt, failure.code);
     return { runId, status: "failed", errorCode: failure.code, deleted: [] };
   }
+}
+
+/**
+ * Of the untagged backups in a folder, the ones this destination can prove it
+ * wrote: its own run history names them, and no other destination's does.
+ *
+ * A name from before backups carried a destination's tag says nothing about
+ * whose it is. The run history is the one record of which file each run
+ * wrote, so it decides. A file older than the history kept (`pruneRuns`),
+ * written by a destination that has since been removed, or by another
+ * installation, is not provably this one's and is left where it is.
+ */
+async function legacyNamesWrittenBy(
+  db: Database,
+  destinationId: string,
+  names: readonly string[],
+): Promise<Set<string>> {
+  const legacy = names.filter((name) => parseBundle(name)?.tag === null);
+  if (legacy.length === 0) return new Set();
+  const rows = await db
+    .select({
+      destinationId: backupRuns.destinationId,
+      objectName: backupRuns.objectName,
+    })
+    .from(backupRuns)
+    .where(inArray(backupRuns.objectName, legacy));
+  const mine = new Set<string>();
+  const theirs = new Set<string>();
+  for (const row of rows) {
+    if (row.objectName === null) continue;
+    (row.destinationId === destinationId ? mine : theirs).add(row.objectName);
+  }
+  for (const name of theirs) mine.delete(name);
+  return mine;
 }
 
 async function markSuccess(
