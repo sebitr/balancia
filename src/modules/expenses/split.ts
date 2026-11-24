@@ -90,6 +90,8 @@ function assertUniqueParticipants(entries: readonly SplitInputEntry[]): void {
     if (seen.has(entry.participantId)) {
       throw new AllocationError(
         `Participant ${entry.participantId} appears more than once in the split`,
+        "participantDuplicate",
+        { participantId: entry.participantId },
       );
     }
     seen.add(entry.participantId);
@@ -230,18 +232,26 @@ export function validatePayerContributions(
   contributions: readonly { participantId: string; amount: bigint }[],
 ): void {
   if (contributions.length === 0) {
-    throw new AllocationError("An expense needs at least one payer");
+    throw new AllocationError(
+      "An expense needs at least one payer",
+      "payerRequired",
+    );
   }
   const seen = new Set<string>();
   for (const contribution of contributions) {
     if (seen.has(contribution.participantId)) {
       throw new AllocationError(
         `Payer ${contribution.participantId} appears more than once`,
+        "payerDuplicate",
+        { participantId: contribution.participantId },
       );
     }
     seen.add(contribution.participantId);
     if (contribution.amount < 0n) {
-      throw new AllocationError("Payer contributions must not be negative");
+      throw new AllocationError(
+        "Payer contributions must not be negative",
+        "payerNegative",
+      );
     }
   }
   const sum = contributions.reduce(
@@ -251,6 +261,8 @@ export function validatePayerContributions(
   if (sum !== total) {
     throw new AllocationError(
       `Payer contributions must sum to the expense total. Expected ${total}, received ${sum}.`,
+      "payerSumMismatch",
+      { expected: total.toString(), received: sum.toString() },
     );
   }
 }

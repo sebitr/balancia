@@ -1,9 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Principal } from "@/modules/agent-access/principal";
+import { AllocationError } from "@/modules/expenses/allocation";
+import {
+  resolveSplit,
+  validatePayerContributions,
+} from "@/modules/expenses/split";
 import {
   describeFailure,
   QUOTES_MEMBERS,
   runTool,
+  splitFailure,
   ToolFailure,
   TYPED_BY_MEMBERS,
 } from "./support";
@@ -76,5 +82,119 @@ describe("labelling what group members typed", () => {
     expect(result.isError).toBe(true);
     expect(textOf(result)).toContain(QUOTES_MEMBERS);
     expect(textOf(result)).not.toContain("untrustedText");
+  });
+});
+
+describe("a split the engine refuses, in money a person would say", () => {
+  const MARTA = "22222222-2222-4222-8222-222222222222";
+  const BEN = "33333333-3333-4333-8333-333333333333";
+  const names = new Map([
+    [MARTA, "Marta"],
+    [BEN, "Ben"],
+  ]);
+  const nameOf = (id: string) => names.get(id);
+
+  /** What the engine throws for a call. */
+  function refusal(call: () => unknown): AllocationError {
+    try {
+      call();
+    } catch (error) {
+      expect(error).toBeInstanceOf(AllocationError);
+      return error as AllocationError;
+    }
+    throw new Error("expected a refusal");
+  }
+
+  it("says what the payers paid in major units with the currency", () => {
+    const error = refusal(() =>
+      validatePayerContributions(6390n, [
+        { participantId: MARTA, amount: 4000n },
+        { participantId: BEN, amount: 2000n },
+      ]),
+    );
+    expect(error.message).toMatch(/6390/);
+    const message = splitFailure(error, { currency: "EUR", nameOf }).message;
+    expect(message).toContain("60.00 EUR");
+    expect(message).toContain("63.90 EUR");
+    expect(message).not.toMatch(/6390|6000/);
+  });
+
+  it("knows a currency with no minor unit from one with three", () => {
+    const short = refusal(() =>
+      validatePayerContributions(6390n, [
+        { participantId: MARTA, amount: 6000n },
+      ]),
+    );
+    expect(splitFailure(short, { currency: "JPY" }).message).toContain(
+      "6390 JPY",
+    );
+    expect(splitFailure(short, { currency: "KWD" }).message).toContain(
+      "6.390 KWD",
+    );
+  });
+
+  it("says exact parts that miss the total the same way", () => {
+    const error = refusal(() =>
+      resolveSplit(6390n, {
+        method: "exact",
+        entries: [
+          { participantId: MARTA, value: "3000" },
+          { participantId: BEN, value: "3000" },
+        ],
+      }),
+    );
+    expect(splitFailure(error, { currency: "EUR" }).message).toMatch(
+      /add up to 60\.00 EUR, but the expense is 63\.90 EUR/,
+    );
+  });
+
+  it("names a person listed twice, and says the name was typed", async () => {
+    const twice = refusal(() =>
+      validatePayerContributions(1000n, [
+        { participantId: MARTA, amount: 500n },
+        { participantId: MARTA, amount: 500n },
+      ]),
+    );
+    const failure = splitFailure(twice, { currency: "EUR", nameOf });
+    expect(failure.message).toContain('"Marta"');
+    expect(failure.message).not.toContain(MARTA);
+    expect(await describeFailure(failure, "balancia_add_expense")).toContain(
+      QUOTES_MEMBERS,
+    );
+
+    const shared = refusal(() =>
+      resolveSplit(1000n, {
+        method: "equal",
+        entries: [{ participantId: BEN }, { participantId: BEN }],
+      }),
+    );
+    expect(splitFailure(shared, { nameOf }).message).toMatch(
+      /"Ben" is listed more than once in the split/,
+    );
+  });
+
+  it("passes on no minor units and no ids, even where the currency is not known", async () => {
+    const twice = await describeFailure(
+      refusal(() =>
+        validatePayerContributions(6390n, [
+          { participantId: MARTA, amount: 6000n },
+          { participantId: MARTA, amount: 390n },
+        ]),
+      ),
+      "balancia_update_expense",
+    );
+    expect(twice).not.toContain(MARTA);
+    expect(twice).toMatch(/listed more than once among the payers/);
+
+    const short = await describeFailure(
+      refusal(() =>
+        validatePayerContributions(6390n, [
+          { participantId: MARTA, amount: 6000n },
+        ]),
+      ),
+      "balancia_update_expense",
+    );
+    expect(short).not.toMatch(/6390|6000/);
+    expect(short).toMatch(/do not add up/);
   });
 });

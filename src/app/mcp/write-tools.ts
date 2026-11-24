@@ -14,6 +14,7 @@ import {
 import { loadMappings } from "@/modules/categorization/service";
 import { lookupRate } from "@/modules/currencies/rates";
 import { parseMajorAmount } from "@/modules/currencies/money";
+import { AllocationError } from "@/modules/expenses/allocation";
 import {
   currencyCodeSchema,
   expenseInputSchema,
@@ -42,6 +43,7 @@ import {
   groupRef,
   runWriteTool,
   shown,
+  splitFailure,
   ToolFailure,
 } from "./support";
 
@@ -220,7 +222,9 @@ export function registerWriteTools(server: McpServer, principal: Principal) {
                 );
               }
             }
-            return createExpense(access, built);
+            return inMajorUnits(built.currency, people, () =>
+              createExpense(access, built),
+            );
           },
         );
         return {
@@ -403,9 +407,11 @@ export function registerWriteTools(server: McpServer, principal: Principal) {
           ...split,
         });
 
-        await updateExpense(access, input.expenseId, next, {
-          expectedVersion: current.version,
-        });
+        await inMajorUnits(next.currency, people, () =>
+          updateExpense(access, input.expenseId, next, {
+            expectedVersion: current.version,
+          }),
+        );
         return {
           group: groupRef(access),
           updated: await describeExpense(access.groupId, input.expenseId),
@@ -639,6 +645,30 @@ function repaymentLockKey(groupId: string, built: SettlementInput): string {
     built.currency,
     built.settledOn,
   ]);
+}
+
+/**
+ * Runs a service that splits an expense, and tells a split it refuses in the
+ * expense's own currency and the people's own names. The service checks the
+ * payers and the shares in minor units and says so by id, which is right for
+ * the engine and wrong for a model told never to read cents.
+ */
+async function inMajorUnits<T>(
+  currency: string,
+  people: readonly Person[],
+  work: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await work();
+  } catch (error) {
+    if (error instanceof AllocationError) {
+      throw splitFailure(error, {
+        currency,
+        nameOf: (id) => people.find((person) => person.id === id)?.name,
+      });
+    }
+    throw error;
+  }
 }
 
 /** The group's currency, or the one the caller named — never a guess. */

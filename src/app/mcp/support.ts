@@ -7,6 +7,7 @@ import type { UserActor } from "@/lib/security/authorization";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { actorOf, type Principal } from "@/modules/agent-access/principal";
 import { money, toMajorString } from "@/modules/currencies/money";
+import { AllocationError } from "@/modules/expenses/allocation";
 
 /**
  * What every tool shares: how a result is shaped, and how a failure is told.
@@ -145,6 +146,95 @@ export function balanceText(minor: bigint, currency: string): string {
   return minor > 0n ? `+${text}` : text;
 }
 
+/**
+ * A split or a set of payers the engine refused, in this file's vocabulary.
+ *
+ * `AllocationError` speaks to developers: totals in minor units ("Expected
+ * 6390, received 6000") and people as UUIDs. Passed through, that is the one
+ * place a model is told cents after being told never to use them, and is left
+ * to guess whether 6390 yen or 63.90 euros was meant. So every code a tool can
+ * reach is said again here — the amounts in major units with the currency when
+ * the caller knows it, without figures when it does not, and a person by name.
+ * A code with nothing to add keeps its own sentence, which carries no figure.
+ */
+export function splitFailure(
+  error: AllocationError,
+  context: {
+    currency?: string;
+    nameOf?: (participantId: string) => string | undefined;
+  } = {},
+): ToolFailure {
+  const { currency, nameOf } = context;
+  const figure = (key: "expected" | "received"): string | null => {
+    const value = error.params[key];
+    if (currency === undefined || value === undefined) return null;
+    try {
+      return amountText(BigInt(value), currency);
+    } catch {
+      return null;
+    }
+  };
+  const who = (): string | null => {
+    const id = error.params.participantId;
+    const name = typeof id === "string" ? nameOf?.(id) : undefined;
+    return name === undefined ? null : `"${shown(name)}"`;
+  };
+  const unchanged = "Nothing was changed.";
+
+  switch (error.code) {
+    case "exactSumMismatch":
+    case "payerSumMismatch": {
+      const parts =
+        error.code === "exactSumMismatch"
+          ? "The exact amounts in the split"
+          : "The payers' amounts";
+      const fix =
+        error.code === "exactSumMismatch"
+          ? "Make each person's amount add up to the total."
+          : "Make the payers' amounts add up to the total.";
+      const expected = figure("expected");
+      const received = figure("received");
+      return new ToolFailure(
+        expected && received
+          ? `${parts} add up to ${received}, but the expense is ${expected}. ${unchanged} ${fix}`
+          : `${parts} do not add up to the expense's total. ${unchanged} ${fix}`,
+      );
+    }
+    case "payerDuplicate":
+    case "participantDuplicate": {
+      const where =
+        error.code === "payerDuplicate" ? "among the payers" : "in the split";
+      const fix =
+        error.code === "payerDuplicate"
+          ? "Name each payer once, with everything they paid."
+          : "Name each person once.";
+      const name = who();
+      return new ToolFailure(
+        `${name ?? "The same person"} is listed more than once ${where}. ${unchanged} ${fix}`,
+        { quotesMembers: name !== null },
+      );
+    }
+    case "payerRequired":
+      return new ToolFailure(
+        `An expense needs at least one payer. ${unchanged}`,
+      );
+    case "payerNegative":
+      return new ToolFailure(
+        `What a payer paid cannot be less than zero. ${unchanged}`,
+      );
+    case "valueTooLarge":
+      return new ToolFailure(
+        `One person's part is larger than any amount Balancia accepts. ${unchanged}`,
+      );
+    case "internal":
+      return new ToolFailure(
+        `Balancia could not split that expense. ${unchanged} Check the amounts and who shares it, and try again.`,
+      );
+    default:
+      return new ToolFailure(`${error.message}. ${unchanged}`);
+  }
+}
+
 const NOT_FOUND =
   "Not found. The group or entry does not exist, or this connection is not allowed to see it.";
 
@@ -160,6 +250,11 @@ export async function describeFailure(
   }
   if (error instanceof ZodError) {
     return error.issues[0]?.message ?? "Check the arguments.";
+  }
+  // A tool that knows the currency says it through `splitFailure` itself; one
+  // that does not still never passes the engine's minor units on.
+  if (error instanceof AllocationError) {
+    return describeFailure(splitFailure(error), tool);
   }
 
   const response = mobileApiError(error, `mcp ${tool}`);
