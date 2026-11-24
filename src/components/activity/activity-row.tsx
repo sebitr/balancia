@@ -27,7 +27,9 @@ export function ActivityRow({ groupId }: { groupId: string }) {
       href={`/groups/${groupId}/activity`}
       transitionTypes={PUSH}
       // The title and caption are stacked spans, which an accessible name
-      // runs together with nothing between them; see the statistics row.
+      // runs together with nothing between them; see the statistics row. The
+      // space between them below is for the same reason the other way round:
+      // the name has to hold every word shown (WCAG 2.5.3).
       aria-label={`${t("activityTitle")} · ${t("activityCaption")}`}
       className="flex min-h-12 items-center gap-2.5 rounded-2xl bg-card px-4 py-2.5 ring-1 ring-border transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
     >
@@ -38,7 +40,7 @@ export function ActivityRow({ groupId }: { groupId: string }) {
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-xs font-medium">
           {t("activityTitle")}
-        </span>
+        </span>{" "}
         <span className="truncate text-xs text-muted-foreground">
           {t("activityCaption")}
         </span>
