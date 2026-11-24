@@ -173,7 +173,7 @@ describe("the person's page", () => {
 
       expect(screen.getByText("You owe Marta")).toBeInTheDocument();
       const link = screen.getByRole("link", {
-        name: "Record Seb's repayment to Marta",
+        name: "I paid Marta, Record Seb's repayment to Marta",
       });
       expect(link).toHaveTextContent("I paid Marta");
       expect(link).toHaveAttribute(
@@ -213,7 +213,9 @@ describe("the person's page", () => {
 
       expect(screen.getByText("Marta owes you")).toBeInTheDocument();
       expect(
-        screen.getByRole("link", { name: "Record Marta's repayment to Seb" }),
+        screen.getByRole("link", {
+          name: "I was paid back, Record Marta's repayment to Seb",
+        }),
       ).toHaveTextContent("I was paid back");
       expect(
         screen.getByRole("button", { name: "Remind Marta" }),

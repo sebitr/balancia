@@ -1,9 +1,9 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import {
   attachVirtualAuthenticator,
-  openSettings,
   registerAndSignIn,
   setPasskeyPresence,
+  signOut,
   TEST_PASSWORD,
   uniqueEmail,
 } from "./helpers";
@@ -17,22 +17,6 @@ import {
  * relying-party ID and the challenge it issued. Nothing is stubbed on the
  * server side.
  */
-
-/**
- * Signing out, which lives at the foot of the settings hub and asks first.
- *
- * Two taps rather than one: it is the only action in settings with no way
- * back, because the Undo would be raised into a page nobody is signed in to.
- */
-async function signOut(page: Page): Promise<void> {
-  await openSettings(page);
-  await page.getByRole("button", { name: "Sign out" }).click();
-  await page
-    .getByRole("alertdialog")
-    .getByRole("button", { name: "Sign out" })
-    .click();
-  await expect(page).toHaveURL("/");
-}
 
 test.describe("passkeys", () => {
   test("registers a passkey and signs in with it", async ({ page }) => {

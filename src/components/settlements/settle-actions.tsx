@@ -113,10 +113,16 @@ export function SettleActions({
 
   const chaseable = remindRecipientsFor(transfer, recipients);
 
-  const recordLabel = t("recordFor", {
-    from: transfer.fromName,
-    to: transfer.toName,
-  });
+  /*
+   * What the button says, then what it does. Said alone, "I was paid back" is
+   * the same three words on every debt the screen lists, so the name goes on
+   * to whose repayment it records. It starts with the words on the button,
+   * though, and does not replace them: a voice user says what they see, and a
+   * name that is only "Record Seb's repayment to Amélie" is not what they
+   * see (WCAG 2.5.3, Label in Name).
+   */
+  const recordName = (shown: string) =>
+    `${shown}, ${t("recordFor", { from: transfer.fromName, to: transfer.toName })}`;
 
   /*
    * The button that records it, which lives in one of two places.
@@ -139,7 +145,10 @@ export function SettleActions({
           nothing here does — so it must not read like an instruction that
           would. What it records is something the reader has already gone and
           done. */}
-      <Link href={recordHref} aria-label={recordLabel}>
+      <Link
+        href={recordHref}
+        aria-label={recordName(t("iPaid", { name: transfer.toName }))}
+      >
         {t("iPaid", { name: transfer.toName })}
       </Link>
     </Button>
@@ -182,7 +191,7 @@ export function SettleActions({
         size="lg"
         className="h-[46px] flex-1 rounded-[14px] font-semibold"
       >
-        <Link href={recordHref} aria-label={recordLabel}>
+        <Link href={recordHref} aria-label={recordName(t("iWasPaid"))}>
           {t("iWasPaid")}
         </Link>
       </Button>

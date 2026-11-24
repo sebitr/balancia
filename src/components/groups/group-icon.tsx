@@ -16,6 +16,7 @@ import {
   Volleyball,
   type LucideIcon,
 } from "lucide-react";
+import { DrawnInitials } from "@/components/ui/drawn-initials";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_GROUP_ICON_COLOR,
@@ -111,7 +112,7 @@ export function GroupIconTile({
           className={cn("size-6", iconClassName)}
         />
       ) : (
-        <span className="font-medium">{initial}</span>
+        <DrawnInitials initials={initial ?? ""} className="font-medium" />
       )}
     </span>
   );

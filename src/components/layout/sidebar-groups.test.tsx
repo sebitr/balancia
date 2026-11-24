@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
+import { expectLabelInName } from "../../../tests/helpers/label-in-name";
 import type { NavigationGroup } from "@/modules/balances/navigation";
 
 /**
@@ -36,7 +37,7 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const { SidebarGroups, SidebarGroupsFallback } =
+const { GroupRow, SidebarGroups, SidebarGroupsFallback } =
   await import("./sidebar-groups");
 const { SidebarFrame } = await import("./sidebar-context");
 const { KnownGroupsOwner, forgetKnownGroups } = await import("./known-groups");
@@ -249,6 +250,42 @@ describe("SidebarGroups", () => {
     const fromHome = screen.getByRole("link", { name: /Flat 4B/ });
     expect(fromHome).toHaveAttribute("href", "/groups/g2");
     expect(fromHome).toHaveAttribute("data-transition", "push");
+  });
+
+  /*
+   * The name says the row's lines with pauses written in, and the row has to
+   * show nothing the name does not: the tile's initial, and the lines run
+   * together where the column draws no space between them, both read as
+   * words a voice user could see and not say (axe's
+   * label-content-name-mismatch, in the Playwright journeys).
+   */
+  it("shows only words its name says, in the same order", () => {
+    renderList([LISBON]);
+
+    const lisbon = screen.getByRole("link", {
+      name: /^Lisbon, March, you are owed €248\.00, you owe CHF\s62\.20$/,
+    });
+    expectLabelInName(lisbon, lisbon.getAttribute("aria-label") ?? "");
+    // The tile's initial is drawn, not written.
+    expect(lisbon.querySelector("[data-initials]")).toHaveAttribute(
+      "data-initials",
+      "L",
+    );
+  });
+
+  it("shows only words its name says in the phone's switcher too", () => {
+    cleanup();
+    renderWithIntl(
+      <GroupRow
+        group={LISBON}
+        isCurrent={false}
+        href="/groups/g1"
+        variant="switcher"
+        transitionTypes={[]}
+      />,
+    );
+    const lisbon = screen.getByRole("link", { name: /^Lisbon, March, / });
+    expectLabelInName(lisbon, lisbon.getAttribute("aria-label") ?? "");
   });
 
   it("folded, keeps each tile's name and balance as its name", () => {

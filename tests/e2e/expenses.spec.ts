@@ -83,10 +83,12 @@ test("shows the rounding difference when a split does not divide evenly", async 
   await page.getByLabel("Description").fill("Coffee");
   await page.getByLabel("Amount").fill("10.00");
 
-  // 10.00 between 3 people cannot divide evenly; the UI must say so. The
-  // split lives behind its summary row now, and the note with it.
+  // 10.00 between 3 people cannot divide evenly; the UI must say so, by
+  // naming whoever pays the cent more than the others who asked for the same
+  // — "You pay CHF 0.01 more so it adds up to CHF 10.00." The note is in the
+  // split, behind its summary row on a phone and on the form on a desk.
   await openSplit(page);
-  await expect(page.getByText(/could not be split evenly/)).toBeVisible();
+  await expect(page.getByText(/ more so it adds up to /)).toBeVisible();
   await closeSplit(page);
 
   await page.getByRole("button", { name: "Add expense" }).click();
@@ -106,9 +108,9 @@ test("records an expense split by percentage", async ({ page }) => {
 
   await openSplit(page);
   await page.getByRole("button", { name: "Percent" }).click();
-  const inputs = page.getByLabel(/Percentage for/);
-  await inputs.nth(0).fill("60");
-  await inputs.nth(1).fill("40");
+  // The reader's own field is "Your percentage"; everybody else's is named.
+  await page.getByLabel("Your percentage").fill("60");
+  await page.getByLabel("Percentage for Blaise").fill("40");
   await closeSplit(page);
 
   await page.getByRole("button", { name: "Add expense" }).click();
@@ -129,9 +131,9 @@ test("rejects percentages that do not add up to 100", async ({ page }) => {
 
   await openSplit(page);
   await page.getByRole("button", { name: "Percent" }).click();
-  const inputs = page.getByLabel(/Percentage for/);
-  await inputs.nth(0).fill("60");
-  await inputs.nth(1).fill("30");
+  // The reader's own field is "Your percentage"; everybody else's is named.
+  await page.getByLabel("Your percentage").fill("60");
+  await page.getByLabel("Percentage for Blaise").fill("30");
 
   await expect(page.getByText(/not 100%/)).toBeVisible();
 });
@@ -159,11 +161,16 @@ test("records a settlement and clears the balance", async ({ page }) => {
   await page.getByRole("button", { name: "Record repayment" }).click();
 
   // Back on the settle-up screen, which now reads as a state: one card saying
-  // the group is settled, with the repayment just recorded listed under it.
+  // the group is settled, with the repayment just recorded listed under it —
+  // told from where the reader stands, so Ada is "you".
   await expect(
     page.getByRole("heading", { name: "The group is settled" }),
   ).toBeVisible();
-  await expect(page.getByText("Blaise paid Ada Lovelace back")).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Last repayments" })
+      .getByText("Blaise paid you back"),
+  ).toBeVisible();
 });
 
 test("records a multi-currency expense in a converted group", async ({
@@ -226,9 +233,22 @@ test("configures a recurring expense", async ({ page }) => {
   await page.getByRole("button", { name: "Save recurring expense" }).click();
   await expect(page).not.toHaveURL(/\/expenses\/new/);
 
+  /*
+   * A desk lists the rules as a table, and the phone's list is in the HTML
+   * beside it with `display: none`. The table folds the schedule into the
+   * description's second line when it is narrow and gives it a column when it
+   * is not — both drawn, one shown — so the sentence is the visible one of
+   * the row's two.
+   */
   await page.goto(`/groups/${groupId}/recurring`);
-  await expect(page.getByText("Rent").first()).toBeVisible();
-  await expect(page.getByText(/Every month on the/).first()).toBeVisible();
+  const rent = page
+    .getByRole("table", { name: "Recurring expenses" })
+    .getByRole("row")
+    .filter({ hasText: "Rent" });
+  await expect(rent.getByText("Rent", { exact: true })).toBeVisible();
+  await expect(
+    rent.getByText(/Every month on the/).filter({ visible: true }),
+  ).toBeVisible();
 });
 
 /**

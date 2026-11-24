@@ -2,6 +2,7 @@
 
 import { Check } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { DrawnInitials } from "@/components/ui/drawn-initials";
 import type { RovingChoiceProps } from "@/components/ui/roving-choice";
 import { cn } from "@/lib/utils";
 import { initialOf } from "./initials";
@@ -84,7 +85,7 @@ export function MemberAvatar({
           selected ? AVATAR_TONE[tone] : "bg-accent text-accent-foreground",
         )}
       >
-        {initialOf(name)}
+        <DrawnInitials initials={initialOf(name)} />
       </AvatarFallback>
     </Avatar>
   );
