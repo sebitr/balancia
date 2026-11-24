@@ -237,6 +237,33 @@ describe("⌘\\", () => {
     press({ key: "`", code: "Backslash", metaKey: true });
     expect(fold).toHaveBeenCalledTimes(1);
   });
+
+  // Windows reports AltGr as Ctrl and Alt held together, and a German or a
+  // French board types `\` with it: that is a character being typed.
+  it("leaves AltGr typing a backslash to the field, off a Mac", () => {
+    render(<Harness />);
+    const event = press({
+      key: "\\",
+      code: "Minus",
+      ctrlKey: true,
+      altKey: true,
+    });
+    expect(fold).not.toHaveBeenCalled();
+    expect(event).toBe(true);
+  });
+
+  it("still takes ⌘⌥⇧/, a French Mac's ⌘\\", () => {
+    vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel");
+    render(<Harness />);
+    press({
+      key: "\\",
+      code: "Slash",
+      metaKey: true,
+      altKey: true,
+      shiftKey: true,
+    });
+    expect(fold).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("below lg", () => {

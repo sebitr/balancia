@@ -15,6 +15,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Plus, Search, Settings, WalletCards } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Kbd } from "@/components/ui/kbd";
 import { MemberAvatar } from "@/components/entries/pills";
 import {
   CATEGORY_GLYPHS,
@@ -32,7 +33,8 @@ import { formatMoney, money } from "@/modules/currencies/money";
 import { searchPaletteAction } from "@/modules/search/actions";
 import type { PalettePerson, PaletteResults } from "@/modules/search/service";
 import { cn } from "@/lib/utils";
-import { useKnownGroups, usePositionLines } from "./sidebar-groups";
+import { useKnownGroups } from "./known-groups";
+import { usePositionLines } from "./sidebar-groups";
 import { readSingleKeys } from "./single-keys";
 import {
   commandHeld,
@@ -406,6 +408,10 @@ function PaletteBody({
   };
 
   const onKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    // Mid-composition, ↵ and the arrows belong to the input method — choosing
+    // a candidate, committing the kana — and not to the list. 229 is what
+    // Safari reports for the key that ends one.
+    if (event.nativeEvent.isComposing || event.keyCode === 229) return;
     if (options.length === 0) return;
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
@@ -485,7 +491,7 @@ function PaletteBody({
           onKeyDown={onKeyDown}
           className="h-full min-w-0 flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
         />
-        <Key>Esc</Key>
+        <Kbd aria-hidden="true">Esc</Kbd>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">
@@ -544,21 +550,21 @@ function PaletteBody({
         className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-t bg-muted/35 px-4 py-2.5 text-xs text-muted-foreground"
       >
         <span className="inline-flex items-center gap-1.5">
-          <Key>↑</Key>
-          <Key>↓</Key>
+          <Kbd aria-hidden="true">↑</Kbd>
+          <Kbd aria-hidden="true">↓</Kbd>
           {t("move")}
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <Key>↵</Key>
+          <Kbd aria-hidden="true">↵</Kbd>
           {t("open")}
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <Key>{apple ? "⌘" : "Ctrl"}</Key>
-          <Key>↵</Key>
+          <Kbd aria-hidden="true">{apple ? "⌘" : "Ctrl"}</Kbd>
+          <Kbd aria-hidden="true">↵</Kbd>
           {t("openNewTab")}
         </span>
         <span className="ml-auto inline-flex items-center gap-1.5">
-          <Key>Esc</Key>
+          <Kbd aria-hidden="true">Esc</Kbd>
           {t("close")}
         </span>
       </div>
@@ -691,7 +697,7 @@ function OptionRow({
         >
           <ActionGlyph icon={Plus} />
           <span className="min-w-0 flex-1 truncate">{option.label}</span>
-          {singleKeys && <Key>N</Key>}
+          {singleKeys && <Kbd aria-hidden="true">N</Kbd>}
         </button>
       );
     case "settle":
@@ -706,7 +712,7 @@ function OptionRow({
         >
           <ActionGlyph icon={WalletCards} />
           <span className="min-w-0 flex-1 truncate">{option.label}</span>
-          {singleKeys && <Key>S</Key>}
+          {singleKeys && <Kbd aria-hidden="true">S</Kbd>}
         </Link>
       );
     case "settings":
@@ -879,24 +885,5 @@ function ActionGlyph({ icon: Icon }: { icon: typeof Plus }) {
 }
 
 function EnterHint() {
-  return <Key>↵</Key>;
-}
-
-/**
- * A key, drawn as the sidebar draws ⌘K: mono at the foot of the scale, on the
- * card with a hairline and a one-pixel lip.
- *
- * Always beside words that already say what the key does, so it is hidden
- * from a screen reader. Local until the entry dialog's `ui/kbd.tsx` lands on
- * main, which is the same drawing.
- */
-function Key({ children }: { children: ReactNode }) {
-  return (
-    <kbd
-      aria-hidden="true"
-      className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-md bg-card px-1 font-mono text-2xs font-medium text-muted-foreground shadow-[inset_0_0_0_1px_var(--border),0_1px_0_var(--border)]"
-    >
-      {children}
-    </kbd>
-  );
+  return <Kbd aria-hidden="true">↵</Kbd>;
 }

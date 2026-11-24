@@ -21,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useDeskWidth } from "@/components/ui/use-desk-width";
 import { Amount } from "@/components/money/amount";
 import { RANKED_BANDS, UNCATEGORISED } from "@/modules/expenses/spread";
 import { useCategoryLabel } from "@/components/expenses/category-field";
@@ -52,7 +53,7 @@ import { FilterSheet } from "./filter-sheet";
 import { FilterRow } from "./filter-row";
 import { badgeOf, Position, usePayerLine } from "./row-parts";
 import { SwipeToDelete } from "./swipe-to-delete";
-import { TransactionsTable, useDeskWidth } from "./transactions-table";
+import { TransactionsTable } from "./transactions-table";
 import { forgetPlace, readPlace, rememberPlace } from "./list-place";
 
 /**
@@ -270,7 +271,9 @@ export function Transactions({
   /*
    * Which renderer the window can see: the phone's list below `lg`, the table
    * from it. Unknown on the server and through hydration, when both are drawn
-   * and CSS shows one — see `useDeskWidth`.
+   * and CSS shows one — see `useDeskWidth`. From the next render on, only the
+   * one the window can see is mounted, so a phone does not carry a hidden
+   * table of every row it holds, nor a desk a hidden list of them.
    */
   const desk = useDeskWidth();
   const showList = desk !== true;

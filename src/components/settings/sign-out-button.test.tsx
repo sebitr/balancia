@@ -36,6 +36,11 @@ vi.mock("@/lib/offline/outbox", () => ({
 vi.mock("@/lib/offline/forget", () => ({
   forgetDevice: () => forgetDevice(),
 }));
+// The list of groups the sidebar keeps for the length of the page: nothing
+// reloads it on the way out, so the next account to sign in would be drawn it.
+vi.mock("@/components/layout/known-groups", () => ({
+  forgetKnownGroups: () => steps.push("forget groups"),
+}));
 vi.mock("@/modules/auth/actions", () => ({
   signOutAction: () => signOutAction(),
   deleteAccountAction: (input: unknown) => deleteAccountAction(input),
@@ -177,6 +182,7 @@ describe("SignOutButton", () => {
 
     await waitFor(() =>
       expect(steps).toEqual([
+        "forget groups",
         "forget",
         // While the session still exists: the server's record of this device
         // is removed as the account that owns it.
@@ -232,7 +238,12 @@ describe("SignOutButton", () => {
     );
 
     await waitFor(() =>
-      expect(steps).toEqual(["forget", "DELETE /api/auth/session", "action"]),
+      expect(steps).toEqual([
+        "forget groups",
+        "forget",
+        "DELETE /api/auth/session",
+        "action",
+      ]),
     );
   });
 });
@@ -268,6 +279,7 @@ describe("DangerCard", () => {
     // nothing to do, and the browser's half is what kills the endpoint.
     await waitFor(() =>
       expect(steps).toEqual([
+        "forget groups",
         "forget",
         "DELETE /api/push/subscriptions",
         "unsubscribe",

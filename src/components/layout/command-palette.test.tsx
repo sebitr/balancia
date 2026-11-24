@@ -1,6 +1,13 @@
 import type { MouseEvent, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import type { RowView } from "@/components/expenses/list-filter";
@@ -334,6 +341,25 @@ describe("CommandPalette", () => {
         screen.queryByRole("dialog", { name: "Search or jump to" }),
       ).toBeNull(),
     );
+  });
+
+  // Choosing a candidate in a Japanese or Chinese input method is ↵ and the
+  // arrows too; while one is open they are the input method's.
+  it("leaves ↵ and the arrows to an input method that is composing", async () => {
+    renderPalette();
+    const dialog = await openWithKeys();
+    await within(dialog).findByRole("option", { name: /^Book club/ });
+    const field = within(dialog).getByRole("combobox");
+    const before = activeOption()?.getAttribute("href");
+
+    fireEvent.keyDown(field, { key: "ArrowDown", isComposing: true });
+    expect(activeOption()?.getAttribute("href")).toBe(before);
+    fireEvent.keyDown(field, { key: "Enter", isComposing: true });
+    // Safari ends a composition with a key it reports as 229.
+    fireEvent.keyDown(field, { key: "Enter", keyCode: 229 });
+
+    expect(followed.hrefs).toEqual([]);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("opens a row in a new tab with Ctrl ↵, and stays open", async () => {

@@ -552,6 +552,13 @@ export interface AddEntryFormProps {
   /** Dismisses the drawer. Supplied by the shell, never by a route. */
   onClose?: () => void;
   /**
+   * Told whether closing now would lose something the reader typed: a change
+   * to an entry that already exists, to a recurring rule, or a repayment —
+   * the three the form keeps no draft of (see `draftable`). The shell uses it
+   * to keep a stray click beside the desk's dialog from closing it.
+   */
+  onUnkeptChange?: (unkept: boolean) => void;
+  /**
    * Dismisses it too, but on a saved entry.
    *
    * Separate from `onClose` because the group behind is now out of date, and
@@ -658,6 +665,7 @@ export function AddEntryForm({
   editing,
   prefill,
   onClose,
+  onUnkeptChange,
   onSaved,
   onRemoved,
   onReload,
@@ -1658,6 +1666,18 @@ export function AddEntryForm({
     });
   }, [draftable, groupId, owner, settledDraft]);
 
+  /*
+   * What the draft cannot keep: everything typed into a form that is not
+   * draftable, measured against what it opened on. A form opened on an entry
+   * and left as it was has nothing to lose, and closes however it is closed.
+   */
+  const work = JSON.stringify([draftSnapshot, rate, settleTo, methodLabel]);
+  const [openedOn] = useState(work);
+  const unkept = !draftable && work !== openedOn;
+  useEffect(() => {
+    onUnkeptChange?.(unkept);
+  }, [unkept, onUnkeptChange]);
+
   const settledAmount = useDebounced(amountText, DUPLICATE_DEBOUNCE_MS);
   const settledDescription = useDebounced(description, DUPLICATE_DEBOUNCE_MS);
   const duplicate = useMemo(() => {
@@ -2394,10 +2414,23 @@ export function AddEntryForm({
    * was pressed for; a picker open over the form is what the keys are for
    * while it is open. And it is the button, pressed: nothing the button would
    * refuse to do.
+   *
+   * Only for a key pressed in the form itself. React carries an event up
+   * through a portal to the component that rendered it, so "Delete this
+   * entry?" — drawn over the form, from inside it — sent its ⌘↵ here, and the
+   * question about deleting the entry was answered by saving the edit
+   * instead. A dialog or a popover over the form is not in its DOM, and is
+   * what the keys are for while it is open.
    */
   const saveFromKeyboard = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "Enter" || !(event.metaKey || event.ctrlKey)) return;
-    if (event.defaultPrevented || sheet !== null) return;
+    if (event.defaultPrevented || sheet !== null || confirmDelete) return;
+    if (
+      !(event.target instanceof Node) ||
+      !event.currentTarget.contains(event.target)
+    ) {
+      return;
+    }
     event.preventDefault();
     if (canSave && !pending) void onSubmit();
   };

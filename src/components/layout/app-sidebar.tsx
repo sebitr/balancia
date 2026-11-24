@@ -26,7 +26,7 @@ import {
   useCommandPaletteAvailable,
 } from "./command-palette";
 import { SidebarTip, useSidebar } from "./sidebar-context";
-import { useKnownGroups } from "./sidebar-groups";
+import { useKnownGroups } from "./known-groups";
 import { UserMenu } from "./user-menu";
 
 /**

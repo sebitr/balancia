@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import { AddExpenseSheet, type PickableGroup } from "./add-expense-sheet";
@@ -194,6 +194,20 @@ describe("on a desk", () => {
     expect(screen.getByRole("link", { name: /Chalet/ })).toHaveFocus();
     await user.keyboard("{ArrowUp}{ArrowUp}");
     expect(screen.getByRole("link", { name: /Berlin trip/ })).toHaveFocus();
+  });
+
+  // An input method choosing a candidate uses the arrows; while it is
+  // composing they are its, and no row is walked to.
+  it("leaves the arrows to an input method that is composing", () => {
+    renderDesk();
+    const search = screen.getByRole("searchbox");
+    search.focus();
+
+    fireEvent.keyDown(search, { key: "ArrowDown", isComposing: true });
+    // Safari ends a composition with a key it reports as 229.
+    fireEvent.keyDown(search, { key: "ArrowDown", keyCode: 229 });
+
+    expect(search).toHaveFocus();
   });
 
   it("leaves a digit typed into the search where it was typed", async () => {

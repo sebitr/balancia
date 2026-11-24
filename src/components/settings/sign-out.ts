@@ -1,4 +1,5 @@
 import { forgetDevice } from "@/lib/offline/forget";
+import { forgetKnownGroups } from "@/components/layout/known-groups";
 import { unsubscribeThisDevice } from "@/components/notifications/unsubscribe-device";
 import { signOutAction } from "@/modules/auth/actions";
 
@@ -6,7 +7,9 @@ import { signOutAction } from "@/modules/auth/actions";
  * What signing out does on this side of the network, in the order it happens.
  *
  * 1. **The device forgets.** The worker's page cache and the offline database
- *    are deleted (see `forget.ts`). First, because it is local and cannot fail
+ *    are deleted (see `forget.ts`), and so is the list of groups the sidebar
+ *    keeps in memory for the length of the page (see `known-groups.tsx`) —
+ *    nothing reloads the page on the way out or on the next sign-in. First, because it is local and cannot fail
  *    on a bad connection, and because it is the part nobody can do for the
  *    person later: once the phone has been handed over, whatever is still on
  *    it is the next person's to read.
@@ -44,6 +47,7 @@ export async function signOut(): Promise<void> {
  * answers the same without a session, and still carries the header.
  */
 export async function leaveDevice(): Promise<void> {
+  forgetKnownGroups();
   await forgetDevice();
   await unsubscribeThisDevice();
   try {

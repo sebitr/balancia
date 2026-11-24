@@ -81,6 +81,10 @@ export function AddExpenseSheet({
    */
   const answerFromKeys = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.metaKey || event.ctrlKey || event.altKey) return;
+    // Mid-composition the arrows and the digits choose the input method's
+    // candidate, not a group. 229 is what Safari reports for the key that
+    // ends one.
+    if (event.nativeEvent.isComposing || event.keyCode === 229) return;
     const links = [
       ...(list.current?.querySelectorAll<HTMLAnchorElement>("a[href]") ?? []),
     ];
