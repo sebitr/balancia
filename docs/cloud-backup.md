@@ -438,10 +438,33 @@ that carries one of them (`[::ffff:a9fe:a9fe]`, `[64:ff9b::a9fe:a9fe]`) is
 refused like the address itself. An S3 region is letters, digits and hyphens only,
 since with no endpoint rclone builds the host name out of it.
 
-One thing this check cannot do: a name that answers differently between the check
-and rclone's own lookup a moment later (DNS rebinding) is not caught, because
-rclone cannot be handed a pre-resolved address. Keep the setting off unless the
-people with accounts are people you would give a shell.
+Two things this check cannot do, both because it judges the address once and
+rclone then makes its own connections:
+
+- **DNS rebinding.** A name that answers differently between the check and
+  rclone's own lookup a moment later is not caught, because rclone cannot be
+  handed a pre-resolved address.
+- **Redirects.** rclone follows a redirect from a WebDAV or S3 server to any
+  other address, and has no option to stop it (checked against rclone 1.76: 301,
+  302, 307 and 308, WebDAV and S3 alike). So a public server that answers
+  "moved, try `http://10.0.0.5/…`" makes the worker send that request, which the
+  check never sees. What does hold: the credentials stay behind — rclone drops
+  the `Authorization` header when a redirect leaves the host, and Balancia never
+  sets WebDAV's `auth_redirect`, which would keep it (`rclone.test.ts` checks
+  this against the real binary). And from **rclone 1.76** a redirect from
+  `https://` to `http://` is refused unless `--allow-https-downgrade` is passed,
+  which Balancia never does; that is what keeps a public HTTPS endpoint from
+  bouncing the worker to a metadata service, which answers on plain HTTP only.
+  The image pins **1.75.2**, which follows that downgrade too, so until
+  `RCLONE_VERSION` is raised the metadata service is reachable this way,
+  without credentials, by anyone who can create a destination. The request is
+  blind — what comes back reaches the owner only as a scrubbed, shortened error
+  — but it is a request this server should not make. Closing both for good needs
+  rclone's connections to pass through something that checks every address it
+  actually dials, such as a filtering proxy of Balancia's own on loopback.
+
+Keep `BACKUP_ALLOW_PRIVATE_ENDPOINTS` off unless the people with accounts are
+people you would give a shell.
 
 ### When something goes wrong
 

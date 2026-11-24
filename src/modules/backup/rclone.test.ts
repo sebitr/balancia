@@ -1,5 +1,6 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
+import { createServer as createHttpServer, type Server } from "node:http";
 import { createServer, connect } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -379,6 +380,63 @@ describe.skipIf(!CAN_SERVE_S3)("rclone over S3", () => {
     ).rejects.toMatchObject({
       code: expect.stringMatching(/not_found|forbidden/),
     });
+  });
+});
+
+describe.skipIf(!HAVE_RCLONE)("a server that redirects elsewhere", () => {
+  // rclone follows a redirect, and has no option to stop it: the limit is in
+  // docs/cloud-backup.md beside DNS rebinding. What must hold is that the
+  // credentials stay behind — so nothing here may set `auth_redirect`.
+  const opened: Server[] = [];
+
+  afterAll(() => {
+    for (const server of opened) server.close();
+  });
+
+  async function listening(server: Server): Promise<number> {
+    opened.push(server);
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
+    const address = server.address();
+    if (typeof address !== "object" || !address) throw new Error("no port");
+    return address.port;
+  }
+
+  it("does not take the password along to another host", async () => {
+    const reached: (string | undefined)[] = [];
+    const elsewhere = await listening(
+      createHttpServer((request, response) => {
+        reached.push(request.headers.authorization);
+        response.statusCode = 404;
+        response.end();
+      }),
+    );
+    const origin = await listening(
+      createHttpServer((request, response) => {
+        response.statusCode = 307;
+        response.setHeader(
+          "location",
+          `http://localhost:${elsewhere}${request.url ?? "/"}`,
+        );
+        response.end();
+      }),
+    );
+    const target = await buildRemote(
+      "webdav",
+      {
+        url: `http://127.0.0.1:${origin}`,
+        vendor: "other",
+        username: "ada",
+        password: "correct horse battery",
+        folder: "",
+      },
+      { obscure },
+    );
+
+    await listObjects(target).catch(() => []);
+
+    for (const authorization of reached) expect(authorization).toBeUndefined();
   });
 });
 

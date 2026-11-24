@@ -129,6 +129,14 @@ describe("WebDAV", () => {
     expect(JSON.stringify(env)).not.toContain("hunter2-hunter2");
   });
 
+  it("never asks rclone to carry the password along a redirect", async () => {
+    // rclone follows redirects whatever it is told; this is what keeps the
+    // credentials from following too. See docs/cloud-backup.md.
+    const { env } = await buildRemote("webdav", webdav, context);
+
+    expect(env).not.toHaveProperty("RCLONE_CONFIG_BACKUP_AUTH_REDIRECT");
+  });
+
   it("puts the backups in a folder of their own under the one chosen", async () => {
     const { directory } = await buildRemote("webdav", webdav, context);
 
