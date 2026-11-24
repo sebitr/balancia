@@ -364,6 +364,91 @@ describe("the entry dialog on a desk", () => {
   });
 });
 
+/**
+ * A press on the dimmed screen beside the dialog, as Radix hears one: a
+ * pointer going down outside the layer.
+ */
+async function clickBeside() {
+  const overlay = document.querySelector('[data-slot="sheet-overlay"]');
+  // The layer starts listening a tick after it opens.
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const target = overlay ?? document.body;
+  // A primary button's press is decided on the click that ends it.
+  fireEvent.pointerDown(target);
+  fireEvent.pointerUp(target);
+  fireEvent.click(target);
+  // Radix decides on the next tick, and the sheet then takes its exit.
+  await new Promise((resolve) => setTimeout(resolve, 450));
+}
+
+describe("a click beside the dialog", () => {
+  it("closes a new expense, which its draft keeps", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await fillIn(user);
+
+    await clickBeside();
+
+    expect(back).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes an entry opened and left as it was", async () => {
+    renderDialog({ editing: EXPENSE }, "/groups/g1/expenses/e1/edit");
+
+    await clickBeside();
+
+    expect(back).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not drop a change to an entry, which nothing keeps", async () => {
+    const user = userEvent.setup();
+    renderDialog({ editing: EXPENSE }, "/groups/g1/expenses/e1/edit");
+    await user.type(
+      screen.getByRole("textbox", { name: "Description" }),
+      " and Coop",
+    );
+
+    await clickBeside();
+
+    expect(back).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("heading", { name: "Edit expense" }),
+    ).toBeInTheDocument();
+
+    // Esc is still a way out, and a deliberate one.
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(back).toHaveBeenCalledTimes(1));
+  });
+
+  it("does not drop a half-typed repayment", async () => {
+    const user = userEvent.setup();
+    renderDialog({}, "/groups/g1/expenses/new#type=settle");
+    await user.click(
+      screen.getByRole("button", { name: /Hervé pays you back/ }),
+    );
+
+    await clickBeside();
+
+    expect(back).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(back).toHaveBeenCalledTimes(1));
+  });
+
+  it("closes the phone's sheet as it always did", async () => {
+    atDesk(false);
+    const user = userEvent.setup();
+    renderDialog({ editing: EXPENSE }, "/groups/g1/expenses/e1/edit");
+    await user.type(
+      screen.getByRole("textbox", { name: "Description" }),
+      " and Coop",
+    );
+
+    await clickBeside();
+
+    expect(back).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("a repayment on a desk", () => {
   it("says the currency the two end up square in, and what recording is", () => {
     renderDialog(

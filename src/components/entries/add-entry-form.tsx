@@ -549,6 +549,13 @@ export interface AddEntryFormProps {
   /** Dismisses the drawer. Supplied by the shell, never by a route. */
   onClose?: () => void;
   /**
+   * Told whether closing now would lose something the reader typed: a change
+   * to an entry that already exists, to a recurring rule, or a repayment —
+   * the three the form keeps no draft of (see `draftable`). The shell uses it
+   * to keep a stray click beside the desk's dialog from closing it.
+   */
+  onUnkeptChange?: (unkept: boolean) => void;
+  /**
    * Dismisses it too, but on a saved entry.
    *
    * Separate from `onClose` because the group behind is now out of date, and
@@ -655,6 +662,7 @@ export function AddEntryForm({
   editing,
   prefill,
   onClose,
+  onUnkeptChange,
   onSaved,
   onRemoved,
   onReload,
@@ -1654,6 +1662,18 @@ export function AddEntryForm({
       },
     });
   }, [draftable, groupId, owner, settledDraft]);
+
+  /*
+   * What the draft cannot keep: everything typed into a form that is not
+   * draftable, measured against what it opened on. A form opened on an entry
+   * and left as it was has nothing to lose, and closes however it is closed.
+   */
+  const work = JSON.stringify([draftSnapshot, rate, settleTo, methodLabel]);
+  const [openedOn] = useState(work);
+  const unkept = !draftable && work !== openedOn;
+  useEffect(() => {
+    onUnkeptChange?.(unkept);
+  }, [unkept, onUnkeptChange]);
 
   const settledAmount = useDebounced(amountText, DUPLICATE_DEBOUNCE_MS);
   const settledDescription = useDebounced(description, DUPLICATE_DEBOUNCE_MS);
