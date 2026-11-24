@@ -24,6 +24,7 @@ import {
 const LOCALE_FLAGS: Record<AppLocale, string> = {
   en: "🇬🇧",
   fr: "🇫🇷",
+  de: "🇩🇪",
 };
 
 function useLanguageChoice(paths?: Record<AppLocale, string>) {

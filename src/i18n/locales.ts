@@ -10,14 +10,15 @@
  * nothing there and would break existing invitation links.
  *
  * The public pages are the exception, and for them the address is the
- * language — `/` is English, `/fr` is French. A crawler sends no cookie and no
- * `Accept-Language`, so while the homepage picked its language from those it
+ * language — `/` is English, `/fr` is French, `/de` is German. A crawler
+ * sends no cookie and no `Accept-Language`, so while the homepage picked its
+ * language from those it
  * was only ever read in English, and the French copy was in no index at all.
  * `src/lib/public-pages.ts` holds the addresses and `proxy.ts` turns one into
  * the header below.
  */
 
-export const LOCALES = ["en", "fr"] as const;
+export const LOCALES = ["en", "fr", "de"] as const;
 
 export type AppLocale = (typeof LOCALES)[number];
 
@@ -46,6 +47,7 @@ export const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 export const LOCALE_LABELS: Record<AppLocale, string> = {
   en: "English",
   fr: "Français",
+  de: "Deutsch",
 };
 
 export function isAppLocale(value: unknown): value is AppLocale {

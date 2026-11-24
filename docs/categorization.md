@@ -524,8 +524,8 @@ A brand that spans categories in a way the text can settle belongs in
 ### Add a category
 
 1. Add the ID and its subcategories to `EXPENSE_CATEGORIES` in `taxonomy.ts`.
-2. Add labels to `expenses.categories` and `expenses.subcategories` in **both**
-   `messages/en.json` and `messages/fr.json` —
+2. Add labels to `expenses.categories` and `expenses.subcategories` in every
+   shipped language catalogue under `messages/` —
    `modules/categorization/taxonomy.test.ts` fails on a code with no label or a
    label with no code, and `src/i18n/messages.test.ts` fails on a key that was
    never translated.

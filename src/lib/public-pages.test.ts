@@ -34,10 +34,13 @@ describe("where the public pages live", () => {
   it("puts English at the root and every other language under its code", () => {
     expect(publicPath("home", "en")).toBe("/");
     expect(publicPath("home", "fr")).toBe("/fr");
+    expect(publicPath("home", "de")).toBe("/de");
     expect(publicPath("splitwise", "en")).toBe("/splitwise-alternative");
     expect(publicPath("splitwise", "fr")).toBe("/fr/alternative-splitwise");
+    expect(publicPath("splitwise", "de")).toBe("/de/splitwise-alternative");
     expect(publicPath("tricount", "en")).toBe("/tricount-alternative");
     expect(publicPath("tricount", "fr")).toBe("/fr/alternative-tricount");
+    expect(publicPath("tricount", "de")).toBe("/de/tricount-alternative");
   });
 
   it("gives every page in every language an address of its own", () => {
@@ -61,8 +64,10 @@ describe("where the public pages live", () => {
   it("serves another language from a file of its own, never from the English one", () => {
     expect(routeFile("home", "en")).toBe("page.tsx");
     expect(routeFile("home", "fr")).toBe("fr/page.tsx");
+    expect(routeFile("home", "de")).toBe("de/page.tsx");
     expect(routeFile("splitwise", "en")).toBe("splitwise-alternative/page.tsx");
     expect(routeFile("splitwise", "fr")).toBe("fr/[slug]/page.tsx");
+    expect(routeFile("splitwise", "de")).toBe("de/[slug]/page.tsx");
   });
 
   it("keeps a language's folder to its public pages and nothing else", () => {
@@ -120,8 +125,8 @@ describe("which page an address names", () => {
     // A French slug with no prefix is not an English address.
     "/alternative-splitwise",
     // A language Balancia does not have is not a prefix.
-    "/de",
-    "/de/splitwise-alternative",
+    "/pt",
+    "/pt/splitwise-alternative",
     "/fr/dashboard",
     "/fr/alternative-splitwise/more",
     "/splitwise-alternative/more",
@@ -138,12 +143,14 @@ describe("the URLs a search engine is given", () => {
     // the same page to a browser and two entries to a sitemap.
     expect(publicUrl("home", "en", origin)).toBe("https://balancia.app");
     expect(publicUrl("home", "fr", origin)).toBe("https://balancia.app/fr");
+    expect(publicUrl("home", "de", origin)).toBe("https://balancia.app/de");
   });
 
   it("names every language of a page, and a default", () => {
     expect(languageAlternates("splitwise", origin)).toEqual({
       en: "https://balancia.app/splitwise-alternative",
       fr: "https://balancia.app/fr/alternative-splitwise",
+      de: "https://balancia.app/de/splitwise-alternative",
       "x-default": "https://balancia.app/splitwise-alternative",
     });
   });
@@ -176,6 +183,7 @@ describe("the URLs a search engine is given", () => {
     expect(localePaths("tricount")).toEqual({
       en: "/tricount-alternative",
       fr: "/fr/alternative-tricount",
+      de: "/de/tricount-alternative",
     });
   });
 });
