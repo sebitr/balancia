@@ -828,6 +828,122 @@ describe("a backup that fails", () => {
   });
 });
 
+describe("what the person does while a run is going", () => {
+  /** Makes the next upload wait for `during`, a quarter of an hour into the run. */
+  function midway(during: () => Promise<void>, fail?: BackupError) {
+    const put = cloud.put.bind(cloud);
+    cloud.put = async (name, bytes) => {
+      clock = new Date(clock.getTime() + 5 * 60_000);
+      await during();
+      clock = new Date(clock.getTime() + 10 * 60_000);
+      if (fail) throw fail;
+      await put(name, bytes);
+    };
+  }
+
+  it("keeps a pause made while a run was going", async () => {
+    const { owner } = await setUp();
+    await createTestGroup(owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    midway(() =>
+      updateDestination(owner.userId, id, { paused: true }, seams()),
+    );
+
+    const outcome = await runBackup(id, { trigger: "schedule", ...seams() });
+
+    expect(outcome?.status).toBe("succeeded");
+    const [view] = await listDestinations(owner.userId);
+    expect(view?.status).toBe("paused");
+    expect(view?.lastSuccessAt).toEqual(clock);
+  });
+
+  it("keeps a pause made while a failing run was going, rather than asking to reconnect", async () => {
+    const { owner } = await setUp();
+    await createTestGroup(owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    midway(
+      () => updateDestination(owner.userId, id, { paused: true }, seams()),
+      new BackupError("reconnect", "invalid_grant"),
+    );
+
+    const outcome = await runBackup(id, { trigger: "schedule", ...seams() });
+
+    expect(outcome?.status).toBe("failed");
+    const [view] = await listDestinations(owner.userId);
+    expect(view?.status).toBe("paused");
+    expect(view?.consecutiveFailures).toBe(1);
+  });
+
+  it("keeps a resume made during a manual run on a paused destination, and its run straight away", async () => {
+    const { owner } = await setUp();
+    await createTestGroup(owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    await updateDestination(owner.userId, id, { paused: true }, seams());
+    let resumedAt: Date | undefined;
+    midway(async () => {
+      resumedAt = clock;
+      await updateDestination(owner.userId, id, { paused: false }, seams());
+    });
+
+    const outcome = await runBackup(id, { trigger: "manual", ...seams() });
+
+    expect(outcome?.status).toBe("succeeded");
+    const [view] = await listDestinations(owner.userId);
+    expect(view?.status).toBe("active");
+    expect(view?.nextRunAt).toEqual(resumedAt);
+  });
+
+  it("counts the next run from the schedule chosen while it went on", async () => {
+    const { owner } = await setUp();
+    await createTestGroup(owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3, frequency: "daily" },
+      seams(),
+    );
+    midway(() =>
+      updateDestination(owner.userId, id, { frequency: "weekly" }, seams()),
+    );
+
+    await runBackup(id, { trigger: "schedule", ...seams() });
+
+    const [view] = await listDestinations(owner.userId);
+    expect(view?.frequency).toBe("weekly");
+    expect(view?.nextRunAt).toEqual(
+      new Date(clock.getTime() + 7 * 24 * 60 * 60 * 1000),
+    );
+  });
+
+  it("does not trip over a destination removed while it ran", async () => {
+    const { owner } = await setUp();
+    await createTestGroup(owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    midway(() => deleteDestination(owner.userId, id, seams()));
+
+    // The run row goes with the destination; the run must still end quietly.
+    await expect(
+      runBackup(id, { trigger: "schedule", ...seams() }),
+    ).resolves.toMatchObject({ status: "succeeded" });
+    expect(await listDestinations(owner.userId)).toEqual([]);
+  });
+});
+
 describe("the schedule", () => {
   it("queues exactly the destinations that are due", async () => {
     const { owner } = await setUp();

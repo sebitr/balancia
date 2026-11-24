@@ -25,6 +25,7 @@ import {
 } from "./providers";
 import {
   nextRunAfter,
+  nextRunOnFinish,
   retryDelayMs,
   shouldSkipUnchanged,
   type Frequency,
@@ -944,10 +945,16 @@ export async function runBackup(
         receiptsWritten,
         receiptsPending,
       });
-      await markSuccess(db, dest, finishedAt, built.contentHash, {
-        keepSuccessAt: true,
-        receiptsPending,
-      });
+      await markSuccess(
+        db,
+        dest.id,
+        { startedAt, finishedAt },
+        built.contentHash,
+        {
+          keepSuccessAt: true,
+          receiptsPending,
+        },
+      );
       log.info("Backup skipped: nothing changed");
       return { runId, status: "unchanged", deleted: [] };
     }
@@ -991,9 +998,13 @@ export async function runBackup(
       receiptsWritten,
       receiptsPending,
     });
-    await markSuccess(db, dest, finishedAt, built.contentHash, {
-      receiptsPending,
-    });
+    await markSuccess(
+      db,
+      dest.id,
+      { startedAt, finishedAt },
+      built.contentHash,
+      { receiptsPending },
+    );
     log.info(
       {
         groups: built.bundle.groups.length,
@@ -1026,7 +1037,7 @@ export async function runBackup(
       errorCode: failure.code,
       errorDetail: failure.detail,
     });
-    await markFailure(db, dest, finishedAt, failure.code);
+    await markFailure(db, dest.id, { startedAt, finishedAt }, failure.code);
     return { runId, status: "failed", errorCode: failure.code, deleted: [] };
   }
 }
@@ -1065,57 +1076,107 @@ async function legacyNamesWrittenBy(
   return mine;
 }
 
+type DestinationRow = typeof backupDestinations.$inferSelect;
+
+/**
+ * Writes the end of a run onto its destination, judged against the row as it
+ * is *now* and not as the run found it.
+ *
+ * A run can take fifteen minutes, and the person can use the screen while it
+ * goes: pause it, resume it, choose weekly, switch receipts on, reconnect.
+ * Writing back the row the run read at its start would quietly undo each of
+ * those — a pause made during a run came undone at its end, and a resume made
+ * during a manual run on a paused destination paused it again. So the row is
+ * read again under a lock, and the run writes only what it owns: when it ran,
+ * how it went, what it held, and when the next one is due — counted from the
+ * schedule the person has now. The one status it changes is the one its
+ * outcome is evidence for.
+ */
+async function settleDestination(
+  db: Database,
+  destinationId: string,
+  decide: (
+    current: DestinationRow,
+  ) => Partial<typeof backupDestinations.$inferInsert>,
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    const [current] = await tx
+      .select()
+      .from(backupDestinations)
+      .where(eq(backupDestinations.id, destinationId))
+      .limit(1)
+      .for("update");
+    // Deleted while the run went on. There is nothing left to write to.
+    if (!current) return;
+    await tx
+      .update(backupDestinations)
+      .set(decide(current))
+      .where(eq(backupDestinations.id, destinationId));
+  });
+}
+
 async function markSuccess(
   db: Database,
-  dest: typeof backupDestinations.$inferSelect,
-  at: Date,
+  destinationId: string,
+  run: { startedAt: Date; finishedAt: Date },
   contentHash: string,
   options: { keepSuccessAt?: boolean; receiptsPending?: number } = {},
 ): Promise<void> {
-  await db
-    .update(backupDestinations)
-    .set({
-      lastRunAt: at,
-      // A skipped night checked, but it did not write: the last *copy* is still
-      // the old one, and the weekly rewrite is counted from it.
-      ...(options.keepSuccessAt ? {} : { lastSuccessAt: at }),
-      lastContentHash: contentHash,
-      consecutiveFailures: 0,
+  const at = run.finishedAt;
+  await settleDestination(db, destinationId, (current) => ({
+    lastRunAt: at,
+    // A skipped night checked, but it did not write: the last *copy* is still
+    // the old one, and the weekly rewrite is counted from it.
+    ...(options.keepSuccessAt ? {} : { lastSuccessAt: at }),
+    lastContentHash: contentHash,
+    consecutiveFailures: 0,
+    nextRunAt: nextRunOnFinish({
+      ...run,
+      current: current.nextRunAt,
       // Receipts still waiting means the run stopped at its budget, not that
       // it is finished: come back within the hour rather than tomorrow, or a
       // big first backup takes a week to land.
-      nextRunAt:
+      planned:
         (options.receiptsPending ?? 0) > 0
           ? new Date(at.getTime() + RECEIPT_CONTINUE_MS)
-          : nextRunAfter(at, dest.frequency),
-      status: dest.status === "needs_reconnect" ? "active" : dest.status,
-      updatedAt: at,
-    })
-    .where(eq(backupDestinations.id, dest.id));
+          : nextRunAfter(at, current.frequency),
+    }),
+    // A run that worked is proof the connection works again. Nothing else: a
+    // pause stays a pause, whoever pressed what while this ran.
+    ...(current.status === "needs_reconnect"
+      ? { status: "active" as const }
+      : {}),
+    updatedAt: at,
+  }));
 }
 
 async function markFailure(
   db: Database,
-  dest: typeof backupDestinations.$inferSelect,
-  at: Date,
+  destinationId: string,
+  run: { startedAt: Date; finishedAt: Date },
   code: BackupErrorCode,
 ): Promise<void> {
-  const failures = dest.consecutiveFailures + 1;
-  await db
-    .update(backupDestinations)
-    .set({
+  const at = run.finishedAt;
+  await settleDestination(db, destinationId, (current) => {
+    const failures = current.consecutiveFailures + 1;
+    return {
       lastRunAt: at,
       consecutiveFailures: failures,
-      nextRunAt: new Date(at.getTime() + retryDelayMs(failures)),
+      nextRunAt: nextRunOnFinish({
+        ...run,
+        current: current.nextRunAt,
+        planned: new Date(at.getTime() + retryDelayMs(failures)),
+      }),
       // Retrying a revoked token only annoys the provider. The destination
-      // waits for the person.
-      status:
-        (code === "reconnect" || code === "app") && dest.status === "active"
-          ? "needs_reconnect"
-          : dest.status,
+      // waits for the person. Only an active one: a paused destination stays
+      // paused, and says what is wrong when it is resumed.
+      ...((code === "reconnect" || code === "app") &&
+      current.status === "active"
+        ? { status: "needs_reconnect" as const }
+        : {}),
       updatedAt: at,
-    })
-    .where(eq(backupDestinations.id, dest.id));
+    };
+  });
 }
 
 // ── The scheduler's half ─────────────────────────────────────────────────────

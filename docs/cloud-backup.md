@@ -122,7 +122,11 @@ add them, and the screen says what that means before it lets them:
   provider was the alternative, and the wrong one.
 - **The schedule** is a row per destination (`next_run_at`) and a sweep every ten
   minutes that queues the ones that are due. One job writes one backup to one
-  destination, so a slow NAS delays only its own owner.
+  destination, so a slow NAS delays only its own owner. A run's end is written
+  against the destination as it is then, not as the run found it: a pause, a
+  resume, a new schedule or a reconnect made while it ran stays made, the next
+  run is counted from the schedule chosen now, and a "run soon" asked for
+  meanwhile is kept.
 - **A night with no change writes nothing.** Each run hashes what the groups
   hold; if it matches the last good backup, the run is recorded as "unchanged".
   A fresh copy is still written at least once a week, and always when the owner
