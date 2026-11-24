@@ -8,6 +8,7 @@ import {
   groupMembers,
   users,
 } from "@/lib/db/schema";
+import { open } from "@/lib/security/secret-box";
 import { createExpense } from "@/modules/expenses/service";
 import {
   addTestParticipant,
@@ -31,6 +32,7 @@ import {
   readBackupFile,
   reapStaleRuns,
   reapStaleSetups,
+  replaceCredentials,
   requestRun,
   runBackup,
   saveBackupKey,
@@ -1006,6 +1008,70 @@ describe("what the person does while a run is going", () => {
       runBackup(id, { trigger: "schedule", ...seams() }),
     ).resolves.toMatchObject({ status: "succeeded" });
     expect(await listDestinations(owner.userId)).toEqual([]);
+  });
+
+  describe("a refresh token the provider rotates during the run", () => {
+    async function sealedRefreshToken(id: string) {
+      const [row] = await getDb()
+        .select({ credentials: backupDestinations.credentials })
+        .from(backupDestinations)
+        .where(eq(backupDestinations.id, id));
+      const plain = open("backup-destination", row?.credentials ?? null);
+      return (
+        JSON.parse(plain ?? "{}") as {
+          credentials?: { refreshToken?: string };
+        }
+      ).credentials?.refreshToken;
+    }
+
+    async function driveDestination() {
+      const { owner } = await setUp();
+      await createTestGroup(owner);
+      const { id } = await createDestination(
+        owner.userId,
+        { provider: "google_drive", credentials: { refreshToken: "rt-0" } },
+        seams(),
+      );
+      return { owner, id };
+    }
+
+    it("is kept for the next run", async () => {
+      const { id } = await driveDestination();
+
+      await runBackup(id, {
+        trigger: "schedule",
+        ...seams(),
+        openTransport: async (_provider, _credentials, options) => {
+          await options?.onRefreshToken?.("rt-1");
+          // A long run refreshes again before a later call, from the new one.
+          await options?.onRefreshToken?.("rt-2");
+          return cloud;
+        },
+      });
+
+      expect(await sealedRefreshToken(id)).toBe("rt-2");
+    });
+
+    it("does not overwrite a reconnect made while the run went on", async () => {
+      const { owner, id } = await driveDestination();
+
+      await runBackup(id, {
+        trigger: "schedule",
+        ...seams(),
+        openTransport: async (_provider, _credentials, options) => {
+          await replaceCredentials(
+            owner.userId,
+            id,
+            { refreshToken: "rt-reconnected" },
+            seams(),
+          );
+          await options?.onRefreshToken?.("rt-1");
+          return cloud;
+        },
+      });
+
+      expect(await sealedRefreshToken(id)).toBe("rt-reconnected");
+    });
   });
 });
 

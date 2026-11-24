@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getDb } from "@/lib/db/client";
 import { backupDestinations, backupRuns } from "@/lib/db/schema";
+import { open } from "@/lib/security/secret-box";
 import { createTestUser } from "../../../tests/helpers/factories";
 import { createRecoveryKey } from "./age";
 import { completeConnection, type ConnectDeps } from "./connect";
@@ -11,6 +12,7 @@ import {
   getDestinationApp,
   listDestinations,
   saveBackupKey,
+  testDestination,
   type Seams,
 } from "./service";
 import type { BackupTransport } from "./transport";
@@ -368,5 +370,81 @@ describe("reconnecting", () => {
       ),
     ).rejects.toBeInstanceOf(BackupError);
     expect(exchange.exchangeCode).not.toHaveBeenCalled();
+  });
+});
+
+describe("a refresh token the provider rotates while the connection is proved", () => {
+  /** Opening the transport spends the token, and the provider answers with a new one. */
+  const rotating = (): Seams => ({
+    openTransport: async (_provider, _credentials, options) => {
+      await options?.onRefreshToken?.("refresh-2");
+      return transport;
+    },
+  });
+
+  async function sealedRefreshToken(id: string): Promise<string | undefined> {
+    const [row] = await getDb()
+      .select({ credentials: backupDestinations.credentials })
+      .from(backupDestinations)
+      .where(eq(backupDestinations.id, id));
+    const plain = open("backup-destination", row?.credentials ?? null);
+    return (
+      JSON.parse(plain ?? "{}") as { credentials?: { refreshToken?: string } }
+    ).credentials?.refreshToken;
+  }
+
+  it("is the one a new connection keeps, not the one it spent", async () => {
+    const owner = await ownerWithKey();
+
+    const connected = await completeConnection(
+      { userId: owner.userId, kind: "microsoft", code: "c", verifier: "v" },
+      {
+        ...rotating(),
+        deps: {
+          ...deps(),
+          describeAccount: vi.fn(async () => ({
+            account: "ada@outlook.com",
+            onedrive: {
+              driveId: "drive-1",
+              driveType: "personal" as const,
+              rootFolderId: "folder-1",
+            },
+          })),
+        },
+      },
+    );
+
+    expect(await sealedRefreshToken(connected.destinationId)).toBe("refresh-2");
+  });
+
+  it("is the one a reconnect keeps", async () => {
+    const owner = await ownerWithKey();
+    const first = await completeConnection(
+      { userId: owner.userId, kind: "google", code: "c", verifier: "v" },
+      { ...seams(), deps: deps() },
+    );
+
+    await completeConnection(
+      {
+        userId: owner.userId,
+        kind: "google",
+        code: "c2",
+        verifier: "v2",
+        reconnectId: first.destinationId,
+      },
+      { ...rotating(), deps: deps() },
+    );
+
+    expect(await sealedRefreshToken(first.destinationId)).toBe("refresh-2");
+  });
+
+  it("is the one a test hands back, for whoever saves the details next", async () => {
+    const details = await testDestination(
+      "google_drive",
+      { refreshToken: "refresh-1" },
+      rotating(),
+    );
+
+    expect(details).toMatchObject({ refreshToken: "refresh-2" });
   });
 });

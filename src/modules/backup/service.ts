@@ -433,21 +433,50 @@ function defaultLabel(provider: BackupProvider, credentials: unknown): string {
 }
 
 /**
+ * Opens a destination with details not yet saved, proves it works, and hands
+ * back the details as they stand afterwards.
+ *
+ * Opening an account provider spends its refresh token at once, and a
+ * provider that rotates it (Microsoft can) answers with a new one. What gets
+ * sealed must be that new one: the one passed in may already be spent, and a
+ * destination saved with it would fail its first run with nothing the person
+ * did wrong.
+ */
+async function proveDetails(
+  provider: BackupProvider,
+  details: unknown,
+  seams: Seams,
+): Promise<unknown> {
+  let current = details;
+  const transport = await (seams.openTransport ?? openTransport)(
+    provider,
+    details,
+    {
+      onRefreshToken: async (refreshToken) => {
+        current = { ...(current as object), refreshToken };
+      },
+    },
+  );
+  await transport.check();
+  return current;
+}
+
+/**
  * Proves a set of details works the way a backup will use it, without saving
  * anything. Throws `BackupError` with a code the screen can word.
+ *
+ * Returns the details as they stand after the test, which is what to save if
+ * they are saved: for an account provider the refresh token may have been
+ * rotated by it.
  */
 export async function testDestination(
   provider: BackupProvider,
   credentials: unknown,
   seams: Seams = {},
-): Promise<void> {
+): Promise<unknown> {
   const parsed = credentialSchemas[provider].safeParse(credentials);
   if (!parsed.success) throw new BackupInputError("invalidDetails");
-  const transport = await (seams.openTransport ?? openTransport)(
-    provider,
-    parsed.data,
-  );
-  await transport.check();
+  return proveDetails(provider, parsed.data, seams);
 }
 
 export async function createDestination(
@@ -485,11 +514,7 @@ export async function createDestination(
 
   // Not saved until it has been shown to work. A destination that can never be
   // written to would otherwise sit there looking fine until the first night.
-  const transport = await (seams.openTransport ?? openTransport)(
-    input.provider,
-    parsed.data,
-  );
-  await transport.check();
+  const proven = await proveDetails(input.provider, parsed.data, seams);
 
   const id = randomUUID();
   await db.insert(backupDestinations).values({
@@ -500,7 +525,7 @@ export async function createDestination(
       0,
       120,
     ),
-    credentials: sealCredentials(id, parsed.data),
+    credentials: sealCredentials(id, proven),
     frequency: input.frequency ?? "daily",
     keepLast: input.keepLast ?? 10,
     excludedGroupIds: [...(input.excludedGroupIds ?? [])],
@@ -636,16 +661,12 @@ export async function replaceCredentials(
 
   const parsed = credentialSchemas[row.provider].safeParse(credentials);
   if (!parsed.success) throw new BackupInputError("invalidDetails");
-  const transport = await (seams.openTransport ?? openTransport)(
-    row.provider,
-    parsed.data,
-  );
-  await transport.check();
+  const proven = await proveDetails(row.provider, parsed.data, seams);
 
   await db
     .update(backupDestinations)
     .set({
-      credentials: sealCredentials(id, parsed.data),
+      credentials: sealCredentials(id, proven),
       status: "active",
       consecutiveFailures: 0,
       nextRunAt: now,
@@ -699,14 +720,28 @@ async function transportFor(
   seams: Seams,
 ): Promise<BackupTransport> {
   const credentials = openCredentials(dest.id, dest.credentials);
+  // What this transport last wrote, or found. A rotation lands only over that:
+  // a run takes long enough for its owner to reconnect meanwhile, and the
+  // details they just gave are newer than a token this run refreshed.
+  let sealed = dest.credentials;
   return (seams.openTransport ?? openTransport)(dest.provider, credentials, {
     onRefreshToken: async (refreshToken) => {
       // Providers that rotate the token expect the new one next time.
-      const next = { ...(credentials as object), refreshToken };
-      await db
+      const next = sealCredentials(dest.id, {
+        ...(credentials as object),
+        refreshToken,
+      });
+      const [kept] = await db
         .update(backupDestinations)
-        .set({ credentials: sealCredentials(dest.id, next) })
-        .where(eq(backupDestinations.id, dest.id));
+        .set({ credentials: next })
+        .where(
+          and(
+            eq(backupDestinations.id, dest.id),
+            eq(backupDestinations.credentials, sealed),
+          ),
+        )
+        .returning({ id: backupDestinations.id });
+      if (kept) sealed = next;
     },
   });
 }

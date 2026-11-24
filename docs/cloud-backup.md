@@ -182,6 +182,16 @@ group join links. A copy of the database alone yields none of them. Rotating
 `AUTH_SECRET` makes them unreadable: every destination then asks to be
 reconnected, and nothing already in the cloud is affected.
 
+A provider may hand back a new refresh token each time the old one is used
+(Microsoft does). Whenever that happens — proving a new connection, a
+reconnect, or a run — the new one is sealed in place of the old, except that a
+run never writes over details the owner gave while it was going. Balancia
+mints every access token itself and does it again before any rclone call that
+the token might not outlast, a quarter of an hour ahead: rclone could refresh
+on its own, but with its remote defined by environment variables it has
+nowhere to save what it gets back and drops it, which would leave a rotating
+provider's connection holding a spent token.
+
 ## What it protects against, and what it does not
 
 **It protects against:**

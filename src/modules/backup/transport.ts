@@ -15,6 +15,7 @@ import {
   inFolder,
   type BackupSubfolder,
   type OAuthToken,
+  type RcloneRemote,
 } from "./rclone-config";
 
 /**
@@ -41,10 +42,29 @@ export interface OpenOptions {
   /**
    * Called when the provider rotated the refresh token, with the new one.
    * Microsoft does on every refresh; if it is not kept, the next run presents a
-   * token that may already be spent.
+   * token that may already be spent. It can be called more than once: when
+   * the transport is opened, and again before any call made after the access
+   * token has run low.
    */
   readonly onRefreshToken?: (refreshToken: string) => Promise<void>;
+  /** The time, for a test. */
+  readonly now?: () => Date;
 }
+
+/**
+ * How long an access token must still have to run when an rclone call starts.
+ *
+ * Longer than the longest call (ten minutes, `rclone.ts`'s default deadline),
+ * so that rclone never has to refresh the token itself. It can — the refresh
+ * token is in its environment — but it cannot keep what it gets back: with the
+ * remote defined by environment variables there is no config section to save
+ * into, and rclone says so ("Not saving config "token" as section "BACKUP" is
+ * not in the config file") and carries on. A provider that rotated the refresh
+ * token during that refresh would leave this destination holding a spent one.
+ * So the token is refreshed here, where the new one is kept, before any call
+ * that could outlive it.
+ */
+export const TOKEN_MARGIN_MS = 15 * 60_000;
 
 /**
  * Whether this instance can offer a provider at all, and if not, why.
@@ -127,8 +147,10 @@ export async function openTransport(
     });
   }
 
+  const now = options.now ?? (() => new Date());
   let app: { clientId: string; clientSecret: string } | undefined;
   let token: OAuthToken | undefined;
+  let mint: (() => Promise<void>) | undefined;
   if (PROVIDERS[provider].kind === "oauth") {
     const kind = KIND_OF[provider as keyof typeof KIND_OF];
     const sealed = parsed.data as {
@@ -138,39 +160,71 @@ export async function openTransport(
     // The app the connection was made through, because a refresh token only
     // works for the client it was issued to. A connection made through the
     // operator's app carries none and uses whatever the operator has now.
-    app = resolveApp(kind, sealed.app);
-    if (!app) {
+    const resolved = resolveApp(kind, sealed.app);
+    if (!resolved) {
       throw new BackupError(
         "app",
         "This connection has no app to sign in through.",
       );
     }
-    const stored = sealed.refreshToken;
-    const fresh = await refreshAccessToken(kind, stored, new Date(), app);
-    const refreshToken = fresh.refreshToken ?? stored;
-    if (refreshToken !== stored) await options.onRefreshToken?.(refreshToken);
-    token = {
-      accessToken: fresh.accessToken,
-      refreshToken,
-      expiresAt: fresh.expiresAt,
+    app = resolved;
+    mint = async () => {
+      // The newest refresh token this transport holds: after a rotation, the
+      // one it was opened with may already be spent.
+      const stored = token?.refreshToken ?? sealed.refreshToken;
+      const fresh = await refreshAccessToken(kind, stored, now(), resolved);
+      const refreshToken = fresh.refreshToken ?? stored;
+      if (refreshToken !== stored) await options.onRefreshToken?.(refreshToken);
+      token = {
+        accessToken: fresh.accessToken,
+        refreshToken,
+        expiresAt: fresh.expiresAt,
+      };
     };
+    await mint();
   }
 
-  const remote = await buildRemote(provider, parsed.data, {
-    obscure: rclone.obscure,
-    oauthApp: app,
-    token,
-  });
+  const build = () =>
+    buildRemote(provider, parsed.data, {
+      obscure: rclone.obscure,
+      oauthApp: app,
+      token,
+    });
+  let remote = await build();
+
+  // One refresh at a time, however many calls find the token low together.
+  let refreshing: Promise<void> | undefined;
+  const current = async (): Promise<RcloneRemote> => {
+    const refresh = mint;
+    if (
+      refresh &&
+      token &&
+      token.expiresAt.getTime() - now().getTime() < TOKEN_MARGIN_MS
+    ) {
+      refreshing ??= (async () => {
+        try {
+          await refresh();
+          remote = await build();
+        } finally {
+          refreshing = undefined;
+        }
+      })();
+      await refreshing;
+    }
+    return remote;
+  };
 
   return {
-    check: () => rclone.checkConnection(remote),
-    ensureDirectory: (folder) =>
-      rclone.ensureDirectory(inFolder(remote, folder)),
-    put: (name, bytes, folder) =>
-      rclone.putObject(inFolder(remote, folder), name, bytes),
-    list: (folder) => rclone.listObjects(inFolder(remote, folder)),
-    remove: (name, folder) =>
-      rclone.deleteObject(inFolder(remote, folder), name),
-    read: (name, folder) => rclone.readObject(inFolder(remote, folder), name),
+    check: async () => rclone.checkConnection(await current()),
+    ensureDirectory: async (folder) =>
+      rclone.ensureDirectory(inFolder(await current(), folder)),
+    put: async (name, bytes, folder) =>
+      rclone.putObject(inFolder(await current(), folder), name, bytes),
+    list: async (folder) =>
+      rclone.listObjects(inFolder(await current(), folder)),
+    remove: async (name, folder) =>
+      rclone.deleteObject(inFolder(await current(), folder), name),
+    read: async (name, folder) =>
+      rclone.readObject(inFolder(await current(), folder), name),
   };
 }
