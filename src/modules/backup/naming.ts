@@ -110,24 +110,53 @@ export function isListedBy(name: string, tag: string): boolean {
 }
 
 /**
- * A receipt, as a file. One per attachment, named for its id and for nothing
- * the person typed, so that the cloud learns neither what it was nor which
- * expense it belonged to.
+ * A receipt, as a file. One per attachment and recovery key, named for the
+ * attachment's id, the key's fingerprint and nothing the person typed, so that
+ * the cloud learns neither what it was nor which expense it belonged to.
+ *
+ * The fingerprint is in the name because a receipt is sent once and then
+ * referred to by every later backup. While the name was the attachment's id
+ * alone, a receipt sent under a key the owner had since replaced went on being
+ * listed by every backup made under the new one, which the new key cannot
+ * open. Now a new key finds none of its own receipts there, sends each again,
+ * and its backups list those.
  *
  * Receipts are never touched by retention. They are written once, shared by
  * every backup that mentions them, and a receipt that no backup mentions any
- * more is still a receipt somebody once kept.
+ * more is still a receipt somebody once kept — and the backups made under the
+ * old key still list the old copies.
  */
-const RECEIPT =
-  /^receipt-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.age$/;
+const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+const RECEIPT = new RegExp(`^receipt-(${UUID})-([0-9a-f]{8})\\.age$`);
+/** As written before names carried the key: still read, never written. */
+const LEGACY_RECEIPT = new RegExp(`^receipt-(${UUID})\\.age$`);
 
-export function receiptName(attachmentId: string): string {
-  return `receipt-${attachmentId}.age`;
+const FINGERPRINT = /^[0-9a-f]{8}$/;
+
+export function receiptName(attachmentId: string, fingerprint: string): string {
+  if (!FINGERPRINT.test(fingerprint)) throw new Error("Not a key fingerprint.");
+  return `receipt-${attachmentId}-${fingerprint}.age`;
 }
 
-/** The attachment id a receipt file is named for; null for anything else. */
-export function parseReceiptName(name: string): string | null {
-  return RECEIPT.exec(name)?.[1] ?? null;
+export interface ParsedReceipt {
+  readonly attachmentId: string;
+  /**
+   * The recovery key it was encrypted to, by fingerprint. Null for a name from
+   * before that was recorded, which could have been written under any key the
+   * owner has had.
+   */
+  readonly fingerprint: string | null;
+}
+
+/** A receipt's name taken apart, in either form; null for anything else. */
+export function parseReceipt(name: string): ParsedReceipt | null {
+  const keyed = RECEIPT.exec(name);
+  if (keyed?.[1] && keyed[2]) {
+    return { attachmentId: keyed[1], fingerprint: keyed[2] };
+  }
+  const legacy = LEGACY_RECEIPT.exec(name);
+  if (legacy?.[1]) return { attachmentId: legacy[1], fingerprint: null };
+  return null;
 }
 
 export interface Ownership {

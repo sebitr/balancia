@@ -4321,7 +4321,7 @@
       "showMore": "{count, plural, one {Afficher # groupe de plus} other {Afficher # groupes de plus}}",
       "selfTitle": "Ou déchiffre-la toi-même",
       "selfBody": "Ça marche sans Balancia, avec l’outil gratuit age.",
-      "selfCommand": "age -d -i recovery-key.txt balancia-backup-20261009T033012Z.json.gz.age | gunzip > backup.json",
+      "selfCommand": "age -d -i recovery-key.txt balancia-backup-3f2a9c1b7d4e-20261009T033012Z.json.gz.age | gunzip > backup.json",
       "receiptsNote": "Les reçus sont des fichiers à part, dans le même dossier. Déchiffre-les un par un de la même façon ; les remettre en place se fait à la main.",
       "importHint": "Pour récupérer un groupe, crée un groupe, puis utilise l’import dans ses paramètres avec le fichier que tu as téléchargé.",
       "fileTooBig": "Ce fichier est trop volumineux pour être une sauvegarde.",

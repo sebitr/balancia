@@ -115,30 +115,60 @@ export async function getBackupKey(
  * Replacing a key changes what later backups are encrypted to. Files already
  * written stay readable by the old key only, which is why the screen asks
  * people to keep it.
+ *
+ * And it brings every running destination's next backup forward to now, for
+ * the scheduler's next sweep. A new key is most often made because the old one
+ * is lost, and until a backup is written under the new one, nothing in the
+ * cloud is a copy its owner can open. That backup is written whatever else has
+ * changed — the key is part of what a run compares (`contentHashOf`) — and
+ * its receipts are sent again under the new key (`syncReceipts`).
  */
 export async function saveBackupKey(
   userId: string,
   recipient: string,
-  options: { db?: Database } = {},
+  options: { db?: Database; now?: Date } = {},
 ): Promise<BackupKeyView> {
   const parsed = await parseRecipient(recipient);
   if (!parsed) throw new BackupInputError("invalidKey");
   const db = options.db ?? getDb();
+  const now = options.now ?? new Date();
   const fingerprint = await keyFingerprint(parsed);
 
-  const [row] = await db
-    .insert(backupKeys)
-    .values({ userId, recipient: parsed, fingerprint })
-    .onConflictDoUpdate({
-      target: backupKeys.userId,
-      set: { recipient: parsed, fingerprint, createdAt: new Date() },
-    })
-    .returning({
-      fingerprint: backupKeys.fingerprint,
-      createdAt: backupKeys.createdAt,
-    });
-  if (!row) throw new Error("The key was not saved.");
-  return row;
+  return db.transaction(async (tx) => {
+    const [previous] = await tx
+      .select({ recipient: backupKeys.recipient })
+      .from(backupKeys)
+      .where(eq(backupKeys.userId, userId))
+      .limit(1)
+      .for("update");
+
+    const [row] = await tx
+      .insert(backupKeys)
+      .values({ userId, recipient: parsed, fingerprint, createdAt: now })
+      .onConflictDoUpdate({
+        target: backupKeys.userId,
+        set: { recipient: parsed, fingerprint, createdAt: now },
+      })
+      .returning({
+        fingerprint: backupKeys.fingerprint,
+        createdAt: backupKeys.createdAt,
+      });
+    if (!row) throw new Error("The key was not saved.");
+
+    if (previous && previous.recipient !== parsed) {
+      await tx
+        .update(backupDestinations)
+        .set({ nextRunAt: now, updatedAt: now })
+        .where(
+          and(
+            eq(backupDestinations.userId, userId),
+            eq(backupDestinations.status, "active"),
+            gt(backupDestinations.nextRunAt, now),
+          ),
+        );
+    }
+    return row;
+  });
 }
 
 // ── Sealed credentials ───────────────────────────────────────────────────────
@@ -899,6 +929,9 @@ export async function runBackup(
         "There is no recovery key to encrypt to.",
       );
     }
+    // Worked out from the recipient itself rather than read beside it, so the
+    // names receipts are given and the key they are encrypted to cannot differ.
+    const fingerprint = await keyFingerprint(key.recipient);
 
     const transport = await transportFor(db, dest, options);
 
@@ -913,6 +946,7 @@ export async function runBackup(
           db,
         }),
         recipient: key.recipient,
+        fingerprint,
         transport,
         storage: options.storage ?? getStorage(),
         byteBudget: options.receiptByteBudget,
@@ -924,6 +958,7 @@ export async function runBackup(
       db,
       now: startedAt,
       receipts: sync?.manifest,
+      keyFingerprint: fingerprint,
     });
     const receiptsWritten = sync?.written ?? 0;
     const receiptsPending = sync?.pending ?? 0;

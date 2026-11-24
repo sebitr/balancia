@@ -5,7 +5,7 @@ import { attachments, groupMembers } from "@/lib/db/schema";
 import { logger } from "@/lib/logger";
 import { ObjectNotFoundError, type StorageDriver } from "@/lib/storage";
 import { encryptTo } from "./age";
-import { parseReceiptName, receiptName } from "./naming";
+import { parseReceipt, receiptName } from "./naming";
 import type { BackupTransport } from "./transport";
 
 /**
@@ -17,14 +17,20 @@ import type { BackupTransport } from "./transport";
  * a person has read what it costs, and they are written differently from the
  * data:
  *
- *  - **One object per receipt, encrypted on its own, written once.** A receipt
- *    never changes after it is uploaded, so there is nothing to gain from
- *    sending it again. The first backup is the expensive one; every later one
- *    sends only what is new, which is usually nothing. Re-sending every receipt
- *    nightly inside a fresh archive would turn a gigabyte into a gigabyte a day.
+ *  - **One object per receipt and key, encrypted on its own, written once.** A
+ *    receipt never changes after it is uploaded, so there is nothing to gain
+ *    from sending it again. The first backup is the expensive one; every later
+ *    one sends only what is new, which is usually nothing. Re-sending every
+ *    receipt nightly inside a fresh archive would turn a gigabyte into a
+ *    gigabyte a day. The one exception is a new recovery key: a receipt sent
+ *    under the old one is not one the new key can open, so each is sent again,
+ *    under a name that carries the new key's fingerprint (see `naming.ts`).
+ *    So is a receipt from before names carried one, since nothing says which
+ *    key it was sent under.
  *  - **The data backup lists them.** The `receipts` array in the backup file
  *    says which attachment is which expense and what it was called — inside the
- *    ciphertext, so the cloud sees only opaque names (`receipt-<id>.age`).
+ *    ciphertext, so the cloud sees only opaque names
+ *    (`receipt-<id>-<key fingerprint>.age`).
  *  - **A budget per run.** A first backup of thousands of receipts does not hold
  *    a worker for an hour: it uploads up to a ceiling and the next run (within
  *    the hour) carries on, the screen saying how many remain.
@@ -174,7 +180,10 @@ export interface ReceiptSync {
   readonly missing: number;
 }
 
-function entryFor(receipt: ReceiptRef): ReceiptManifestEntry {
+function entryFor(
+  receipt: ReceiptRef,
+  fingerprint: string,
+): ReceiptManifestEntry {
   return {
     id: receipt.id,
     groupId: receipt.groupId,
@@ -183,13 +192,15 @@ function entryFor(receipt: ReceiptRef): ReceiptManifestEntry {
     contentType: receipt.contentType,
     byteSize: String(receipt.byteSize),
     checksum: receipt.checksum,
-    object: `receipts/${receiptName(receipt.id)}`,
+    object: `receipts/${receiptName(receipt.id, fingerprint)}`,
   };
 }
 
 export async function syncReceipts(input: {
   readonly receipts: readonly ReceiptRef[];
   readonly recipient: string;
+  /** The recipient's fingerprint (`keyFingerprint`), which names its receipts. */
+  readonly fingerprint: string;
   readonly transport: BackupTransport;
   readonly storage: StorageDriver;
   readonly now?: () => number;
@@ -201,16 +212,22 @@ export async function syncReceipts(input: {
   const byteBudget = input.byteBudget ?? RECEIPT_BYTE_BUDGET;
   const timeBudget = input.timeBudgetMs ?? RECEIPT_TIME_BUDGET_MS;
 
+  // Only receipts already sent under *this* key count as sent. One under an
+  // earlier key, or under a name that does not say, is not one a backup made
+  // now could point the owner at.
   const have = new Set<string>();
   for (const name of await input.transport.list("receipts")) {
-    const id = parseReceiptName(name);
-    if (id) have.add(id);
+    const parsed = parseReceipt(name);
+    if (parsed?.fingerprint === input.fingerprint) {
+      have.add(parsed.attachmentId);
+    }
   }
 
+  const entry = (receipt: ReceiptRef) => entryFor(receipt, input.fingerprint);
   const wanted = input.receipts.filter((receipt) => !have.has(receipt.id));
   const manifest: ReceiptManifestEntry[] = input.receipts
     .filter((receipt) => have.has(receipt.id))
-    .map(entryFor);
+    .map(entry);
   if (wanted.length === 0) {
     return { manifest, written: 0, pending: 0, missing: 0 };
   }
@@ -246,8 +263,12 @@ export async function syncReceipts(input: {
     }
 
     const sealed = await encryptTo(input.recipient, plain);
-    await input.transport.put(receiptName(receipt.id), sealed, "receipts");
-    manifest.push(entryFor(receipt));
+    await input.transport.put(
+      receiptName(receipt.id, input.fingerprint),
+      sealed,
+      "receipts",
+    );
+    manifest.push(entry(receipt));
     written += 1;
     sent += plain.byteLength;
   }

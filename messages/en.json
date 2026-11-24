@@ -4321,7 +4321,7 @@
       "showMore": "Show {count, plural, one {# more group} other {# more groups}}",
       "selfTitle": "Or decrypt it yourself",
       "selfBody": "This works without Balancia, with the free age tool.",
-      "selfCommand": "age -d -i recovery-key.txt balancia-backup-20261009T033012Z.json.gz.age | gunzip > backup.json",
+      "selfCommand": "age -d -i recovery-key.txt balancia-backup-3f2a9c1b7d4e-20261009T033012Z.json.gz.age | gunzip > backup.json",
       "receiptsNote": "Receipts are separate files in the same folder. Decrypt each one the same way; putting them back is a manual step.",
       "importHint": "To bring a group back, create a group, then use Import in its settings with the file you downloaded.",
       "fileTooBig": "That file is too large to be a backup.",

@@ -195,6 +195,71 @@ describe("the recovery key", () => {
   });
 });
 
+describe("a new recovery key", () => {
+  it("brings the next backup forward, and that backup is written though nothing else changed", async () => {
+    const { owner } = await setUp();
+    await createTestGroup(owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3, frequency: "weekly" },
+      seams(),
+    );
+    await runBackup(id, { trigger: "schedule", ...seams() });
+
+    // The old key is lost; a new one is made the next morning.
+    const next = await createRecoveryKey();
+    clock = new Date("2026-10-10T08:00:00Z");
+    await saveBackupKey(owner.userId, next.recipient, { now: clock });
+
+    const [view] = await listDestinations(owner.userId);
+    expect(view?.nextRunAt).toEqual(clock);
+
+    clock = new Date("2026-10-10T08:10:00Z");
+    const outcome = await runBackup(id, { trigger: "schedule", ...seams() });
+
+    expect(outcome?.status).toBe("succeeded");
+    expect(cloud.files.size).toBe(2);
+    // The newest copy is one the new key opens.
+    const bundle = await openFile(next.identity);
+    expect(bundle.groups).toHaveLength(1);
+  });
+
+  it("leaves the schedule alone when the same key is saved again, and a paused destination paused", async () => {
+    const { owner, key } = await setUp();
+    await createTestGroup(owner);
+    const { id: running } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    const { id: paused } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    await runBackup(running, { trigger: "schedule", ...seams() });
+    await runBackup(paused, { trigger: "schedule", ...seams() });
+    await updateDestination(owner.userId, paused, { paused: true }, seams());
+    const before = await listDestinations(owner.userId);
+
+    clock = new Date("2026-10-09T12:00:00Z");
+    await saveBackupKey(owner.userId, key.recipient, { now: clock });
+    expect(
+      (await listDestinations(owner.userId)).map((view) => view.nextRunAt),
+    ).toEqual(before.map((view) => view.nextRunAt));
+
+    await saveBackupKey(owner.userId, (await createRecoveryKey()).recipient, {
+      now: clock,
+    });
+    const after = await listDestinations(owner.userId);
+    expect(after.find((view) => view.id === running)?.nextRunAt).toEqual(clock);
+    expect(after.find((view) => view.id === paused)).toMatchObject({
+      status: "paused",
+      nextRunAt: before.find((view) => view.id === paused)?.nextRunAt,
+    });
+  });
+});
+
 describe("creating a destination", () => {
   it("needs a recovery key first", async () => {
     const owner = await createTestUser();

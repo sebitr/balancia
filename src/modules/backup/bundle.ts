@@ -106,6 +106,8 @@ export async function buildBundle(
     now?: Date;
     /** Receipts already safe in the cloud; omit for a data-only backup. */
     receipts?: readonly ReceiptManifestEntry[];
+    /** The fingerprint of the key it will be encrypted to; see `contentHashOf`. */
+    keyFingerprint?: string;
   } = {},
 ): Promise<BuiltBundle> {
   const db = options.db ?? getDb();
@@ -144,27 +146,45 @@ export async function buildBundle(
       ...(options.receipts ? { receipts: options.receipts } : {}),
     },
     skipped,
-    contentHash: contentHashOf(exports, options.receipts),
+    contentHash: contentHashOf(
+      exports,
+      options.receipts,
+      options.keyFingerprint,
+    ),
   };
 }
 
 /**
- * A fingerprint of what the groups hold, blind to when it was taken.
+ * A fingerprint of what the groups hold, blind to when it was taken, and of
+ * the key it is for.
  *
  * Each export carries the moment it was made, so hashing the files as they are
  * would call every night "changed". The timestamp is the one field blanked;
  * everything a person could have edited is in.
+ *
+ * So is the recovery key's fingerprint. "Nothing changed" is the question of
+ * whether the copy in the cloud is still the right one, and a copy the owner's
+ * current key cannot open is not, however alike the groups are. Without it, a
+ * person who made a new key — because the old one was lost — was told for up
+ * to a week that there was nothing new to back up, with every file in their
+ * cloud still locked to the key they no longer had.
  */
 export function contentHashOf(
   exports: readonly GroupExport[],
   receipts?: readonly ReceiptManifestEntry[],
+  keyFingerprint?: string,
 ): string {
   const stable = exports.map((entry) => ({
     ...entry,
     balancia: { ...entry.balancia, exportedAt: "" },
   }));
+  const content = receipts ? { groups: stable, receipts } : stable;
   return createHash("sha256")
-    .update(JSON.stringify(receipts ? { groups: stable, receipts } : stable))
+    .update(
+      JSON.stringify(
+        keyFingerprint === undefined ? content : { keyFingerprint, content },
+      ),
+    )
     .digest("hex");
 }
 

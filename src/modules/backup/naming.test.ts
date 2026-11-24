@@ -5,6 +5,8 @@ import {
   isListedBy,
   parseBundle,
   parseBundleName,
+  parseReceipt,
+  receiptName,
   selectExpired,
 } from "./naming";
 
@@ -102,6 +104,50 @@ describe("isListedBy", () => {
 
   it("offers nothing that is not a backup", () => {
     expect(isListedBy("README.txt", MINE)).toBe(false);
+  });
+});
+
+describe("receiptName", () => {
+  const attachment = "0b7c1d2e-3f40-4a51-9b62-7c83d94ea5f6";
+
+  it("names the attachment and the key it was encrypted to, and nothing the person typed", () => {
+    expect(receiptName(attachment, "9f3a07c2")).toBe(
+      `receipt-${attachment}-9f3a07c2.age`,
+    );
+  });
+
+  it("gives the same receipt under two keys two files", () => {
+    expect(receiptName(attachment, "9f3a07c2")).not.toBe(
+      receiptName(attachment, "00c0ffee"),
+    );
+  });
+
+  it("reads back the attachment and the key", () => {
+    expect(parseReceipt(receiptName(attachment, "9f3a07c2"))).toEqual({
+      attachmentId: attachment,
+      fingerprint: "9f3a07c2",
+    });
+  });
+
+  it("still reads a name from before the key was in it, as from no known key", () => {
+    expect(parseReceipt(`receipt-${attachment}.age`)).toEqual({
+      attachmentId: attachment,
+      fingerprint: null,
+    });
+  });
+
+  it.each([
+    "receipt-not-an-id.age",
+    `receipt-${attachment}-9F3A07C2.age`,
+    `receipt-${attachment}-9f3a07.age`,
+    `receipt-${attachment}.age.bak`,
+    "notes.txt",
+  ])("does not recognise %j", (name) => {
+    expect(parseReceipt(name)).toBeNull();
+  });
+
+  it("will not be given a fingerprint that is not one", () => {
+    expect(() => receiptName(attachment, "../x")).toThrow();
   });
 });
 

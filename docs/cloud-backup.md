@@ -52,6 +52,10 @@ being retried until the owner reconnects it.
 works, forgets the old one. What the old one already holds stays there.
 **Creating a new recovery key** makes later backups open with the new key; the
 earlier ones still need the earlier key, and the screen says so before it asks.
+The first backup under the new key is made within ten minutes, whatever the
+schedule and whether or not anything changed, since until then nothing in the
+cloud opens with the key the owner now holds. With receipts on, each is sent
+again under the new key ([below](#receipts-if-asked-for)).
 
 ### Which groups
 
@@ -78,20 +82,28 @@ add them, and the screen says what that means before it lets them:
 - **They are bigger than the data.** A group's data is a few hundred kilobytes; its
   receipts can be a gigabyte. They use the owner's cloud quota and upload
   bandwidth, and the screen shows an estimate for the groups ticked.
-- **Each receipt is one file, encrypted on its own, sent once.** A receipt never
-  changes after it is uploaded, so the first backup is the expensive one and each
-  later one sends only what is new (usually nothing). They sit in a `receipts/`
-  folder beside the backups as `receipt-<id>.age`, and the backup file lists which
-  is which — inside the ciphertext, so the cloud sees opaque names.
+- **Each receipt is one file, encrypted on its own, sent once per key.** A
+  receipt never changes after it is uploaded, so the first backup is the
+  expensive one and each later one sends only what is new (usually nothing). They
+  sit in a `receipts/` folder beside the backups as
+  `receipt-<id>-<key fingerprint>.age`, and the backup file lists which is which
+  — inside the ciphertext, so the cloud sees opaque names.
+- **A new recovery key sends them all again.** A receipt sent under the old key
+  is not one the new key opens, so the first backups under a new key send every
+  receipt again, within the budget below, and list the new copies. The old copies
+  stay: the backups made under the old key list them. Receipts written before
+  their names carried the key's fingerprint (`receipt-<id>.age`, until November 2026) are sent again once in the same way, since nothing records which key they
+  were sent under; they too stay where they are.
 - **A run has a budget** (256 MB, fifteen minutes). A first backup of thousands of
   receipts carries on in the next run, within the hour, and the card says how many
   are still to go.
 - **Balancia never deletes one**, however many backups it keeps. A receipt for an
   expense that was later deleted stays in the cloud until the owner removes it.
 - **Restoring one is manual** today. The import restores expenses and not receipt
-  files. Decrypt each `receipt-<id>.age` with the `age` command and put it back by
-  hand; the backup file's `receipts` list says which expense each belongs to and
-  what it was called. Doing that in the browser is in `todo/next/`.
+  files. Decrypt the file each entry of the backup file's `receipts` list names
+  (its `object`) with the `age` command and put it back by hand; the list says
+  which expense each belongs to and what it was called. Doing that in the browser
+  is in `todo/next/`.
 
 ## How it is built
 
@@ -131,7 +143,8 @@ add them, and the screen says what that means before it lets them:
   hold; if it matches the last good backup, the run is recorded as "unchanged".
   A fresh copy is still written at least once a week, and always when the owner
   presses _Back up now_, so a file deleted from the cloud by hand is not missed
-  for long.
+  for long. The recovery key is part of what is hashed, so a night after the
+  owner made a new key is never "unchanged".
 - **Each file says which destination wrote it.** A backup is named
   `balancia-backup-<tag>-<UTC timestamp>.json.gz.age`, where the tag is the first
   twelve hex digits of the destination's id: random, fixed for the life of the
