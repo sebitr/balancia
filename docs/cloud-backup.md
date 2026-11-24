@@ -52,6 +52,10 @@ being retried until the owner reconnects it.
 works, forgets the old one. What the old one already holds stays there.
 **Creating a new recovery key** makes later backups open with the new key; the
 earlier ones still need the earlier key, and the screen says so before it asks.
+The first backup under the new key is made within ten minutes, whatever the
+schedule and whether or not anything changed, since until then nothing in the
+cloud opens with the key the owner now holds. With receipts on, each is sent
+again under the new key ([below](#receipts-if-asked-for)).
 
 ### Which groups
 
@@ -78,20 +82,28 @@ add them, and the screen says what that means before it lets them:
 - **They are bigger than the data.** A group's data is a few hundred kilobytes; its
   receipts can be a gigabyte. They use the owner's cloud quota and upload
   bandwidth, and the screen shows an estimate for the groups ticked.
-- **Each receipt is one file, encrypted on its own, sent once.** A receipt never
-  changes after it is uploaded, so the first backup is the expensive one and each
-  later one sends only what is new (usually nothing). They sit in a `receipts/`
-  folder beside the backups as `receipt-<id>.age`, and the backup file lists which
-  is which — inside the ciphertext, so the cloud sees opaque names.
+- **Each receipt is one file, encrypted on its own, sent once per key.** A
+  receipt never changes after it is uploaded, so the first backup is the
+  expensive one and each later one sends only what is new (usually nothing). They
+  sit in a `receipts/` folder beside the backups as
+  `receipt-<id>-<key fingerprint>.age`, and the backup file lists which is which
+  — inside the ciphertext, so the cloud sees opaque names.
+- **A new recovery key sends them all again.** A receipt sent under the old key
+  is not one the new key opens, so the first backups under a new key send every
+  receipt again, within the budget below, and list the new copies. The old copies
+  stay: the backups made under the old key list them. Receipts written before
+  their names carried the key's fingerprint (`receipt-<id>.age`, until November 2026) are sent again once in the same way, since nothing records which key they
+  were sent under; they too stay where they are.
 - **A run has a budget** (256 MB, fifteen minutes). A first backup of thousands of
   receipts carries on in the next run, within the hour, and the card says how many
   are still to go.
 - **Balancia never deletes one**, however many backups it keeps. A receipt for an
   expense that was later deleted stays in the cloud until the owner removes it.
 - **Restoring one is manual** today. The import restores expenses and not receipt
-  files. Decrypt each `receipt-<id>.age` with the `age` command and put it back by
-  hand; the backup file's `receipts` list says which expense each belongs to and
-  what it was called. Doing that in the browser is in `todo/next/`.
+  files. Decrypt the file each entry of the backup file's `receipts` list names
+  (its `object`) with the `age` command and put it back by hand; the list says
+  which expense each belongs to and what it was called. Doing that in the browser
+  is in `todo/next/`.
 
 ## How it is built
 
@@ -106,7 +118,8 @@ add them, and the screen says what that means before it lets them:
                                   export owned groups  (JSON)
                                   gzip
                                   encrypt to `age1…`    ───────►   balancia-backup-
-                                  upload through rclone             20261009T033012Z
+                                  upload through rclone             3f2a9c1b7d4e-
+                                                                    20261009T033012Z
                                                                     .json.gz.age
 ```
 
@@ -121,16 +134,39 @@ add them, and the screen says what that means before it lets them:
   provider was the alternative, and the wrong one.
 - **The schedule** is a row per destination (`next_run_at`) and a sweep every ten
   minutes that queues the ones that are due. One job writes one backup to one
-  destination, so a slow NAS delays only its own owner.
+  destination, so a slow NAS delays only its own owner. A run's end is written
+  against the destination as it is then, not as the run found it: a pause, a
+  resume, a new schedule or a reconnect made while it ran stays made, the next
+  run is counted from the schedule chosen now, and a "run soon" asked for
+  meanwhile is kept.
 - **A night with no change writes nothing.** Each run hashes what the groups
   hold; if it matches the last good backup, the run is recorded as "unchanged".
   A fresh copy is still written at least once a week, and always when the owner
   presses _Back up now_, so a file deleted from the cloud by hand is not missed
-  for long.
+  for long. The recovery key is part of what is hashed, so a night after the
+  owner made a new key is never "unchanged".
+- **Each file says which destination wrote it.** A backup is named
+  `balancia-backup-<tag>-<UTC timestamp>.json.gz.age`, where the tag is the first
+  twelve hex digits of the destination's id: random, fixed for the life of the
+  destination, and telling the cloud nothing about the person. Two owners who
+  point their backups at the same bucket or folder, one owner's two
+  destinations, or two installations sharing a Nextcloud, therefore never write
+  the same name, even in the same second.
 - **Retention** deletes the oldest backups beyond the number the owner chose, and
-  _only_ files whose names match `balancia-backup-<UTC timestamp>.json.gz.age`
-  exactly. A README, a copy made by another tool, a renamed file: none match, none
-  are touched. It runs after the new backup is written, never before.
+  _only this destination's own_: files whose names match the pattern above
+  exactly, with its own tag. A README, a copy made by another tool, a renamed
+  file, another destination's backups in the same folder: none count, none are
+  touched. It runs after the new backup is written, never before. The restore
+  list offers the same files, and never another destination's.
+- **Backups from before the tag** (`balancia-backup-<UTC timestamp>.json.gz.age`,
+  written until November 2026) cannot say whose they are. Retention deletes one
+  only when this destination's own run history records writing it, and no other
+  destination's history records the same name; the history keeps a
+  destination's thirty most recent runs, so older files, files written by a
+  destination since removed, and files from another installation are **left in
+  place for the owner to remove by hand**. They stay on the restore list, since
+  they may be the owner's only copies of those weeks, and open only with the key
+  that wrote them.
 
 ### What leaves the server, and what stays
 
@@ -311,7 +347,7 @@ not come back, are in [data-migration.md](data-migration.md#restoring-a-balancia
 The file is plain age, gzipped JSON inside:
 
 ```bash
-age --decrypt --identity recovery-key.txt balancia-backup-20261009T033012Z.json.gz.age \
+age --decrypt --identity recovery-key.txt balancia-backup-3f2a9c1b7d4e-20261009T033012Z.json.gz.age \
   | gunzip > backup.json
 ```
 
@@ -381,7 +417,12 @@ setting on, any account can make this server connect to any address it can reach
 Off, such an address is refused, and so is a public-looking name that resolves
 into a private range. Plain `http://` is accepted only for addresses that are
 private; the password would otherwise cross the internet unencrypted. The platform
-metadata address (`169.254.169.254`) is refused either way.
+metadata addresses are refused either way: the whole link-local range
+(`169.254.0.0/16`, `fe80::/10`), AWS's `fd00:ec2::254` and Alibaba's
+`100.100.100.200`. They are compared as numbers, not as text, so an IPv6 spelling
+that carries one of them (`[::ffff:a9fe:a9fe]`, `[64:ff9b::a9fe:a9fe]`) is
+refused like the address itself. An S3 region is letters, digits and hyphens only,
+since with no endpoint rclone builds the host name out of it.
 
 One thing this check cannot do: a name that answers differently between the check
 and rclone's own lookup a moment later (DNS rebinding) is not caught, because

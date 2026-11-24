@@ -82,6 +82,34 @@ describe("S3", () => {
       credentialSchemas.s3.safeParse({ ...s3, prefix: "a/../../b" }).success,
     ).toBe(false);
   });
+
+  // With no endpoint, rclone builds the AWS host out of the region.
+  it.each([
+    "169.254.169.254",
+    "us-east-1.attacker.example",
+    "x@169.254.169.254",
+    "eu/../x",
+    "us east 1",
+  ])("does not let a region choose the host: %j", (region) => {
+    expect(
+      credentialSchemas.s3.safeParse({ ...s3, endpoint: "", region }).success,
+    ).toBe(false);
+  });
+
+  it.each(["", "auto", "us-east-1", "fr-par", "eu-central-003"])(
+    "takes a real region: %j",
+    (region) => {
+      expect(
+        credentialSchemas.s3.safeParse({ ...s3, endpoint: "", region }).success,
+      ).toBe(true);
+    },
+  );
+
+  it("takes a region typed in capitals, as the provider spells it", () => {
+    expect(
+      credentialSchemas.s3.parse({ ...s3, region: " EU-West-2 " }).region,
+    ).toBe("eu-west-2");
+  });
 });
 
 describe("WebDAV", () => {

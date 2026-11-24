@@ -16,7 +16,7 @@ import {
   createTestUser,
   isoToday,
 } from "../../../tests/helpers/factories";
-import { createRecoveryKey, decryptWith } from "./age";
+import { createRecoveryKey, decryptWith, keyFingerprint } from "./age";
 import { type BackupBundle } from "./bundle";
 import { receiptName } from "./naming";
 import { estimateReceipts } from "./receipts";
@@ -129,7 +129,8 @@ async function setUp(includeReceipts = true) {
     { provider: "s3", credentials: S3, includeReceipts },
     seams(),
   );
-  return { owner, key, group, destinationId: id };
+  const fingerprint = await keyFingerprint(key.recipient);
+  return { owner, key, fingerprint, group, destinationId: id };
 }
 
 /** An expense with one attached receipt, stored the way the app stores it. */
@@ -199,7 +200,7 @@ describe("with receipts off", () => {
 
 describe("with receipts on", () => {
   it("sends each receipt encrypted, and the owner's key opens it to the original bytes", async () => {
-    const { key, group, destinationId } = await setUp();
+    const { key, fingerprint, group, destinationId } = await setUp();
     const { attachmentId, body } = await expenseWithReceipt(
       group,
       "dinner-ticket",
@@ -211,9 +212,12 @@ describe("with receipts on", () => {
     });
 
     expect(outcome?.status).toBe("succeeded");
-    expect([...cloud.receipts.keys()]).toEqual([receiptName(attachmentId)]);
+    expect([...cloud.receipts.keys()]).toEqual([
+      receiptName(attachmentId, fingerprint),
+    ]);
     const sealed =
-      cloud.receipts.get(receiptName(attachmentId)) ?? new Uint8Array();
+      cloud.receipts.get(receiptName(attachmentId, fingerprint)) ??
+      new Uint8Array();
     expect(Buffer.from(sealed).toString("latin1")).not.toContain(
       "dinner-ticket",
     );
@@ -223,7 +227,7 @@ describe("with receipts on", () => {
   });
 
   it("lists them in the backup, inside the ciphertext, with what a restore needs", async () => {
-    const { key, group, destinationId } = await setUp();
+    const { key, fingerprint, group, destinationId } = await setUp();
     const { attachmentId, body } = await expenseWithReceipt(
       group,
       "dinner-ticket",
@@ -240,7 +244,7 @@ describe("with receipts on", () => {
         fileName: "Ticket 12.jpg",
         contentType: "image/jpeg",
         byteSize: String(body.length),
-        object: `receipts/${receiptName(attachmentId)}`,
+        object: `receipts/${receiptName(attachmentId, fingerprint)}`,
       }),
     ]);
   });
@@ -260,7 +264,7 @@ describe("with receipts on", () => {
   });
 
   it("sends only the new one the next time", async () => {
-    const { key, group, destinationId } = await setUp();
+    const { key, fingerprint, group, destinationId } = await setUp();
     await expenseWithReceipt(group, "first");
     await runBackup(destinationId, { trigger: "manual", ...seams() });
     cloud.writes.length = 0;
@@ -271,12 +275,12 @@ describe("with receipts on", () => {
 
     expect(
       cloud.writes.filter((write) => write.startsWith("receipts/")),
-    ).toEqual([`receipts/${receiptName(second.attachmentId)}`]);
+    ).toEqual([`receipts/${receiptName(second.attachmentId, fingerprint)}`]);
     expect((await openBundle(key.identity)).receipts).toHaveLength(2);
   });
 
   it("only takes receipts from groups the person owns and has not left out", async () => {
-    const { owner, group, destinationId } = await setUp();
+    const { owner, fingerprint, group, destinationId } = await setUp();
     const kept = await expenseWithReceipt(group, "mine");
 
     const skipped = await createTestGroup(owner, { name: "Left out" });
@@ -302,7 +306,7 @@ describe("with receipts on", () => {
     await runBackup(destinationId, { trigger: "manual", ...seams() });
 
     expect([...cloud.receipts.keys()]).toEqual([
-      receiptName(kept.attachmentId),
+      receiptName(kept.attachmentId, fingerprint),
     ]);
   });
 
@@ -320,7 +324,7 @@ describe("with receipts on", () => {
   });
 
   it("notes a receipt whose file has gone from storage and carries on without it", async () => {
-    const { key, group, destinationId } = await setUp();
+    const { key, fingerprint, group, destinationId } = await setUp();
     const lost = await expenseWithReceipt(group, "lost");
     const kept = await expenseWithReceipt(group, "kept");
     storage.objects.delete("key-lost");
@@ -332,7 +336,7 @@ describe("with receipts on", () => {
 
     expect(outcome?.status).toBe("succeeded");
     expect([...cloud.receipts.keys()]).toEqual([
-      receiptName(kept.attachmentId),
+      receiptName(kept.attachmentId, fingerprint),
     ]);
     expect((await openBundle(key.identity)).receipts?.map((r) => r.id)).toEqual(
       [kept.attachmentId],
@@ -416,6 +420,63 @@ describe("with receipts on", () => {
 
     expect(outcome?.status).toBe("succeeded");
     expect(cloud.receipts.size).toBe(1);
+  });
+});
+
+describe("with a new recovery key", () => {
+  it("sends every receipt again under the new key, and the backup lists those copies", async () => {
+    const { owner, fingerprint, group, destinationId } = await setUp();
+    const { attachmentId, body } = await expenseWithReceipt(group, "ticket");
+    await runBackup(destinationId, { trigger: "schedule", ...seams() });
+
+    const next = await createRecoveryKey();
+    const nextFingerprint = await keyFingerprint(next.recipient);
+    clock = new Date("2026-10-09T12:00:00Z");
+    await saveBackupKey(owner.userId, next.recipient, { now: clock });
+    clock = new Date("2026-10-09T12:10:00Z");
+    cloud.writes.length = 0;
+
+    const outcome = await runBackup(destinationId, {
+      trigger: "schedule",
+      ...seams(),
+    });
+
+    expect(outcome?.status).toBe("succeeded");
+    expect(
+      cloud.writes.filter((write) => write.startsWith("receipts/")),
+    ).toEqual([`receipts/${receiptName(attachmentId, nextFingerprint)}`]);
+    expect((await openBundle(next.identity)).receipts).toEqual([
+      expect.objectContaining({
+        id: attachmentId,
+        object: `receipts/${receiptName(attachmentId, nextFingerprint)}`,
+      }),
+    ]);
+    const sealed =
+      cloud.receipts.get(receiptName(attachmentId, nextFingerprint)) ??
+      new Uint8Array();
+    expect(
+      Buffer.from(await decryptWith(next.identity, sealed)).equals(body),
+    ).toBe(true);
+    // The copy under the old key stays: the backups made under it list it.
+    expect(cloud.receipts.has(receiptName(attachmentId, fingerprint))).toBe(
+      true,
+    );
+  });
+
+  it("sends again a receipt from before names said which key it was sent under, and deletes neither", async () => {
+    const { key, fingerprint, group, destinationId } = await setUp();
+    const { attachmentId } = await expenseWithReceipt(group, "older");
+    const legacy = `receipt-${attachmentId}.age`;
+    cloud.receipts.set(legacy, new Uint8Array([1]));
+
+    await runBackup(destinationId, { trigger: "manual", ...seams() });
+
+    expect([...cloud.receipts.keys()].sort()).toEqual(
+      [legacy, receiptName(attachmentId, fingerprint)].sort(),
+    );
+    expect(
+      (await openBundle(key.identity)).receipts?.map((entry) => entry.object),
+    ).toEqual([`receipts/${receiptName(attachmentId, fingerprint)}`]);
   });
 });
 

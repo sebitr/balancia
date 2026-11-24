@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   nextRunAfter,
+  nextRunOnFinish,
   retryDelayMs,
   shouldSkipUnchanged,
   type SkipInput,
@@ -16,6 +17,39 @@ describe("nextRunAfter", () => {
     expect(
       nextRunAfter(at("2026-10-09T03:30:00Z"), "weekly").toISOString(),
     ).toBe("2026-10-16T03:30:00.000Z");
+  });
+});
+
+describe("nextRunOnFinish", () => {
+  const run = {
+    startedAt: at("2026-10-09T03:30:00Z"),
+    finishedAt: at("2026-10-09T03:45:00Z"),
+    planned: at("2026-10-10T03:45:00Z"),
+  };
+
+  it("follows the run's own plan when nobody touched the schedule", () => {
+    // What started a scheduled run: a due time at or before its start.
+    expect(
+      nextRunOnFinish({ ...run, current: at("2026-10-09T03:30:00Z") }),
+    ).toEqual(run.planned);
+    expect(
+      nextRunOnFinish({ ...run, current: at("2026-10-08T00:00:00Z") }),
+    ).toEqual(run.planned);
+  });
+
+  it("follows the plan after a manual run, whose due time was still ahead", () => {
+    expect(
+      nextRunOnFinish({ ...run, current: at("2026-10-09T20:00:00Z") }),
+    ).toEqual(run.planned);
+  });
+
+  it("keeps a sooner run the person asked for while this one went on", () => {
+    const resumedAt = at("2026-10-09T03:40:00Z");
+
+    expect(nextRunOnFinish({ ...run, current: resumedAt })).toEqual(resumedAt);
+    expect(nextRunOnFinish({ ...run, current: run.finishedAt })).toEqual(
+      run.finishedAt,
+    );
   });
 });
 

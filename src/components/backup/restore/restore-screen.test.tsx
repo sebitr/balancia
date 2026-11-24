@@ -1008,7 +1008,7 @@ describe("decrypting it yourself", () => {
     expect(screen.getByText("Or decrypt it yourself")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "age -d -i recovery-key.txt balancia-backup-20261009T033012Z.json.gz.age | gunzip > backup.json",
+        "age -d -i recovery-key.txt balancia-backup-3f2a9c1b7d4e-20261009T033012Z.json.gz.age | gunzip > backup.json",
       ),
     ).toBeInTheDocument();
     expect(
@@ -1022,7 +1022,7 @@ describe("decrypting it yourself", () => {
     await user.click(screen.getByRole("button", { name: "Copy" }));
 
     expect(await navigator.clipboard.readText()).toBe(
-      "age -d -i recovery-key.txt balancia-backup-20261009T033012Z.json.gz.age | gunzip > backup.json",
+      "age -d -i recovery-key.txt balancia-backup-3f2a9c1b7d4e-20261009T033012Z.json.gz.age | gunzip > backup.json",
     );
     expect(screen.getByRole("button", { name: "Copied" })).toBeInTheDocument();
   });
