@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { IntlMessageFormat } from "intl-messageformat";
 import en from "../../messages/en.json";
 import fr from "../../messages/fr.json";
+import de from "../../messages/de.json";
 import { LOCALES, negotiateLocale, isAppLocale } from "./locales";
 
 /**
@@ -81,6 +82,7 @@ function placeholdersOf(locale: string, message: string): Set<string> {
 
 const english = flatten(en as unknown as Tree);
 const french = flatten(fr as unknown as Tree);
+const german = flatten(de as unknown as Tree);
 
 /**
  * Every catalogue `messages/` holds, flattened, by language code.
@@ -156,6 +158,11 @@ describe("message catalogues", () => {
 
   it("translates every English key into French", () => {
     const missing = [...english.keys()].filter((key) => !french.has(key));
+    expect(missing).toEqual([]);
+  });
+
+  it("translates every English key into German", () => {
+    const missing = [...english.keys()].filter((key) => !german.has(key));
     expect(missing).toEqual([]);
   });
 
@@ -471,6 +478,7 @@ describe("English copy", () => {
 describe("locale negotiation", () => {
   it("honours the highest-quality supported language", () => {
     expect(negotiateLocale("fr-CA,fr;q=0.9,en;q=0.8")).toBe("fr");
+    expect(negotiateLocale("de-DE,de;q=0.9,en;q=0.8")).toBe("de");
     expect(negotiateLocale("en-GB,en;q=0.9")).toBe("en");
   });
 
