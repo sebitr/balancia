@@ -3,16 +3,17 @@ import { renderWithIntl } from "../../../tests/helpers/intl";
 import { MemberStack } from "./member-stack";
 
 /**
- * The home screen's faces. The reader is a different participant in every
- * group, so a hue keyed by that id would colour them differently on each row;
- * their slot arrives empty and keeps the plain "you" face instead.
+ * The home screen's faces. Their hues arrive worked out on the server, from
+ * each person's account where they have one, so somebody in several of the
+ * reader's groups is one colour on every row. The reader's slot is null and
+ * keeps the plain "you" face, as on every group screen.
  */
 describe("MemberStack", () => {
-  it("gives everybody but the reader a hue", () => {
+  it("paints the hues it is given and leaves the reader plain", () => {
     const { container } = renderWithIntl(
       <MemberStack
         names={["Demo", "Katherine"]}
-        ids={["", "8d6b1c52-5e0f-4c4f-9a1c-2f1b8e1f7a10"]}
+        hues={[null, 250]}
         total={2}
       />,
     );
@@ -22,10 +23,10 @@ describe("MemberStack", () => {
     ];
     expect(faces).toHaveLength(2);
     expect(faces[0]).not.toHaveAttribute("data-avatar-hue");
-    expect(faces[1]).toHaveAttribute("data-avatar-hue");
+    expect(faces[1]).toHaveAttribute("data-avatar-hue", "250");
   });
 
-  it("falls back to the name when no ids are given", () => {
+  it("falls back to the name when no hues are given", () => {
     const { container } = renderWithIntl(
       <MemberStack names={["Demo"]} total={1} />,
     );

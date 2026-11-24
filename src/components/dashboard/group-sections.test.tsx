@@ -18,7 +18,7 @@ function row(overrides: Partial<GroupRowView> = {}): GroupRowView {
     icon: null,
     iconColor: null,
     memberNames: ["Sofia", "Mika"],
-    memberIds: [],
+    memberHues: [],
     participantCount: 2,
     lastActivityAt: "2026-08-11T12:00:00.000Z",
     amounts: [{ minorUnits: "-10000", currency: "EUR" }],
