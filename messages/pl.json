@@ -671,6 +671,7 @@
     "signOut": "",
     "signOutTitle": "",
     "signOutBody": "",
+    "signOutBodyDemo": "To demo kończy się po wylogowaniu. Załóż konto, aby zachować grupę.",
     "keepIt": "",
     "photoAdd": "",
     "photoChange": "",
@@ -1721,6 +1722,8 @@
   },
   "importWizard": {
     "fileLabel": "",
+    "chooseFile": "Wybierz plik",
+    "noFileChosen": "Nie wybrano pliku",
     "fileHelp": "",
     "read": "",
     "readFailed": "",

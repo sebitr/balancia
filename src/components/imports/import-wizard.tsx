@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -46,6 +46,8 @@ export function ImportWizard({ groupId }: { groupId: string }) {
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
 
   const onUpload = async (formData: FormData) => {
     setError(null);
@@ -85,8 +87,10 @@ export function ImportWizard({ groupId }: { groupId: string }) {
     if (file && file.size > MAX_IMPORT_BYTES) {
       setError(t("tooLarge", { limit: MAX_IMPORT_BYTES / 1_000_000 }));
       event.target.value = "";
+      setFileName(null);
     } else {
       setError(null);
+      setFileName(file?.name ?? null);
     }
   };
 
@@ -290,16 +294,47 @@ export function ImportWizard({ groupId }: { groupId: string }) {
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="import-file">{t("fileLabel")}</Label>
+          <Label id="import-file-label" htmlFor="import-file">
+            {t("fileLabel")}
+          </Label>
+          {/*
+           * The browser's own file control writes "Choose file / No file
+           * chosen" in the browser's language, whatever the app is set to.
+           * It stays in the form, visually hidden, to carry the file and the
+           * `required` check; a button says the same thing in ours.
+           */}
           <input
+            ref={fileInput}
             id="import-file"
             name="file"
             type="file"
             accept=".csv,.json"
             required
             onChange={onFileChosen}
-            className="block w-full rounded-md border border-input text-sm file:mr-3 file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground"
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden="true"
           />
+          <div
+            role="group"
+            aria-labelledby="import-file-label"
+            className="flex min-w-0 flex-wrap items-center gap-3"
+          >
+            <Button
+              type="button"
+              variant="secondary"
+              aria-describedby="import-file-name"
+              onClick={() => fileInput.current?.click()}
+            >
+              {t("chooseFile")}
+            </Button>
+            <span
+              id="import-file-name"
+              className="min-w-0 truncate text-sm text-muted-foreground"
+            >
+              {fileName ?? t("noFileChosen")}
+            </span>
+          </div>
           <p className="text-xs text-muted-foreground">
             {t("fileHelp", { limit: MAX_IMPORT_BYTES / 1_000_000 })}
           </p>

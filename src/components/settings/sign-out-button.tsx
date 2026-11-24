@@ -21,7 +21,7 @@ import { SignOutSheet } from "./sign-out-sheet";
  * and threading a `variant` through to say so would be the longer way to write
  * both.
  */
-export function SignOutButton() {
+export function SignOutButton({ demo = false }: { demo?: boolean }) {
   const t = useTranslations("userSettings");
   const [open, setOpen] = useState(false);
 
@@ -35,7 +35,7 @@ export function SignOutButton() {
         {t("signOut")}
       </button>
 
-      <SignOutSheet open={open} onOpenChange={setOpen} />
+      <SignOutSheet open={open} onOpenChange={setOpen} demo={demo} />
     </>
   );
 }

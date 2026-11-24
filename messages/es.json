@@ -667,6 +667,7 @@
     "signOut": "",
     "signOutTitle": "",
     "signOutBody": "",
+    "signOutBodyDemo": "Esta demostración termina cuando cierras sesión. Crea una cuenta para conservar un grupo.",
     "keepIt": "",
     "photoAdd": "",
     "photoChange": "",
@@ -1717,6 +1718,8 @@
   },
   "importWizard": {
     "fileLabel": "",
+    "chooseFile": "Elegir un archivo",
+    "noFileChosen": "Ningún archivo elegido",
     "fileHelp": "",
     "read": "",
     "readFailed": "",

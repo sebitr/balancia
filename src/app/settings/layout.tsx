@@ -143,7 +143,7 @@ function HubPane({
 }) {
   return (
     <div className="flex flex-col gap-4.5">
-      <SettingsHub user={user} hub={use(hub)} />
+      <SettingsHub user={user} hub={use(hub)} demo={getEnv().DEMO_MODE} />
     </div>
   );
 }

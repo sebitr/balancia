@@ -26,6 +26,11 @@ async function manifest(): Promise<Record<string, unknown>> {
 }
 
 describe("the web app manifest", () => {
+  it("does not lock the installed app to an orientation", async () => {
+    // WCAG 1.3.4: content is not restricted to one display orientation.
+    expect(await manifest()).not.toHaveProperty("orientation");
+  });
+
   it("offers Balancia in another app's share sheet", async () => {
     const shareTarget = (await manifest()).share_target;
 

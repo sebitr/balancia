@@ -667,6 +667,7 @@
     "signOut": "",
     "signOutTitle": "",
     "signOutBody": "",
+    "signOutBodyDemo": "Αυτή η επίδειξη τελειώνει όταν αποσυνδεθείς. Δημιούργησε λογαριασμό για να κρατήσεις μια ομάδα.",
     "keepIt": "",
     "photoAdd": "",
     "photoChange": "",
@@ -1717,6 +1718,8 @@
   },
   "importWizard": {
     "fileLabel": "",
+    "chooseFile": "Επιλογή αρχείου",
+    "noFileChosen": "Δεν επιλέχθηκε αρχείο",
     "fileHelp": "",
     "read": "",
     "readFailed": "",

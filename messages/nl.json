@@ -667,6 +667,7 @@
     "signOut": "",
     "signOutTitle": "",
     "signOutBody": "",
+    "signOutBodyDemo": "Deze demo eindigt als je uitlogt. Maak een account aan om een groep te bewaren.",
     "keepIt": "",
     "photoAdd": "",
     "photoChange": "",
@@ -1717,6 +1718,8 @@
   },
   "importWizard": {
     "fileLabel": "",
+    "chooseFile": "Kies een bestand",
+    "noFileChosen": "Geen bestand gekozen",
     "fileHelp": "",
     "read": "",
     "readFailed": "",

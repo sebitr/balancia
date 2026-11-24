@@ -855,6 +855,7 @@
     "signOut": "Abmelden",
     "signOutTitle": "Von Balancia abmelden?",
     "signOutBody": "Deine Gruppen bleiben unverändert. Für die nächste Anmeldung brauchst du deinen Passkey oder dein Passwort.",
+    "signOutBodyDemo": "Diese Demo endet, wenn du dich abmeldest. Erstelle ein Konto, um eine Gruppe zu behalten.",
     "keepIt": "",
     "photoAdd": "Foto hinzufügen",
     "photoChange": "Foto ändern",
@@ -2205,6 +2206,8 @@
   },
   "importWizard": {
     "fileLabel": "Sicherung oder Export",
+    "chooseFile": "Datei auswählen",
+    "noFileChosen": "Keine Datei ausgewählt",
     "fileHelp": "Ein Balancia-JSON-Export, eine Splitwise-Gruppen-CSV oder eine Splitwise-JSON-Sicherung bis zu {limit} MB. Die Datei wird auf diesem Server verarbeitet und nirgendwo sonst hingeschickt.",
     "read": "Datei einlesen",
     "readFailed": "Die Datei konnte nicht eingelesen werden.",

@@ -27,7 +27,13 @@ import { deleteAccountAction } from "@/modules/auth/actions";
  * account is not recoverable, and typing it out is the difference between
  * meaning it and being halfway through something else.
  */
-export function DangerCard({ email }: { email: string }) {
+export function DangerCard({
+  email,
+  demo = false,
+}: {
+  email: string;
+  demo?: boolean;
+}) {
   const router = useRouter();
   const t = useTranslations("userSettings");
 
@@ -68,7 +74,11 @@ export function DangerCard({ email }: { email: string }) {
         />
       </section>
 
-      <SignOutSheet open={signingOut} onOpenChange={setSigningOut} />
+      <SignOutSheet
+        open={signingOut}
+        onOpenChange={setSigningOut}
+        demo={demo}
+      />
 
       <ConfirmSheet
         open={deleting}

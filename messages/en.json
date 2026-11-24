@@ -802,6 +802,7 @@
     "signOut": "Sign out",
     "signOutTitle": "Sign out of Balancia?",
     "signOutBody": "Your groups stay exactly as they are. You will need your passkey or password to come back.",
+    "signOutBodyDemo": "This demo ends when you sign out. Create an account to keep a group.",
     "signOutUnsent": "{count, plural, one {# entry on this device has not synced yet, and signing out deletes it. Stay signed in and it syncs the next time you are online.} other {# entries on this device have not synced yet, and signing out deletes them. Stay signed in and they sync the next time you are online.}}",
     "signOutCancel": "Stay signed in",
     "photoAdd": "Add a photo",
@@ -2619,6 +2620,8 @@
   },
   "importWizard": {
     "fileLabel": "Backup or export",
+    "chooseFile": "Choose a file",
+    "noFileChosen": "No file chosen",
     "fileHelp": "A Balancia JSON export, a Splitwise group CSV, or a Splitwise JSON backup, up to {limit} MB. The file is parsed on this server and never sent anywhere else.",
     "read": "Read the file",
     "readFailed": "That file could not be read.",

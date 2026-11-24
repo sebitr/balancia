@@ -148,13 +148,14 @@
  *
  * The reader picks an accent (src/modules/profile/accent.ts), and the server
  * paints it inline on <html>, where it outranks both blocks below. It paints
- * six variables and no more: --primary and --ring as literals, and the accent
+ * seven variables and no more: --primary and the text on it as literals, and the accent
  * as *text* in each theme, because an inline declaration cannot know which
  * theme it is in and the two need different lightness. So --primary-ink is
  * written once per block as `var(--accent-ink-…, <coral>)`, falling back to
  * the palette as drawn for a document nobody painted (a test). It is the only
- * var() indirection left in this file, and the ring and sidebar stay literal
- * or aliased: several parsers read a bare oklch() out of here and none of
+ * var() indirection left in this file besides the ring, which is an alias of
+ * that ink — a focus ring owes the page 3:1, and the fill never gave it. The
+ * sidebar stays literal or aliased: several parsers read a bare oklch() out of here and none of
  * them needs to learn var().
  *
  * The palette as drawn is coral, and it is the brand's: the emails, the app
@@ -223,7 +224,7 @@
   --payer-ink: oklch(0.534 0.145 70);
   --border: oklch(0.9 0.012 82);
   --input: oklch(0.88 0.016 82);
-  --ring: oklch(0.712 0.168 30);
+  --ring: var(--primary-ink);
 
   /*
    * The washes: a tile, a rail, a zebra row — a surface a shade off the one
@@ -245,7 +246,7 @@
   --wash-3: color-mix(in oklch, var(--foreground) 9%, transparent);
   --wash-4: color-mix(in oklch, var(--foreground) 12%, transparent);
 
-  --chart-1: oklch(0.47 0.085 319);
+  --chart-1: oklch(0.33 0.075 319);
   --chart-2: var(--primary);
   --chart-3: oklch(0.6 0.1 205);
   --chart-4: oklch(0.62 0.05 250);
@@ -345,12 +346,12 @@
   --payer-ink: oklch(0.82 0.14 78);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.712 0.168 30);
+  --ring: var(--primary-ink);
   --chart-1: oklch(0.84 0.035 319);
   --chart-2: var(--primary);
   --chart-3: oklch(0.84 0.08 205);
   --chart-4: oklch(0.86 0.06 267);
-  --chart-5: oklch(0.55 0.09 319);
+  --chart-5: oklch(0.4 0.08 319);
   --sidebar: oklch(0.27 0.068 319);
   --sidebar-foreground: oklch(0.977 0.007 85);
   --sidebar-primary: var(--primary);

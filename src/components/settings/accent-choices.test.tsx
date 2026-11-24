@@ -60,13 +60,17 @@ describe("AccentChoices", () => {
     expect(screen.getByText("Mint")).toBeInTheDocument();
   });
 
-  it("also paints the focus ring, so nothing is left the old colour", async () => {
+  it("also paints the text on the fill, and leaves the focus ring to the ink", async () => {
     const { user } = renderChoices();
 
     await user.click(screen.getByRole("radio", { name: "Ocean" }));
 
     const style = document.documentElement.style;
-    expect(style.getPropertyValue("--ring")).toBe(fillOf("ocean"));
+    expect(style.getPropertyValue("--primary-foreground")).not.toBe("");
+    // The ring is an alias of `--primary-ink` in the stylesheet, so painting
+    // the ink moves it; painting `--ring` itself would pin it to the fill.
+    expect(style.getPropertyValue("--ring")).toBe("");
+    expect(style.getPropertyValue("--accent-ink-light")).not.toBe("");
     // `--sidebar-primary` and `--sidebar-ring` are not painted here: the
     // stylesheet points them at these two, so they follow on their own.
   });

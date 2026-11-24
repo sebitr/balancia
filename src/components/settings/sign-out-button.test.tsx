@@ -109,6 +109,28 @@ async function openSheet() {
 }
 
 describe("SignOutButton", () => {
+  it("promises the usual return on a real instance", async () => {
+    await openSheet();
+    expect(
+      within(screen.getByRole("alertdialog")).getByText(
+        /You will need your passkey or password to come back/,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says the visit ends, on the demo, where there is no passkey to come back with", async () => {
+    const user = userEvent.setup();
+    renderWithIntl(<SignOutButton demo />);
+    await user.click(screen.getByRole("button", { name: "Sign out" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(
+      within(dialog).getByText(
+        "This demo ends when you sign out. Create an account to keep a group.",
+      ),
+    ).toBeInTheDocument();
+    expect(dialog).not.toHaveTextContent("passkey");
+  });
+
   it("asks plainly when nothing is waiting to be sent", async () => {
     await openSheet();
 
