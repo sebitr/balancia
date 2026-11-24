@@ -76,7 +76,7 @@ export function CodeInput({
                 ? "border-primary"
                 : "border-input",
               index === cursor &&
-                "group-has-[input:focus-visible]/code:ring-3 group-has-[input:focus-visible]/code:ring-ring/50",
+                "group-has-[input:focus-visible]/code:ring-3 group-has-[input:focus-visible]/code:ring-ring",
             )}
           >
             {digit}

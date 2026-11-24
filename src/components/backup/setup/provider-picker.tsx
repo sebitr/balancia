@@ -214,7 +214,7 @@ function ProviderOption({
       {...roving}
       className={cn(
         "tap-target relative flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-colors",
-        "focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:-outline-offset-2 focus-visible:outline-none",
+        "focus-visible:ring-3 focus-visible:ring-ring focus-visible:-outline-offset-2 focus-visible:outline-none",
         // A row below `lg`: a hairline between neighbours, none above the first.
         "border-t border-border first:border-t-0",
         // A tile from `lg`: its own outline, all the way round.

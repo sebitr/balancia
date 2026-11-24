@@ -30,7 +30,7 @@ export function SignOutButton({ demo = false }: { demo?: boolean }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mx-auto mt-1 shrink-0 rounded-lg px-4 py-2 text-sm font-semibold text-primary-ink transition-colors hover:bg-primary/10 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+        className="mx-auto mt-1 shrink-0 rounded-lg px-4 py-2 text-sm font-semibold text-primary-ink transition-colors hover:bg-primary/10 focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none"
       >
         {t("signOut")}
       </button>

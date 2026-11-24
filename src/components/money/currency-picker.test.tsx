@@ -73,7 +73,7 @@ describe("the currency picker", () => {
       name: "Search a currency",
     }).parentElement;
     expect(pill?.className).toContain("has-[input:focus-visible]:ring-3");
-    expect(pill?.className).toContain("has-[input:focus-visible]:ring-ring/50");
+    expect(pill?.className).toContain("has-[input:focus-visible]:ring-ring");
   });
 
   it("pins favourites above the list, and does not repeat them in it", () => {

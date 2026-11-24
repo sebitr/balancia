@@ -127,7 +127,7 @@ export function MethodPickerSheet({
             type="button"
             onClick={() => onOpenChange(false)}
             aria-label={t("picker.close")}
-            className="tap-target flex size-7 shrink-0 items-center justify-center rounded-full bg-wash-3 text-foreground transition-colors hover:bg-wash-4 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+            className="tap-target flex size-7 shrink-0 items-center justify-center rounded-full bg-wash-3 text-foreground transition-colors hover:bg-wash-4 focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none"
           >
             <X aria-hidden="true" className="size-3.5" strokeWidth={2.2} />
           </button>
@@ -135,7 +135,7 @@ export function MethodPickerSheet({
 
         <div className="shrink-0 px-4 pb-2">
           {/* The pill is the field's edge, so the pill shows the caret. */}
-          <div className="flex h-10 items-center gap-2.5 rounded-xl bg-wash-2 px-3 inset-ring inset-ring-foreground/10 has-[input:focus-visible]:ring-3 has-[input:focus-visible]:ring-ring/50">
+          <div className="flex h-10 items-center gap-2.5 rounded-xl bg-wash-2 px-3 inset-ring inset-ring-foreground/10 has-[input:focus-visible]:ring-3 has-[input:focus-visible]:ring-ring">
             <Search
               aria-hidden="true"
               className="size-4 shrink-0 text-muted-foreground"
@@ -214,7 +214,7 @@ function MethodRow({
         "flex min-h-11 w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left transition-colors",
         added
           ? "pointer-events-none opacity-50"
-          : "hover:bg-wash-2 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+          : "hover:bg-wash-2 focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none",
       )}
     >
       <MethodMark

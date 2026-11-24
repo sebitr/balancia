@@ -219,7 +219,7 @@ export function MoneyFormats({
           disabled={isPending}
           onClick={() => setPickerOpen(true)}
           aria-haspopup="dialog"
-          className="relative flex min-h-11 w-full items-center gap-2 border-t border-border px-4 py-2.5 text-left transition-colors hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
+          className="relative flex min-h-11 w-full items-center gap-2 border-t border-border px-4 py-2.5 text-left transition-colors hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
         >
           <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
             {t("currencyTitle")}
@@ -375,7 +375,7 @@ function ChipRow<T extends string>({
             }}
             className={cn(
               "tap-target flex h-8.5 shrink-0 items-center rounded-full px-3.25 text-xs font-medium tabular-nums",
-              "transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+              "transition-colors focus-visible:ring-3 focus-visible:ring-ring",
               "focus-visible:outline-none aria-disabled:opacity-50",
               choice.value === value
                 ? "bg-primary/18 text-[color-mix(in_oklch,var(--primary)_62%,var(--foreground))] ring-1 ring-primary/45"

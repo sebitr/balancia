@@ -54,7 +54,7 @@ export function ExportPanel({ groups }: { groups: ExportableGroup[] }) {
             id="export-group"
             value={groupId}
             onChange={(event) => setGroupId(event.target.value)}
-            className="h-10 w-full appearance-none rounded-xl border border-input bg-transparent px-3 pr-9 text-base transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none md:text-sm dark:bg-input/30"
+            className="h-10 w-full appearance-none rounded-xl border border-input bg-transparent px-3 pr-9 text-base transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none md:text-sm dark:bg-input/30"
           >
             {groups.map((group) => (
               <option key={group.id} value={group.id}>
@@ -95,7 +95,7 @@ export function ExportPanel({ groups }: { groups: ExportableGroup[] }) {
             }),
           )
         }
-        className="tap-target flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+        className="tap-target flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/80 focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none"
       >
         <Download aria-hidden="true" className="size-4" />
         {t("exportAction")}

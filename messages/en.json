@@ -25,6 +25,8 @@
     "overview": "Overview",
     "expenses": "Transactions",
     "settings": "Settings",
+    "expensesBar": "Transactions",
+    "settingsBar": "Settings",
     "add": "Add",
     "people": "People",
     "groupSections": "Group sections",

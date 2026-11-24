@@ -67,7 +67,7 @@ export interface ManageGroup {
 }
 
 const ROW =
-  "flex min-h-11 w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium transition-colors hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:-outline-offset-2 focus-visible:outline-none";
+  "flex min-h-11 w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium transition-colors hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring focus-visible:-outline-offset-2 focus-visible:outline-none";
 
 export function ManagePanel({
   destination,
@@ -247,7 +247,7 @@ export function ManagePanel({
           <button
             type="button"
             onClick={() => setShowAll(true)}
-            className="flex min-h-11 w-full items-center gap-3 border-t border-border text-xs font-semibold text-primary-ink transition-colors hover:text-primary-ink/80 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+            className="flex min-h-11 w-full items-center gap-3 border-t border-border text-xs font-semibold text-primary-ink transition-colors hover:text-primary-ink/80 focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none"
           >
             <span className="min-w-0 flex-1 text-left">
               {tSettings("showAllGroups", { count: groups.length })}
