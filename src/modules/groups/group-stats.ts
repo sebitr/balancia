@@ -580,6 +580,16 @@ function rangeStats(
   const start = from ?? earliest;
   const months =
     start === null ? null : monthsBetween(start, to, input.timezone);
+  // What the per-person-per-month figure divides by: the months the group had
+  // any spending in this window, not the months the window is long. A group
+  // three weeks old read through a one-year window is one month of life, and
+  // dividing by twelve showed a twelfth of what each person actually carried.
+  const activeStart =
+    from === null || earliest === null || earliest > from ? earliest : from;
+  const activeMonths =
+    activeStart === null
+      ? null
+      : monthsBetween(activeStart, to, input.timezone);
   const granularity: Granularity =
     key === "3m"
       ? "week"
@@ -592,7 +602,7 @@ function rangeStats(
     granularity,
     months,
     currencies: currencies.map((currency) =>
-      statsForCurrency(input, currency, granularity, from, to, months),
+      statsForCurrency(input, currency, granularity, from, to, activeMonths),
     ),
   };
 }

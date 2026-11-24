@@ -187,7 +187,8 @@ describe("the activity feed's clock", () => {
     );
 
     const time = screen.getByText(/16:05/);
-    expect(time).toHaveTextContent("13/08/2026, 16:05");
+    // The row carries the time alone; the day is the heading's to say.
+    expect(time).toHaveTextContent(/^16:05$/);
     // The machine-readable instant is still the instant.
     expect(time).toHaveAttribute("datetime", "2026-08-13T14:05:00.000Z");
     expect(screen.queryByText(/14:05/)).not.toBeInTheDocument();
@@ -205,7 +206,9 @@ describe("the activity feed's clock", () => {
       GROUP,
     );
 
-    expect(screen.getByText(/11:45/)).toHaveTextContent("14/08/2026, 11:45");
+    expect(screen.getByText(/11:45/)).toHaveTextContent(/^11:45$/);
+    // And it is the 14th there, in the heading above it.
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(/14/);
   });
 });
 
@@ -837,5 +840,125 @@ describe("the lines about links", () => {
     );
 
     expect(screen.getByText("revoked your personal link")).toBeVisible();
+  });
+});
+
+/**
+ * Day headings, the time alone on each row, a link where there is an entry to
+ * open, and the reader as "You".
+ */
+describe("the feed's days, links and reader", () => {
+  const NOW = new Date("2026-08-14T12:00:00Z");
+
+  const added = (id: string, entityId: string, at: string) =>
+    event({
+      id,
+      action: "expense.created",
+      entityType: "expense",
+      entityId,
+      metadata: { description: `Item ${id}` },
+      createdAt: new Date(at),
+    });
+
+  const render = async (
+    entries: ActivityEntry[],
+    options: { openable?: string[]; you?: string | null } = {},
+  ) =>
+    renderWithIntl(
+      await ActivityFeed({
+        entries,
+        groupId: "g1",
+        restorable: new Set(),
+        openable: new Set(options.openable ?? []),
+        timeZone: "UTC",
+        now: NOW,
+        people: {
+          you: options.you ?? null,
+          names: new Map([["p-ada", "Ada"]]),
+        },
+      }),
+      GROUP,
+    );
+
+  it("groups rows under Today, Yesterday and then a date", async () => {
+    await render([
+      added("a", "e1", "2026-08-14T09:00:00Z"),
+      added("b", "e2", "2026-08-14T08:00:00Z"),
+      added("c", "e3", "2026-08-13T20:00:00Z"),
+      added("d", "e4", "2026-08-01T20:00:00Z"),
+    ]);
+
+    const headings = screen
+      .getAllByRole("heading", { level: 2 })
+      .map((heading) => heading.textContent);
+    expect(headings).toHaveLength(3);
+    expect(headings[0]).toBe("Today");
+    expect(headings[1]).toBe("Yesterday");
+    expect(headings[2]).toMatch(/1/);
+    expect(headings[2]).not.toBe("Today");
+    // Two rows under one heading, not two headings.
+    expect(screen.getAllByRole("listitem")).toHaveLength(4);
+  });
+
+  it("links a row to its entry while it exists", async () => {
+    await render(
+      [
+        added("a", "e1", "2026-08-14T09:00:00Z"),
+        event({
+          id: "b",
+          action: "settlement.created",
+          entityType: "settlement",
+          entityId: "s1",
+          metadata: { amount: "1000", currency: "EUR" },
+          createdAt: new Date("2026-08-14T08:00:00Z"),
+        }),
+        // Deleted since: nothing to open.
+        added("c", "e3", "2026-08-14T07:00:00Z"),
+        // A person, not an entry.
+        event({
+          id: "d",
+          action: "participant.created",
+          entityType: "participant",
+          entityId: "p1",
+          metadata: { displayName: "Bob" },
+          createdAt: new Date("2026-08-14T06:00:00Z"),
+        }),
+      ],
+      { openable: ["e1", "s1"] },
+    );
+
+    const hrefs = screen
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("href"));
+    expect(hrefs).toEqual([
+      "/groups/g1/expenses/e1",
+      "/groups/g1/settlements/s1",
+    ]);
+  });
+
+  it("gives a deletion its Restore and no link, even if it has been put back", async () => {
+    await render([DINNER_DELETED], { openable: ["e1"] });
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("calls the reader You, and words the line for it", async () => {
+    await render(
+      [
+        event({
+          id: "m1",
+          action: "expense.created",
+          entityType: "expense",
+          entityId: "e1",
+          actorParticipantId: "p-ada",
+          metadata: { description: "Lunch" },
+          createdAt: new Date("2026-08-14T09:00:00Z"),
+        }),
+      ],
+      { you: "p-ada" },
+    );
+
+    expect(screen.getByText("You")).toBeVisible();
+    expect(screen.queryByText("Ada")).toBeNull();
+    expect(screen.getByText("added an expense: Lunch")).toBeVisible();
   });
 });

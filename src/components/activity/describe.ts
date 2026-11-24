@@ -47,6 +47,40 @@ export interface ActivityReader extends ActivityPeople {
   readonly language?: string;
 }
 
+/** Whether the reader is the one who did it. */
+export function didByReader(entry: ActivityEntry, you: string | null): boolean {
+  return (
+    you !== null &&
+    entry.actorParticipantId !== null &&
+    entry.actorParticipantId === you &&
+    entry.actorType !== "system"
+  );
+}
+
+/**
+ * The translator for a line the reader's own hand wrote.
+ *
+ * The line is printed after "You", and a verb does not stay the same under a
+ * different subject in every language — "a ajouté" is "as ajouté" for "tu".
+ * So the lines have a second set of wording under `self.`, looked up first,
+ * and the plain one answers for anything that has no entry there. The two
+ * must be changed together: a line the first set says and the second does not
+ * is told in the third person under a "You".
+ */
+function byReader(
+  entry: ActivityEntry,
+  t: ActivityTranslate,
+  you: string | null,
+): ActivityTranslate {
+  if (!didByReader(entry, you)) return t;
+  const own = ((key, values) =>
+    t.has(`self.${key}`)
+      ? t(`self.${key}`, values)
+      : t(key, values)) as ActivityTranslate;
+  own.has = (key) => t.has(`self.${key}`) || t.has(key);
+  return own;
+}
+
 /** Nobody named and nobody reading: every line in its short form. */
 export const NOBODY: ActivityPeople = { you: null, names: new Map() };
 
@@ -57,9 +91,10 @@ export const NOBODY: ActivityPeople = { you: null, names: new Map() };
  */
 export function describeActivity(
   entry: ActivityEntry,
-  t: ActivityTranslate,
+  translate: ActivityTranslate,
   reader: ActivityReader = { ...NOBODY, locale: "en" },
 ): string {
+  const t = byReader(entry, translate, reader.you);
   /*
    * Somebody who left. Leaving writes the removal event, because the action
    * is a database enum and a new kind would need a migration; what tells the
@@ -225,10 +260,16 @@ function readRepayment(
   const toYou = you !== null && to === you;
 
   let shape: Shape;
-  if (entry.actorParticipantId !== null && from === entry.actorParticipantId) {
-    shape = toYou ? "theirsToYou" : "theirs";
-  } else if (you !== null && from === you) {
+  if (you !== null && from === you) {
+    // The reader's own repayment is "your", whoever recorded it — and when
+    // the reader did, the feed says "You recorded your repayment", not "Ada
+    // recorded their repayment" beside a "You" everywhere else.
     shape = "yours";
+  } else if (
+    entry.actorParticipantId !== null &&
+    from === entry.actorParticipantId
+  ) {
+    shape = toYou ? "theirsToYou" : "theirs";
   } else {
     shape = toYou ? "toYou" : "between";
   }
@@ -621,10 +662,14 @@ export function actorOf(
   entry: ActivityEntry,
   t: ActivityTranslate,
   names: ReadonlyMap<string, string> = new Map(),
+  you: string | null = null,
 ): string {
   if (entry.actorType === "system" || DONE_BY_BALANCIA.has(entry.action)) {
     return "Balancia";
   }
+  // The reader is "You" here as they are in every balance, not a name the
+  // line then has to be read against.
+  if (didByReader(entry, you)) return t("you");
   const seat = entry.actorParticipantId
     ? names.get(entry.actorParticipantId)
     : undefined;

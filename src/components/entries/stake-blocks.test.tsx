@@ -245,7 +245,7 @@ describe("the split", () => {
     await split(DINNER, "chloe");
 
     const rows = screen.getAllByRole("listitem");
-    expect(rows[0]).toHaveTextContent("Chloé");
+    expect(rows[0]).toHaveTextContent("You");
     expect(rows[0]).toHaveTextContent("You owe €30.00");
     expect(rows[1]).toHaveTextContent("Gets back €60.00");
   });
@@ -293,7 +293,7 @@ describe("the split", () => {
     await split(evenly, "ada");
 
     expect(screen.queryByText(/share$/)).toBeNull();
-    expect(screen.queryByText(/Owes|Gets back|You/)).toBeNull();
+    expect(screen.queryByText(/Owes|Gets back|You (owe|get)/)).toBeNull();
   });
 
   it("credits an income, and words it the right way round", async () => {
@@ -364,7 +364,7 @@ describe("the split at width", () => {
     await table(DINNER, "chloe");
 
     const [, first, second] = screen.getAllByRole("row");
-    expect(cells(first)).toEqual(["CChloé", "€30.00", "—", "You owe €30.00"]);
+    expect(cells(first)).toEqual(["CYou", "€30.00", "—", "You owe €30.00"]);
     expect(cells(second)).toEqual([
       "AAda",
       "€30.00",
@@ -420,7 +420,7 @@ describe("the split at width", () => {
     await table(evenly, "ada");
 
     expect(screen.getAllByRole("columnheader")).toHaveLength(3);
-    expect(screen.queryByText(/Owes|Gets back|You/)).toBeNull();
+    expect(screen.queryByText(/Owes|Gets back|You (owe|get)/)).toBeNull();
   });
 
   it("words every row in French", async () => {

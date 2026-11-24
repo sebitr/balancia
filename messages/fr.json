@@ -1106,6 +1106,130 @@
     "convertedToExpense": {
       "full": "a transformé un remboursement de {before} en « {description} » ({amount})",
       "plain": "a transformé un remboursement en « {description} »"
+    },
+    "today": "Aujourd’hui",
+    "yesterday": "Hier",
+    "you": "Tu",
+    "self": {
+      "actions": {
+        "expense": {
+          "created": "as ajouté une dépense",
+          "updated": "as modifié une dépense",
+          "deleted": "as supprimé une dépense",
+          "restored": "as rétabli une dépense"
+        },
+        "settlement": {
+          "created": "as enregistré un remboursement",
+          "updated": "as modifié un remboursement",
+          "deleted": "as supprimé un remboursement",
+          "restored": "as rétabli un remboursement"
+        },
+        "member": {
+          "added": "as ajouté quelqu’un au groupe",
+          "removed": "as retiré quelqu’un du groupe",
+          "role_changed": "as changé le rôle de quelqu’un"
+        },
+        "participant": {
+          "created": "as ajouté quelqu’un au groupe",
+          "updated": "as mis à jour les informations de quelqu’un",
+          "removed": "as retiré quelqu’un du groupe",
+          "restored": "as rétabli une personne dans le groupe"
+        },
+        "guest_link": {
+          "created": "as envoyé un lien personnel à quelqu’un",
+          "revoked": "as révoqué un lien personnel",
+          "redeemed": "as ouvert ton lien personnel"
+        },
+        "recurring": {
+          "created": "as configuré une dépense récurrente",
+          "updated": "as modifié une dépense récurrente",
+          "deleted": "as supprimé une dépense récurrente",
+          "restored": "as rétabli une dépense récurrente",
+          "generated": "as ajouté une dépense automatiquement",
+          "paused": "as mis en pause une dépense récurrente",
+          "resumed": "as repris une dépense récurrente"
+        },
+        "import": {
+          "completed": "as terminé un import"
+        },
+        "group": {
+          "created": "as créé le groupe",
+          "updated": "as mis à jour le groupe",
+          "archived": "as archivé le groupe",
+          "unarchived": "as sorti le groupe des archives"
+        },
+        "reminder": {
+          "sent": "as envoyé une relance"
+        },
+        "income": {
+          "created": "as ajouté un revenu",
+          "updated": "as modifié un revenu",
+          "deleted": "as supprimé un revenu",
+          "restored": "as rétabli un revenu",
+          "generated": "as ajouté un revenu automatiquement"
+        }
+      },
+      "actionsNamed": {
+        "participant": {
+          "created": "as ajouté {name} au groupe",
+          "updated": "as mis à jour les informations concernant {name}",
+          "removed": "as retiré {name} du groupe",
+          "restored": "as rétabli {name} dans le groupe"
+        },
+        "guest_link": {
+          "created": "as envoyé un lien personnel à {name}",
+          "revoked": "as révoqué le lien personnel pour {name}"
+        },
+        "reminder": {
+          "sent": "as envoyé une relance à {name}"
+        }
+      },
+      "repaymentRecorded": {
+        "between": "as enregistré un remboursement de {amount} versé par {from} à {to}",
+        "toYou": "as enregistré un remboursement de {amount} qui t’a été versé par {from}",
+        "yours": "as enregistré ton remboursement de {amount} à {to}"
+      },
+      "repaymentEdited": {
+        "between": "as modifié le remboursement de {amount} versé par {from} à {to}",
+        "toYou": "as modifié le remboursement de {amount} qui t’a été versé par {from}",
+        "yours": "as modifié ton remboursement de {amount} à {to}"
+      },
+      "repaymentDeleted": {
+        "between": "as supprimé le remboursement de {amount} versé par {from} à {to}",
+        "toYou": "as supprimé le remboursement de {amount} qui t’a été versé par {from}",
+        "yours": "as supprimé ton remboursement de {amount} à {to}"
+      },
+      "repaymentRestored": {
+        "between": "as rétabli le remboursement de {amount} versé par {from} à {to}",
+        "toYou": "as rétabli le remboursement de {amount} qui t’a été versé par {from}",
+        "yours": "as rétabli ton remboursement de {amount} à {to}"
+      },
+      "participantRenamed": "as renommé {before} en {name}",
+      "groupCreated": "as créé le groupe « {name} »",
+      "groupChanged": {
+        "renamed": "as renommé le groupe « {before} » en « {name} »",
+        "timezone": "as réglé le fuseau horaire du groupe sur {timezone}",
+        "fields": "as mis à jour le groupe : {fields}"
+      },
+      "expenseChanged": {
+        "amount": "as changé le montant de « {description} » de {before} à {after}",
+        "renamed": "as renommé « {before} » en « {description} »",
+        "fields": "as modifié « {description} » : {fields}"
+      },
+      "left": "as quitté le groupe",
+      "joinedWithGroupLink": "as rejoint le groupe avec le lien du groupe",
+      "claimedPersonalLink": "as transformé ton lien personnel en compte",
+      "importCompleted": "{imported, plural, =0 {n’as rien importé depuis « {file} »} one {as importé # transaction depuis « {file} »} other {as importé # transactions depuis « {file} »}}{failed, plural, =0 {} one {, # n’a pas pu être importée} other {, # n’ont pas pu être importées}}",
+      "convertedToRepayment": {
+        "between": "as transformé « {description} » en un remboursement de {amount} versé par {from} à {to}",
+        "toYou": "as transformé « {description} » en un remboursement de {amount} qui t’a été versé par {from}",
+        "yours": "as transformé « {description} » en ton remboursement de {amount} à {to}",
+        "plain": "as transformé « {description} » en remboursement"
+      },
+      "convertedToExpense": {
+        "full": "as transformé un remboursement de {before} en « {description} » ({amount})",
+        "plain": "as transformé un remboursement en « {description} »"
+      }
     }
   },
   "recurring": {
@@ -2806,7 +2930,10 @@
     "recordSquareSub": "Tout le monde à zéro, du {from} au {to}",
     "days": "{count, plural, one {# jour} other {# jours}}",
     "percent": "{percent, number, ::.0} %",
-    "method": "Les parts utilisent les répartitions enregistrées sur chaque transaction, pas celles d’aujourd’hui. Les remboursements déplacent de l’argent entre les personnes du groupe et ne comptent jamais comme des dépenses. Les montants dans d’autres devises sont listés à part et jamais additionnés."
+    "method": "Les parts utilisent les répartitions enregistrées sur chaque transaction, pas celles d’aujourd’hui. Les remboursements déplacent de l’argent entre les personnes du groupe et ne comptent jamais comme des dépenses. Les montants dans d’autres devises sont listés à part et jamais additionnés.",
+    "you": "Toi",
+    "netAbove": "au-dessus de sa part",
+    "netBelow": "en dessous de sa part"
   },
   "recurringPage": {
     "title": "Dépenses récurrentes",
@@ -2827,7 +2954,9 @@
       "actions": "Actions",
       "footer": "{running, plural, one {# en cours} other {# en cours}}{paused, plural, =0 {} one { · # suspendue} other { · # suspendues}}",
       "footerNote": "Modifier une règle change les dépenses qu’elle ajoutera désormais. Celles déjà ajoutées restent telles quelles."
-    }
+    },
+    "due": "Échue · ajoutée au prochain passage de la tâche quotidienne du serveur",
+    "dueShort": "Échue"
   },
   "settingsPage": {
     "title": "Paramètres du groupe",
@@ -2944,7 +3073,8 @@
       "paidYou": "Tu as payé",
       "received": "{count, plural, one {{name} l’a reçu} other {# personnes l’ont reçu}}",
       "receivedYou": "Tu l’as reçu"
-    }
+    },
+    "you": "Toi"
   },
   "emails": {
     "codeLabel": "Ton code — appuie ou clique pour sélectionner",

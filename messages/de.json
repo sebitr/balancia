@@ -1177,6 +1177,130 @@
     "convertedToExpense": {
       "full": "hat eine Rückzahlung über {before} in die Ausgabe „{description}“ ({amount}) umgewandelt",
       "plain": "hat eine Rückzahlung in die Ausgabe „{description}“ umgewandelt"
+    },
+    "today": "Heute",
+    "yesterday": "Gestern",
+    "you": "Du",
+    "self": {
+      "actions": {
+        "expense": {
+          "created": "hast eine Ausgabe hinzugefügt",
+          "updated": "hast eine Ausgabe bearbeitet",
+          "deleted": "hast eine Ausgabe gelöscht",
+          "restored": "hast eine Ausgabe wiederhergestellt"
+        },
+        "settlement": {
+          "created": "hast eine Rückzahlung erfasst",
+          "updated": "hast eine Rückzahlung bearbeitet",
+          "deleted": "hast eine Rückzahlung gelöscht",
+          "restored": "hast eine Rückzahlung wiederhergestellt"
+        },
+        "member": {
+          "added": "hast jemanden zur Gruppe hinzugefügt",
+          "removed": "hast jemanden aus der Gruppe entfernt",
+          "role_changed": "hast die Rolle einer Person geändert"
+        },
+        "participant": {
+          "created": "hast jemanden zur Gruppe hinzugefügt",
+          "updated": "hast die Angaben einer Person aktualisiert",
+          "removed": "hast jemanden aus der Gruppe entfernt",
+          "restored": "hast jemanden wieder zur Gruppe hinzugefügt"
+        },
+        "guest_link": {
+          "created": "hast jemandem einen persönlichen Link geschickt",
+          "revoked": "hast einen persönlichen Link widerrufen",
+          "redeemed": "hast deinen persönlichen Link geöffnet"
+        },
+        "recurring": {
+          "created": "hast eine wiederkehrende Ausgabe eingerichtet",
+          "updated": "hast eine wiederkehrende Ausgabe geändert",
+          "deleted": "hast eine wiederkehrende Ausgabe entfernt",
+          "restored": "hast eine wiederkehrende Ausgabe wiederhergestellt",
+          "generated": "hast automatisch eine Ausgabe hinzugefügt",
+          "paused": "hast eine wiederkehrende Ausgabe pausiert",
+          "resumed": "hast eine wiederkehrende Ausgabe fortgesetzt"
+        },
+        "import": {
+          "completed": "hast einen Import abgeschlossen"
+        },
+        "group": {
+          "created": "hast die Gruppe erstellt",
+          "updated": "hast die Gruppe aktualisiert",
+          "archived": "hast die Gruppe archiviert",
+          "unarchived": "hast die Gruppe aus dem Archiv geholt"
+        },
+        "reminder": {
+          "sent": "hast eine Erinnerung gesendet"
+        },
+        "income": {
+          "created": "hast eine Einnahme hinzugefügt",
+          "updated": "hast eine Einnahme bearbeitet",
+          "deleted": "hast eine Einnahme gelöscht",
+          "restored": "hast eine Einnahme wiederhergestellt",
+          "generated": "hast automatisch eine Einnahme hinzugefügt"
+        }
+      },
+      "actionsNamed": {
+        "participant": {
+          "created": "hast {name} zur Gruppe hinzugefügt",
+          "updated": "hast die Angaben von {name} aktualisiert",
+          "removed": "hast {name} aus der Gruppe entfernt",
+          "restored": "hast {name} wieder zur Gruppe hinzugefügt"
+        },
+        "guest_link": {
+          "created": "hast {name} einen persönlichen Link geschickt",
+          "revoked": "hast den persönlichen Link von {name} widerrufen"
+        },
+        "reminder": {
+          "sent": "hast {name} eine Erinnerung gesendet"
+        }
+      },
+      "repaymentRecorded": {
+        "between": "hast die Rückzahlung von {from} über {amount} an {to} erfasst",
+        "toYou": "hast die Rückzahlung von {from} über {amount} an dich erfasst",
+        "yours": "hast deine Rückzahlung über {amount} an {to} erfasst"
+      },
+      "repaymentEdited": {
+        "between": "hast die Rückzahlung von {from} über {amount} an {to} bearbeitet",
+        "toYou": "hast die Rückzahlung von {from} über {amount} an dich bearbeitet",
+        "yours": "hast deine Rückzahlung über {amount} an {to} bearbeitet"
+      },
+      "repaymentDeleted": {
+        "between": "hast die Rückzahlung von {from} über {amount} an {to} gelöscht",
+        "toYou": "hast die Rückzahlung von {from} über {amount} an dich gelöscht",
+        "yours": "hast deine Rückzahlung über {amount} an {to} gelöscht"
+      },
+      "repaymentRestored": {
+        "between": "hast die Rückzahlung von {from} über {amount} an {to} wiederhergestellt",
+        "toYou": "hast die Rückzahlung von {from} über {amount} an dich wiederhergestellt",
+        "yours": "hast deine Rückzahlung über {amount} an {to} wiederhergestellt"
+      },
+      "participantRenamed": "hast {before} in {name} umbenannt",
+      "groupCreated": "hast die Gruppe „{name}“ erstellt",
+      "groupChanged": {
+        "renamed": "hast den Gruppennamen von „{before}“ in „{name}“ geändert",
+        "timezone": "hast die Zeitzone der Gruppe auf {timezone} gesetzt",
+        "fields": "hast die Gruppe aktualisiert: {fields}"
+      },
+      "expenseChanged": {
+        "amount": "hast den Betrag von „{description}“ von {before} auf {after} geändert",
+        "renamed": "hast „{before}“ in „{description}“ umbenannt",
+        "fields": "hast „{description}“ bearbeitet: {fields}"
+      },
+      "left": "hast die Gruppe verlassen",
+      "joinedWithGroupLink": "bist über den Gruppenlink beigetreten",
+      "claimedPersonalLink": "hast deinen persönlichen Link in ein Konto umgewandelt",
+      "importCompleted": "{imported, plural, =0 {hast nichts aus „{file}“ importiert} one {hast # Eintrag aus „{file}“ importiert} other {hast # Einträge aus „{file}“ importiert}}{failed, plural, =0 {} one {, # konnte nicht importiert werden} other {, # konnten nicht importiert werden}}",
+      "convertedToRepayment": {
+        "between": "hast „{description}“ in die Rückzahlung von {from} über {amount} an {to} umgewandelt",
+        "toYou": "hast „{description}“ in die Rückzahlung von {from} über {amount} an dich umgewandelt",
+        "yours": "hast „{description}“ in deine Rückzahlung über {amount} an {to} umgewandelt",
+        "plain": "hast „{description}“ in eine Rückzahlung umgewandelt"
+      },
+      "convertedToExpense": {
+        "full": "hast eine Rückzahlung über {before} in die Ausgabe „{description}“ ({amount}) umgewandelt",
+        "plain": "hast eine Rückzahlung in die Ausgabe „{description}“ umgewandelt"
+      }
     }
   },
   "recurring": {
@@ -2410,7 +2534,10 @@
     "recordSquareSub": "Für niemanden war etwas offen, von {from} bis {to}",
     "days": "{count, plural, one {# Tag} other {# Tage}}",
     "percent": "{percent, number, ::.0}%",
-    "method": "Für Anteile gelten die bei jedem Eintrag gespeicherten Aufteilungsverhältnisse, nicht die heutigen. Rückzahlungen verschieben Geld zwischen Personen und zählen niemals zu den Ausgaben. Beträge in anderen Währungen werden separat aufgeführt und niemals addiert."
+    "method": "Für Anteile gelten die bei jedem Eintrag gespeicherten Aufteilungsverhältnisse, nicht die heutigen. Rückzahlungen verschieben Geld zwischen Personen und zählen niemals zu den Ausgaben. Beträge in anderen Währungen werden separat aufgeführt und niemals addiert.",
+    "you": "Du",
+    "netAbove": "über dem Anteil",
+    "netBelow": "unter dem Anteil"
   },
   "recurringPage": {
     "title": "Wiederkehrende Ausgaben",
@@ -2434,7 +2561,9 @@
       "actions": "Aktionen",
       "footer": "{running, plural, one {# aktiv} other {# aktiv}}{paused, plural, =0 {} one { · # pausiert} other { · # pausiert}}",
       "footerNote": "Wenn du eine Regel bearbeitest, ändern sich nur die Ausgaben, die ab jetzt hinzugefügt werden. Bereits hinzugefügte Ausgaben bleiben unverändert."
-    }
+    },
+    "due": "Fällig · wird mit dem täglichen Serverjob hinzugefügt",
+    "dueShort": "Fällig"
   },
   "settingsPage": {
     "title": "Gruppeneinstellungen",
@@ -2559,7 +2688,8 @@
       "paidYou": "Du hast bezahlt",
       "received": "{count, plural, one {{name} hat es erhalten} other {# Personen haben es erhalten}}",
       "receivedYou": "Du hast es erhalten"
-    }
+    },
+    "you": "Du"
   },
   "emails": {
     "fallbackLabel": "Oder füge diesen Link in deinen Browser ein",
