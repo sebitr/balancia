@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
 import {
   fitBandsToHeight,
+  groupByDay,
   Transactions,
   type BandView,
   type EntryKind,
@@ -1721,5 +1722,114 @@ describe("Transactions filter sheet, dates and order", () => {
     expect(filterButton()).toHaveAccessibleName(
       "Filter and sort, 1 filter applied",
     );
+  });
+});
+
+describe("groupByDay", () => {
+  it("cuts the rows wherever the day changes, keeping their order", () => {
+    const rows = [
+      row({ id: "a", date: "2026-08-13" }),
+      row({ id: "b", date: "2026-08-13" }),
+      row({ id: "c", date: "2026-08-12" }),
+    ];
+    expect(groupByDay(rows).map((day) => day.map((entry) => entry.id))).toEqual(
+      [["a", "b"], ["c"]],
+    );
+  });
+
+  it("draws a day twice rather than moving a row out of its place", () => {
+    const rows = [
+      row({ id: "a", date: "2026-08-13" }),
+      row({ id: "b", date: "2026-08-12" }),
+      row({ id: "c", date: "2026-08-13" }),
+    ];
+    expect(groupByDay(rows)).toHaveLength(3);
+  });
+});
+
+describe("a transaction's row", () => {
+  function renderAs(rows: readonly RowView[], search = "") {
+    window.history.replaceState(null, "", `/groups/g1/expenses${search}`);
+    return renderWithIntl(
+      <Transactions
+        groupId="g1"
+        eyebrow={<h1>Transactions</h1>}
+        bands={BANDS}
+        kinds={kindsOf(rows)}
+        rows={rows}
+        cursor={null}
+        self="seb"
+        {...sheetProps(rows)}
+      />,
+    );
+  }
+
+  const item = (title: string) => screen.getByText(title).closest("li")!;
+
+  it("says the day once, above that day's rows, rather than on every row", () => {
+    renderAs(ROWS);
+
+    const days = screen.getAllByRole("heading", { level: 2 });
+    expect(days.map((day) => day.textContent)).toEqual(["Aug 13", "Aug 12"]);
+    // Six rows on the 13th, under one heading and none of them repeating it.
+    const thirteenth = within(days[0].closest("section")!).getAllByRole(
+      "listitem",
+    );
+    expect(thirteenth).toHaveLength(6);
+    for (const entry of thirteenth) {
+      expect(entry).not.toHaveTextContent("Aug 13");
+    }
+  });
+
+  it("says who paid under an expense, with the reader as You", () => {
+    renderAs([
+      row({ id: "mine", title: "Mine", payers: ["seb"], payerNames: ["Seb"] }),
+      row({
+        id: "theirs",
+        title: "Theirs",
+        payers: ["padi"],
+        payerNames: ["Padi"],
+      }),
+      row({
+        id: "shared",
+        title: "Shared",
+        payers: ["seb", "padi"],
+        payerNames: ["Seb", "Padi"],
+      }),
+    ]);
+
+    expect(within(item("Mine")).getByText("You paid")).toBeVisible();
+    expect(within(item("Theirs")).getByText("Padi paid")).toBeVisible();
+    expect(within(item("Shared")).getByText("You and Padi paid")).toBeVisible();
+  });
+
+  it("names what kind of row it is in words, where the badge used to be", () => {
+    renderAs([
+      row({
+        kind: "settlement",
+        id: "s1",
+        title: "Padi paid you back",
+        category: null,
+        note: "Taxi",
+        payers: ["padi"],
+        payerNames: ["Padi"],
+      }),
+      row({ id: "net", title: "Internet", recurring: true }),
+      row({ id: "refund", title: "Refund", revenue: true }),
+    ]);
+
+    // A repayment's title is already the two names, so what it was for goes
+    // under it rather than who paid it, again.
+    expect(item("Padi paid you back")).toHaveTextContent("Repayment · Taxi");
+    expect(item("Padi paid you back")).not.toHaveTextContent("Padi paid ·");
+    expect(item("Internet")).toHaveTextContent("Recurring · You paid");
+    expect(item("Refund")).toHaveTextContent("Income · You paid");
+  });
+
+  it("puts each row's own date back when the list is sorted by amount", () => {
+    renderAs(ROWS, "?sort=largest");
+
+    expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
+    expect(item("airbnb")).toHaveTextContent("Aug 13 · You paid");
   });
 });
