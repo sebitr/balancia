@@ -161,8 +161,10 @@ See the [full project status](./docs/implementation-status.md),
   changes, every group or just one, and you can disconnect it at any time. See
   [AI assistants](./docs/ai-agents.md).
 - **Local categorization and receipt scanning.** Optional models run on the
-  instance. Balancia sends no expense data to an external AI service; an
-  assistant you connect yourself sees only what you allow it to.
+  instance or in the browser. Balancia sends no expense data to an external AI
+  service unless an administrator turns on server-side receipt reading and a
+  person chooses it for a scan; an assistant you connect yourself sees only what
+  you allow it to.
 - **English and French.** Language, date format, number format and currency
   preferences are independent. A language Balancia does not have yet is
   [a browser away](https://hosted.weblate.org/engage/balancia/).

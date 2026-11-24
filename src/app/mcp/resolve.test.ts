@@ -252,3 +252,51 @@ describe("naming a group", () => {
     );
   });
 });
+
+describe("saying that a name in a refusal was typed by somebody", () => {
+  const ACTOR = { userId: "u" } as UserActor;
+
+  function caught(call: () => unknown): ToolFailure {
+    try {
+      call();
+    } catch (error) {
+      expect(error).toBeInstanceOf(ToolFailure);
+      return error as ToolFailure;
+    }
+    throw new Error("expected a refusal");
+  }
+
+  async function refused(reference: string): Promise<ToolFailure> {
+    const error = await resolveGroup(ACTOR, reference).catch(
+      (caught: unknown) => caught,
+    );
+    expect(error).toBeInstanceOf(ToolFailure);
+    return error as ToolFailure;
+  }
+
+  it("marks every refusal that lists members", () => {
+    const twin = {
+      id: "55555555-5555-4555-8555-555555555555",
+      name: "Marta Ruiz",
+    };
+    expect(caught(() => pick("Nobody")).quotesMembers).toBe(true);
+    expect(caught(() => pick("Marta", [...PEOPLE, twin])).quotesMembers).toBe(
+      true,
+    );
+    expect(
+      caught(() => pick("99999999-9999-4999-8999-999999999999")).quotesMembers,
+    ).toBe(true);
+  });
+
+  it("marks the refusals that list groups, and not the one that lists none", async () => {
+    mocks.groups = [
+      { id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", name: "Lisbon trip" },
+      { id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd", name: "Lisbon" },
+    ];
+    expect((await refused("Lisbon")).quotesMembers).toBe(true);
+    expect((await refused("Paris")).quotesMembers).toBe(true);
+
+    mocks.groups = [];
+    expect((await refused("Paris")).quotesMembers).toBe(false);
+  });
+});

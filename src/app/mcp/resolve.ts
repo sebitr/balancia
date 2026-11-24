@@ -76,6 +76,7 @@ export async function resolveGroup(
   if (exact.length > 1) {
     throw new ToolFailure(
       `More than one group is called "${shown(ref)}". Nothing was changed. Ask the person which they mean, then use the id: ${choices(exact)}.`,
+      { quotesMembers: true },
     );
   }
 
@@ -95,6 +96,7 @@ export async function resolveGroup(
   if (candidates.length > 1) {
     throw new ToolFailure(
       `"${shown(ref)}" could be more than one group: ${choices(candidates)}. Nothing was changed. Ask the person which they mean, then use the id.`,
+      { quotesMembers: true },
     );
   }
 
@@ -104,6 +106,7 @@ export async function resolveGroup(
       : `No group matches "${shown(ref)}". Groups available: ${mine
           .map((group) => `"${shown(group.name)}"`)
           .join(", ")}.`,
+    { quotesMembers: mine.length > 0 },
   );
 }
 
@@ -176,6 +179,7 @@ export function pickPerson(
       `Nobody in this group has the id ${ref}. Members: ${people
         .map((person) => `"${shown(person.name)}" (${person.id})`)
         .join(", ")}.`,
+      { quotesMembers: true },
     );
   }
 
@@ -197,6 +201,7 @@ export function pickPerson(
     `No ${role} in this group matches "${shown(ref)}". Members: ${people
       .map((person) => `"${shown(person.name)}"`)
       .join(", ")}.`,
+    { quotesMembers: true },
   );
 }
 
@@ -210,5 +215,6 @@ function ambiguous(
     .join("; ");
   return new ToolFailure(
     `"${shown(ref)}" could be more than one ${role}: ${listed}. Nothing was changed. Ask the person which they mean, then use the id.`,
+    { quotesMembers: true },
   );
 }

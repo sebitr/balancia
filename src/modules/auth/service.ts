@@ -50,6 +50,7 @@ import {
 } from "./emails/templates";
 import { sanitiseFavoriteCurrencies } from "@/modules/currencies/favorites";
 import { revokeAllApiTokensForUser } from "@/modules/api-tokens/service";
+import { disconnectAll } from "@/modules/agent-access/grants";
 import { endPendingEmailChanges, proveAddress } from "./address-proof";
 
 /**
@@ -1308,6 +1309,13 @@ export async function resetPassword(
  * old sessions signed in answers nothing — there is no device list in this app,
  * so this is the only gesture that evicts anyone.
  *
+ * Every connected AI assistant ends with them, for the same reason. Allowing
+ * one needs nothing but a live session, and its refresh token lasts ninety
+ * days, so a session borrowed for five minutes could leave behind a connection
+ * that outlived the very change meant to evict the borrower. The owner
+ * reconnects the assistants they meant to keep, one Allow each. API keys are
+ * left alone: they belong to scripts, and recovery is what takes them back.
+ *
  * Optional, and omitting it signs the caller out as well. A caller that cannot
  * name its own session should lose it rather than be guessed at.
  */
@@ -1362,7 +1370,12 @@ export async function changePassword(
     options.currentSessionToken,
     { db },
   );
-  logger.info({ userId, ended }, "Password changed; other sessions revoked");
+  // And every assistant, with any code waiting to be exchanged for one.
+  const disconnected = await disconnectAll(userId, { db });
+  logger.info(
+    { userId, ended, disconnected },
+    "Password changed; other sessions and assistant connections revoked",
+  );
 }
 
 /**

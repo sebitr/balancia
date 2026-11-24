@@ -1569,7 +1569,7 @@
         },
         "assistants": {
           "question": "Can I use Balancia with Claude, ChatGPT or another AI assistant?",
-          "answer": "Yes. Balancia is an MCP server, so Claude, ChatGPT and other assistants that accept custom connectors can add it by its address and send you to a Balancia screen to sign in and press Allow. There is nothing to install and no key to copy. You choose read only or read and make changes, and every group or just one, and you can disconnect it from Settings at any time. It acts as you, never sees payment details or email addresses, and Balancia itself calls no AI service. Which plans allow custom connectors is up to the assistant's maker."
+          "answer": "Yes. Balancia is an MCP server, so Claude, ChatGPT and other assistants that accept custom connectors can add it by its address and send you to a Balancia screen to sign in and press Allow. There is nothing to install and no key to copy. You choose read only or read and make changes, and every group or just one, and you can disconnect it from Settings at any time. It acts as you, never sees payment details or email addresses, and Balancia itself calls no AI service unless the administrator has turned on server-side receipt reading and you choose it for a scan. Which plans allow custom connectors is up to the assistant's maker."
         },
         "comparison": {
           "question": "How is Balancia different from Splitwise and Tricount?",
@@ -1730,7 +1730,7 @@
       "sections": {
         "privacy": {
           "title": "Privacy and control",
-          "body1": "With a self-hosted Balancia, the operator chooses the server, the storage, the domain, the email provider and every optional integration. The application needs no outside service to run, and telemetry starts off. Category suggestions and receipt scanning run locally and send no expense to an AI provider.",
+          "body1": "With a self-hosted Balancia, the operator chooses the server, the storage, the domain, the email provider and every optional integration. The application needs no outside service to run, and telemetry starts off. Category suggestions run locally and send no expense to an AI provider, and neither does receipt scanning unless the administrator turns on server-side reading and the person scanning chooses it; the photo then goes to the provider the administrator picked, which can be a model on their own hardware.",
           "body2": "That control is also a responsibility: somebody has to apply updates, configure HTTPS, protect the secrets, watch the instance and test the backups. Splitwise takes that work on, and its privacy statement governs how it and its vendors handle what you enter."
         },
         "migration": {
@@ -1872,7 +1872,7 @@
         },
         "privacy": {
           "title": "Privacy and control",
-          "body1": "With a self-hosted Balancia, the operator chooses the server, the storage, the domain, the email provider and every optional integration. The application needs no outside service to run, and telemetry starts off. Category suggestions and receipt scanning run locally and send no expense to an AI provider.",
+          "body1": "With a self-hosted Balancia, the operator chooses the server, the storage, the domain, the email provider and every optional integration. The application needs no outside service to run, and telemetry starts off. Category suggestions run locally and send no expense to an AI provider, and neither does receipt scanning unless the administrator turns on server-side reading and the person scanning chooses it; the photo then goes to the provider the administrator picked, which can be a model on their own hardware.",
           "body2": "tricount is owned and operated by bunq. Its privacy policy sets out the financial, identification, device and usage data used to run and improve the service, and the processing done by its providers. In exchange, nobody in the group has a server, a database, upgrades or backups to look after."
         },
         "migration": {
@@ -2567,7 +2567,7 @@
     "control3": "Keep your assistant’s ask-first prompt on for anything that changes something. Adding an expense or repayment tells the other members, as if you had done it.",
     "control4": "It can never change your account, add or remove people, create invitation links, export or delete a group, or see anybody’s payment details.",
     "control5": "Notes and names in a group are typed by other members, and one of them could try to give your assistant orders. Read what it is about to do before you allow it.",
-    "control6": "A connection ends by itself when you reset your password or change your email address.",
+    "control6": "A connection ends by itself when you change or reset your password, or change your email address.",
     "troubleTitle": "If it does not work",
     "trouble1": "It cannot add expenses: it was connected as Read only. Disconnect it and connect again, choosing Read and make changes.",
     "trouble2": "Claude or ChatGPT says it cannot reach the server: the address has to be reachable from the internet over HTTPS. Whoever runs this Balancia can tell you whether it is.",

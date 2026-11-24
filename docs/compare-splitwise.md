@@ -46,8 +46,9 @@ in both places or in neither, and the date above is `COMPARISON_REVIEWED` in
 
 With self-hosted Balancia, the operator chooses the server, storage, domain,
 email provider and optional integrations. The application requires no external
-service at runtime, and telemetry starts off. Local categorization and optional
-receipt scanning do not send expenses to an AI provider.
+service at runtime, and telemetry starts off. Local categorization does not
+send expenses to an AI provider, and neither does receipt scanning unless the
+operator turns on server-side reading and the person scanning chooses it.
 
 That control also creates responsibility: the operator must apply updates,
 configure HTTPS, protect secrets, monitor the instance and test backups.
