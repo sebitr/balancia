@@ -69,6 +69,7 @@ function group(id: string, name: string): GroupSummary {
     participantId: `${id}-me`,
     lastActivityAt: new Date("2026-11-01T12:00:00Z"),
     memberNames: ["Ada", "Ben"],
+    memberIds: [],
   };
 }
 

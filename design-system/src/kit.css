@@ -1585,6 +1585,16 @@ a.tx-row:hover {
   font-weight: 600;
   flex-shrink: 0;
 }
+/* A face's own hue (src/components/ui/avatar-hue.ts): five muted hues, none
+   within 25 degrees of the money colours. Set `--avatar-hue` inline. */
+.avatar[data-avatar-hue] {
+  background: oklch(0.92 0.035 var(--avatar-hue));
+  color: oklch(0.34 0.09 var(--avatar-hue));
+}
+.dark .avatar[data-avatar-hue] {
+  background: oklch(0.36 0.06 var(--avatar-hue));
+  color: oklch(0.93 0.03 var(--avatar-hue));
+}
 .avatar--lg {
   width: 2.25rem;
   height: 2.25rem;

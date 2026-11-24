@@ -4,6 +4,7 @@ import * as React from "react";
 import { Avatar as AvatarPrimitive } from "radix-ui";
 
 import { cn } from "@/lib/utils";
+import { avatarHue } from "./avatar-hue";
 
 function Avatar({
   className,
@@ -43,11 +44,29 @@ function AvatarImage({
 
 function AvatarFallback({
   className,
+  hueKey,
+  style,
   ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Fallback>) {
+}: React.ComponentProps<typeof AvatarPrimitive.Fallback> & {
+  /**
+   * Who this face is, as a string that never changes: a participant id, or a
+   * name where a screen has nothing better. It picks the face's hue from a
+   * small muted palette (`avatar-hue.ts`); leave it out for the plain lilac.
+   * A face that is chosen, or is the reader, states its own colour instead
+   * and passes no key.
+   */
+  hueKey?: string;
+}) {
+  const hue = hueKey ? avatarHue(hueKey) : undefined;
   return (
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
+      data-avatar-hue={hue}
+      style={
+        hue === undefined
+          ? style
+          : ({ ...style, "--avatar-hue": hue } as React.CSSProperties)
+      }
       className={cn(
         "flex size-full items-center justify-center rounded-full bg-muted text-sm text-muted-foreground group-data-[size=sm]/avatar:text-xs",
         className,

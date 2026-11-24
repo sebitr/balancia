@@ -276,6 +276,7 @@ export default async function GroupOverviewPage({
               <>
                 {access.participantId && (
                   <PositionCard
+                    now={now.toISOString()}
                     positions={overview.positions.map((position) => ({
                       currency: position.currency,
                       minorUnits: position.amount.toString(),
@@ -342,6 +343,7 @@ export default async function GroupOverviewPage({
               <>
                 {access.participantId && (
                   <PositionHero
+                    now={now.toISOString()}
                     positions={overview.positions.map((position) => ({
                       currency: position.currency,
                       minorUnits: position.amount.toString(),

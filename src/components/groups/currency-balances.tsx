@@ -389,6 +389,7 @@ function MemberLine({
       <span className="flex min-w-0 items-center gap-2.5">
         <Avatar className="size-7 shrink-0">
           <AvatarFallback
+            hueKey={member.isSelf ? undefined : member.participantId}
             className={cn(
               "text-2xs font-semibold",
               member.isSelf

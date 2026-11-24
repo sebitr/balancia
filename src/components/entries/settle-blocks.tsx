@@ -266,6 +266,7 @@ function PairSide({
           <MemberPill
             key={member.id}
             name={member.displayName}
+            hueKey={member.id}
             label={`${label}: ${member.displayName}`}
             selected={member.id === selectedId}
             onToggle={() => onSelect(member.id)}
@@ -413,7 +414,11 @@ export function OutstandingList({
                   active && "bg-wash-2 lg:hover:bg-wash-2",
                 )}
               >
-                <MemberAvatar name={pair.fromName} selected={active} />
+                <MemberAvatar
+                  name={pair.fromName}
+                  hueKey={pair.fromParticipantId}
+                  selected={active}
+                />
                 {/*
                  * The sentence and the figure are stacked, not set side by
                  * side. Two names, a verb and a five-figure amount do not fit

@@ -420,6 +420,7 @@ function TableRow({
               <MemberAvatar
                 key={payer}
                 name={row.payerNames[index] ?? ""}
+                hueKey={payer}
                 // The reader's own face in the accent, as the "you" pill is
                 // everywhere else. Who paid is not money; the amount is.
                 selected={payer === self}

@@ -50,7 +50,10 @@ export function PositionHero({
   senderName,
   recipients,
   canArchive,
+  now,
 }: {
+  /** The server's clock, for "reminded 2 hours ago". */
+  now?: string;
   positions: readonly PositionView[];
   groupId: string;
   groupName: string;
@@ -269,6 +272,7 @@ export function PositionHero({
                   groupName={groupName}
                   senderName={senderName}
                   recipients={recipients}
+                  now={now}
                   label={remindLabel}
                   variant="default"
                   className={ACTION}
@@ -287,6 +291,7 @@ export function PositionHero({
                     groupName={groupName}
                     senderName={senderName}
                     recipients={recipients}
+                    now={now}
                     label={remindLabel}
                     variant="outline"
                     className={ACTION}

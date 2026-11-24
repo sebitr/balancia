@@ -3096,6 +3096,7 @@
   "remind": {
     "action": "Erinnern",
     "reminded": "Erinnert",
+    "remindedState": "Erinnert: {count, plural, one {{name}} other {# Personen}} · {when}",
     "sheetTitle": "Erinnerung senden",
     "sheetSubtitle": "{count, plural, one {# Person schuldet} other {# Personen schulden}} dir {amount}.",
     "sheetSubtitleNone": "Wähle aus, wen du erinnern möchtest.",

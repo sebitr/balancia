@@ -60,6 +60,7 @@ export default async function SettleUpPage({
       }))}
       transferCount={view.transferCount}
       payoutHints={payoutHints}
+      now={new Date().toISOString()}
       lastSettled={view.lastSettled.map((repayment) => ({
         id: repayment.id,
         fromName: repayment.fromName,

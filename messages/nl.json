@@ -2420,6 +2420,7 @@
   "remind": {
     "action": "",
     "reminded": "",
+    "remindedState": "",
     "sheetTitle": "",
     "sheetSubtitle": "",
     "sheetSubtitleNone": "",
