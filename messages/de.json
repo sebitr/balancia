@@ -1184,122 +1184,122 @@
     "self": {
       "actions": {
         "expense": {
-          "created": "",
-          "updated": "",
-          "deleted": "",
-          "restored": ""
+          "created": "hast eine Ausgabe hinzugefügt",
+          "updated": "hast eine Ausgabe bearbeitet",
+          "deleted": "hast eine Ausgabe gelöscht",
+          "restored": "hast eine Ausgabe wiederhergestellt"
         },
         "settlement": {
-          "created": "",
-          "updated": "",
-          "deleted": "",
-          "restored": ""
+          "created": "hast eine Rückzahlung erfasst",
+          "updated": "hast eine Rückzahlung bearbeitet",
+          "deleted": "hast eine Rückzahlung gelöscht",
+          "restored": "hast eine Rückzahlung wiederhergestellt"
         },
         "member": {
-          "added": "",
-          "removed": "",
-          "role_changed": ""
+          "added": "hast jemanden zur Gruppe hinzugefügt",
+          "removed": "hast jemanden aus der Gruppe entfernt",
+          "role_changed": "hast die Rolle einer Person geändert"
         },
         "participant": {
-          "created": "",
-          "updated": "",
-          "removed": "",
-          "restored": ""
+          "created": "hast jemanden zur Gruppe hinzugefügt",
+          "updated": "hast die Angaben einer Person aktualisiert",
+          "removed": "hast jemanden aus der Gruppe entfernt",
+          "restored": "hast jemanden wieder zur Gruppe hinzugefügt"
         },
         "guest_link": {
-          "created": "",
-          "revoked": "",
-          "redeemed": ""
+          "created": "hast jemandem einen persönlichen Link geschickt",
+          "revoked": "hast einen persönlichen Link widerrufen",
+          "redeemed": "hast deinen persönlichen Link geöffnet"
         },
         "recurring": {
-          "created": "",
-          "updated": "",
-          "deleted": "",
-          "restored": "",
-          "generated": "",
-          "paused": "",
-          "resumed": ""
+          "created": "hast eine wiederkehrende Ausgabe eingerichtet",
+          "updated": "hast eine wiederkehrende Ausgabe geändert",
+          "deleted": "hast eine wiederkehrende Ausgabe entfernt",
+          "restored": "hast eine wiederkehrende Ausgabe wiederhergestellt",
+          "generated": "hast automatisch eine Ausgabe hinzugefügt",
+          "paused": "hast eine wiederkehrende Ausgabe pausiert",
+          "resumed": "hast eine wiederkehrende Ausgabe fortgesetzt"
         },
         "import": {
-          "completed": ""
+          "completed": "hast einen Import abgeschlossen"
         },
         "group": {
-          "created": "",
-          "updated": "",
-          "archived": "",
-          "unarchived": ""
+          "created": "hast die Gruppe erstellt",
+          "updated": "hast die Gruppe aktualisiert",
+          "archived": "hast die Gruppe archiviert",
+          "unarchived": "hast die Gruppe aus dem Archiv geholt"
         },
         "reminder": {
-          "sent": ""
+          "sent": "hast eine Erinnerung gesendet"
         },
         "income": {
-          "created": "",
-          "updated": "",
-          "deleted": "",
-          "restored": "",
-          "generated": ""
+          "created": "hast eine Einnahme hinzugefügt",
+          "updated": "hast eine Einnahme bearbeitet",
+          "deleted": "hast eine Einnahme gelöscht",
+          "restored": "hast eine Einnahme wiederhergestellt",
+          "generated": "hast automatisch eine Einnahme hinzugefügt"
         }
       },
       "actionsNamed": {
         "participant": {
-          "created": "",
-          "updated": "",
-          "removed": "",
-          "restored": ""
+          "created": "hast {name} zur Gruppe hinzugefügt",
+          "updated": "hast die Angaben von {name} aktualisiert",
+          "removed": "hast {name} aus der Gruppe entfernt",
+          "restored": "hast {name} wieder zur Gruppe hinzugefügt"
         },
         "guest_link": {
-          "created": "",
-          "revoked": ""
+          "created": "hast {name} einen persönlichen Link geschickt",
+          "revoked": "hast den persönlichen Link von {name} widerrufen"
         },
         "reminder": {
-          "sent": ""
+          "sent": "hast {name} eine Erinnerung gesendet"
         }
       },
       "repaymentRecorded": {
-        "between": "",
-        "toYou": "",
-        "yours": ""
+        "between": "hast die Rückzahlung von {from} über {amount} an {to} erfasst",
+        "toYou": "hast die Rückzahlung von {from} über {amount} an dich erfasst",
+        "yours": "hast deine Rückzahlung über {amount} an {to} erfasst"
       },
       "repaymentEdited": {
-        "between": "",
-        "toYou": "",
-        "yours": ""
+        "between": "hast die Rückzahlung von {from} über {amount} an {to} bearbeitet",
+        "toYou": "hast die Rückzahlung von {from} über {amount} an dich bearbeitet",
+        "yours": "hast deine Rückzahlung über {amount} an {to} bearbeitet"
       },
       "repaymentDeleted": {
-        "between": "",
-        "toYou": "",
-        "yours": ""
+        "between": "hast die Rückzahlung von {from} über {amount} an {to} gelöscht",
+        "toYou": "hast die Rückzahlung von {from} über {amount} an dich gelöscht",
+        "yours": "hast deine Rückzahlung über {amount} an {to} gelöscht"
       },
       "repaymentRestored": {
-        "between": "",
-        "toYou": "",
-        "yours": ""
+        "between": "hast die Rückzahlung von {from} über {amount} an {to} wiederhergestellt",
+        "toYou": "hast die Rückzahlung von {from} über {amount} an dich wiederhergestellt",
+        "yours": "hast deine Rückzahlung über {amount} an {to} wiederhergestellt"
       },
-      "participantRenamed": "",
-      "groupCreated": "",
+      "participantRenamed": "hast {before} in {name} umbenannt",
+      "groupCreated": "hast die Gruppe „{name}“ erstellt",
       "groupChanged": {
-        "renamed": "",
-        "timezone": "",
-        "fields": ""
+        "renamed": "hast den Gruppennamen von „{before}“ in „{name}“ geändert",
+        "timezone": "hast die Zeitzone der Gruppe auf {timezone} gesetzt",
+        "fields": "hast die Gruppe aktualisiert: {fields}"
       },
       "expenseChanged": {
-        "amount": "",
-        "renamed": "",
-        "fields": ""
+        "amount": "hast den Betrag von „{description}“ von {before} auf {after} geändert",
+        "renamed": "hast „{before}“ in „{description}“ umbenannt",
+        "fields": "hast „{description}“ bearbeitet: {fields}"
       },
-      "left": "",
-      "joinedWithGroupLink": "",
-      "claimedPersonalLink": "",
-      "importCompleted": "",
+      "left": "hast die Gruppe verlassen",
+      "joinedWithGroupLink": "bist über den Gruppenlink beigetreten",
+      "claimedPersonalLink": "hast deinen persönlichen Link in ein Konto umgewandelt",
+      "importCompleted": "{imported, plural, =0 {hast nichts aus „{file}“ importiert} one {hast # Eintrag aus „{file}“ importiert} other {hast # Einträge aus „{file}“ importiert}}{failed, plural, =0 {} one {, # konnte nicht importiert werden} other {, # konnten nicht importiert werden}}",
       "convertedToRepayment": {
-        "between": "",
-        "toYou": "",
-        "yours": "",
-        "plain": ""
+        "between": "hast „{description}“ in die Rückzahlung von {from} über {amount} an {to} umgewandelt",
+        "toYou": "hast „{description}“ in die Rückzahlung von {from} über {amount} an dich umgewandelt",
+        "yours": "hast „{description}“ in deine Rückzahlung über {amount} an {to} umgewandelt",
+        "plain": "hast „{description}“ in eine Rückzahlung umgewandelt"
       },
       "convertedToExpense": {
-        "full": "",
-        "plain": ""
+        "full": "hast eine Rückzahlung über {before} in die Ausgabe „{description}“ ({amount}) umgewandelt",
+        "plain": "hast eine Rückzahlung in die Ausgabe „{description}“ umgewandelt"
       }
     }
   },
