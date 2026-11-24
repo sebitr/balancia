@@ -1,6 +1,6 @@
 # Label what group members typed in every assistant answer, speak split errors in money, and say when Balancia does call an AI service
 
-Branch: `fix/mcp-follow-ups`
+Merged: 2026-11-24 in #502
 
 Follow-ups to the MCP hardening in #492. Every tool result and every error
 that quotes a name now says the text was typed by group members, from one

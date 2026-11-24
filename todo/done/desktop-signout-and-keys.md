@@ -1,6 +1,6 @@
 # Never show the last account's groups after signing out, and make the desktop keys do only what they say
 
-Branch: `fix/desktop-signout-and-keys`
+Merged: 2026-11-24 in #504
 
 Confirmed desktop defects from the audit of 2026-11-24. The sidebar's list of
 groups outlived a sign-out and was drawn — in the sidebar, the ⌘K palette and
