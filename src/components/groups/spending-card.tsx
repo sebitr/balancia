@@ -206,7 +206,9 @@ export function SpendingCard({
           // The caption sits under the title rather than after a middot, and
           // two stacked lines run together into one accessible name with
           // nothing between them. The separator the eye reads as a line break
-          // has to be spelled out for anything listening.
+          // has to be spelled out for anything listening — and the lines are
+          // spaced below as well, since a name has to hold the words shown,
+          // and "StatisticsPer" is not one of them (WCAG 2.5.3).
           aria-label={`${t("statistics")} · ${t("statisticsCaption")}`}
           className={cn(
             "flex items-center gap-2.5 border-t px-4 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
@@ -222,7 +224,7 @@ export function SpendingCard({
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-xs font-medium">
               {t("statistics")}
-            </span>
+            </span>{" "}
             <span className="truncate text-xs text-muted-foreground">
               {t("statisticsCaption")}
             </span>

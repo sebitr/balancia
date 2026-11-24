@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
+import { expectLabelInName } from "../../../tests/helpers/label-in-name";
 import {
   CurrencyBalances,
   type CurrencyBalanceView,
@@ -345,15 +346,20 @@ describe("CurrencyBalances", () => {
     renderList([GBP], "GBP");
 
     expect(
-      screen.queryByRole("link", { name: "View suggested repayments" }),
+      screen.queryByRole("link", { name: /^View suggested repayments/ }),
     ).toBeNull();
   });
 
   it("counts the payments the settlement plan would make", () => {
     renderList();
 
-    expect(
-      screen.getByRole("link", { name: "View suggested repayments" }),
-    ).toHaveTextContent("2 repayments clear all 3 currencies");
+    // Named for both of its lines, since a name has to hold every word the
+    // link shows — the count was once hidden from a screen reader and left on
+    // the screen, which a voice user cannot say their way to.
+    const name =
+      "View suggested repayments · 2 repayments clear all 3 currencies";
+    const link = screen.getByRole("link", { name });
+    expect(link).toHaveTextContent("2 repayments clear all 3 currencies");
+    expectLabelInName(link, name);
   });
 });
