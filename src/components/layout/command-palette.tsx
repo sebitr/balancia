@@ -407,6 +407,10 @@ function PaletteBody({
   };
 
   const onKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    // Mid-composition, ↵ and the arrows belong to the input method — choosing
+    // a candidate, committing the kana — and not to the list. 229 is what
+    // Safari reports for the key that ends one.
+    if (event.nativeEvent.isComposing || event.keyCode === 229) return;
     if (options.length === 0) return;
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
