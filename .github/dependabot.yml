@@ -7,6 +7,15 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    # pnpm refuses to install anything published less than a day ago
+    # (minimumReleaseAge), and a version bump pulls in fresh transitive
+    # releases too. A PR opened inside that window fails every job at install
+    # and, while main's own checks were red, nobody noticed: next 16.4.5 sat
+    # in #485 for a week with every job failing on
+    # ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION. Two days clears the floor.
+    # Version updates only; security updates are never held back.
+    cooldown:
+      default-days: 2
     # Grouped so a routine week is one PR to review, not twenty.
     groups:
       production:
@@ -15,6 +24,12 @@ updates:
       development:
         dependency-type: development
         update-types: ["minor", "patch"]
+      # Security fixes arrived one PR per package beside the weekly group
+      # (#477 nodemailer, #480 zod), each going stale once the group carried
+      # the same bump. One PR for whatever is urgent at the time.
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
     ignore:
       # Next.js and React majors change behaviour; upgrade them deliberately,
       # following the version-matched upgrade guide.
@@ -38,6 +53,10 @@ updates:
     directory: "/"
     schedule:
       interval: monthly
+    # One PR a month for the actions, not one per action (#473–#476).
+    groups:
+      actions:
+        patterns: ["*"]
     labels:
       - dependencies
 
