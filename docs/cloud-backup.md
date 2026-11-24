@@ -455,11 +455,11 @@ rclone then makes its own connections:
   `https://` to `http://` is refused unless `--allow-https-downgrade` is passed,
   which Balancia never does; that is what keeps a public HTTPS endpoint from
   bouncing the worker to a metadata service, which answers on plain HTTP only.
-  The image pins **1.75.2**, which follows that downgrade too, so until
-  `RCLONE_VERSION` is raised the metadata service is reachable this way,
-  without credentials, by anyone who can create a destination. The request is
-  blind — what comes back reaches the owner only as a scrubbed, shortened error
-  — but it is a request this server should not make. Closing both for good needs
+  The image pins 1.76.0 for that reason (1.75 followed the downgrade, leaving
+  the metadata service reachable, blind and without credentials, by anyone who
+  could create a destination), and `rclone-version.test.ts` fails the build if
+  either Dockerfile goes back below it. A redirect from one plain-HTTP address
+  to another is still followed. Closing both for good needs
   rclone's connections to pass through something that checks every address it
   actually dials, such as a filtering proxy of Balancia's own on loopback.
 
