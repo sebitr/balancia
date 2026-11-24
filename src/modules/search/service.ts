@@ -9,28 +9,40 @@ import {
   type RowView,
 } from "@/components/expenses/list-filter";
 import {
-  loadNavigationGroups,
+  loadNavigationGroupsAmong,
   type NavigationGroup,
 } from "@/modules/balances/navigation";
 import { loadTransactionPage } from "@/modules/expenses/transactions";
+import { listGroupsForUser } from "@/modules/groups/service";
 
 /**
  * "Search or jump to": the reader's groups, the people in them and the
  * transactions of the group they are in, answered at once for the command
  * palette.
  *
- * Nothing here is a second read model. The groups are the sidebar's own list
- * (`loadNavigationGroups`), so a group reads the same in the palette as in the
- * column beside it, position words and all. The transactions are a page of the
- * transactions list (`loadTransactionPage`) with the search field filled in,
- * so the palette finds exactly what that screen's search would find — a
- * title, a repayment's sentence, a date as the reader writes it — and in the
- * same order. Only the people are read here, because no screen searches them
+ * Nothing here is a second read model. The groups are the sidebar's own rows
+ * (`loadNavigationGroupsAmong`), so a group reads the same in the palette as
+ * in the column beside it, position words and all. The transactions are a page
+ * of the transactions list (`loadTransactionPage`) with the search field
+ * filled in, so the palette finds exactly what that screen's search would
+ * find — a title, a repayment's sentence, a date as the reader writes it —
+ * and in the same order. Only the people are read here, because no screen searches them
  * across groups.
  *
  * Matching is the list's: the query trimmed and lowered, found anywhere in
  * the name, accents kept ("hotel" does not find "Hôtel"), on both sides of the
  * wire — see `searchNeedle` and `transaction-filter.ts`.
+ *
+ * The palette asks on opening and on every pause in typing, and it used to
+ * compute where the reader stands in every group each time — Home's whole
+ * overview, conversions and all — to show at most six rows and, for a search
+ * that names no group, none. Which groups the reader is in, and what they are
+ * called, is one cheap read of their memberships (`listGroupsForUser`, the
+ * list the overview starts from), and that is all the name match and the
+ * people need. Balances are read only for the groups whose name matches, and
+ * for none when none does — except for a reader with no display currency
+ * stated, whose groups are all read as before, because the currency every
+ * position is converted into then depends on all of them.
  *
  * Transactions come from the group the reader is in and from no other. A
  * search from Home would be a page of the list per group the reader belongs
@@ -102,14 +114,23 @@ export async function searchPalette(
   const needle = searchNeedle({ ...NO_FILTER, query });
 
   // A guest has one group and no list of them; their palette searches the
-  // group they are in.
+  // group they are in. Archived groups are left out, as the sidebar leaves
+  // them out: neither offers them as somewhere to go.
   const groups =
-    actor.kind === "user" ? await loadNavigationGroups(actor.userId) : [];
-  const matching = groups
-    .filter(
-      (group) => needle === "" || group.name.toLowerCase().includes(needle),
-    )
-    .slice(0, PALETTE_LIMITS.groups);
+    actor.kind === "user"
+      ? (await listGroupsForUser(actor.userId, { db: options.db })).filter(
+          (group) => group.archivedAt === null,
+        )
+      : [];
+  const named = groups.filter(
+    (group) => needle === "" || group.name.toLowerCase().includes(needle),
+  );
+  // Ranked as Home ranks them, which needs their positions, before the cut.
+  const matching = (
+    actor.kind === "user"
+      ? await loadNavigationGroupsAmong(actor.userId, named)
+      : []
+  ).slice(0, PALETTE_LIMITS.groups);
 
   if (needle === "") {
     return { groups: matching, people: [], entries: null };
@@ -146,8 +167,9 @@ export async function searchPalette(
  * The people whose name holds `needle`, in any group the reader is in.
  *
  * The groups are the ones the reader was just listed — their memberships, read
- * by `loadNavigationGroups` — plus the group the screen belongs to, which the
- * caller authorized and which may be archived and so missing from that list.
+ * by `listGroupsForUser`, archived ones left out — plus the group the screen
+ * belongs to, which the caller authorized and which may be archived and so
+ * missing from that list.
  * Nobody is found in a group the reader is not in.
  *
  * The reader is left out of their own search, and so is anybody removed from
@@ -157,7 +179,7 @@ export async function searchPalette(
 async function findPeople(
   actor: Actor,
   access: GroupAccess | null,
-  groups: readonly NavigationGroup[],
+  groups: readonly { readonly id: string; readonly name: string }[],
   needle: string,
   db: Database,
 ): Promise<PalettePerson[]> {

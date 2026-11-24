@@ -1,6 +1,7 @@
 import "server-only";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
+import { oncePerRender } from "@/lib/render-memo";
 // Aliased: `groups` is the name this module already uses for the user's own
 // list of groups, and the two would shadow each other.
 import {
@@ -399,30 +400,26 @@ async function loadLastCleared(
   return row ?? null;
 }
 
-export async function loadHomeOverview(
-  userId: string,
-  options: {
-    preferredCurrency?: string | null;
-    now?: Date;
-    db?: Database;
-  } = {},
-): Promise<HomeOverview> {
-  const now = options.now ?? new Date();
-  const groups = await listGroupsForUser(userId, { db: options.db });
-
+/**
+ * The user's standing in each of `groups`, before anything is converted.
+ *
+ * Archived groups are listed and never read. Nothing shows their figures —
+ * the home list gives them a word where an amount would go, the switcher
+ * leaves them out, and every total skips them — yet each one's whole history
+ * used to be summed on every visit, and archived groups only pile up.
+ */
+async function readPositions(
+  groups: readonly GroupSummary[],
+  db: Database | undefined,
+): Promise<GroupPosition[]> {
   // One set of reads for every group at once, rather than one set per group:
   // see `loadBalancesForGroups`. This is the screen that made the difference.
-  //
-  // Archived groups are listed and never read. Nothing shows their figures —
-  // the home list gives them a word where an amount would go, the switcher
-  // leaves them out, and every total above skips them — yet each one's whole
-  // history used to be summed on every visit, and archived groups only pile up.
   const balancesByGroup = await loadBalancesForGroups(
     groups.filter((group) => group.archivedAt === null),
-    { db: options.db },
+    { db },
   );
 
-  const unconverted: GroupPosition[] = groups.map((group) => {
+  return groups.map((group) => {
     if (group.archivedAt !== null) {
       return { group, amounts: [], net: null, owedTo: null, hasEntries: null };
     }
@@ -441,27 +438,21 @@ export async function loadHomeOverview(
       hasEntries: balances.currencies.length > 0,
     };
   });
+}
 
-  const displayCurrency = resolveDisplayCurrency(
-    options.preferredCurrency ?? null,
-    unconverted,
-  );
-
-  if (!displayCurrency) {
-    // Nothing outstanding anywhere, which is the all-settled screen: it is the
-    // only state whose footnote asks when things were last cleared.
-    return {
-      displayCurrency: null,
-      netPosition: null,
-      currencyTotals: perCurrencyTotals(unconverted),
-      ratesAsOf: null,
-      converted: false,
-      buckets: bucketPositions(unconverted),
-      groupCount: groups.length,
-      lastCleared: await loadLastCleared(userId, { db: options.db }),
-    };
-  }
-
+/**
+ * Each position's net in `displayCurrency`, and the fixing dates the
+ * conversions used.
+ *
+ * Group by group, so a position comes out the same whichever other groups
+ * were converted beside it — which is what lets `loadPositionsAmong` convert
+ * a few of them and agree with the home screen about each.
+ */
+async function convertPositions(
+  unconverted: readonly GroupPosition[],
+  displayCurrency: string,
+  now: Date,
+): Promise<{ positions: GroupPosition[]; quotedOnDates: string[] }> {
   const cache: RateCache = new Map();
   const on = todayIso(now);
   const quotedOnDates: string[] = [];
@@ -490,6 +481,46 @@ export async function loadHomeOverview(
     }
     positions.push({ ...position, net });
   }
+  return { positions, quotedOnDates };
+}
+
+export async function loadHomeOverview(
+  userId: string,
+  options: {
+    preferredCurrency?: string | null;
+    now?: Date;
+    db?: Database;
+  } = {},
+): Promise<HomeOverview> {
+  const now = options.now ?? new Date();
+  const groups = await listGroupsForUser(userId, { db: options.db });
+  const unconverted = await readPositions(groups, options.db);
+
+  const displayCurrency = resolveDisplayCurrency(
+    options.preferredCurrency ?? null,
+    unconverted,
+  );
+
+  if (!displayCurrency) {
+    // Nothing outstanding anywhere, which is the all-settled screen: it is the
+    // only state whose footnote asks when things were last cleared.
+    return {
+      displayCurrency: null,
+      netPosition: null,
+      currencyTotals: perCurrencyTotals(unconverted),
+      ratesAsOf: null,
+      converted: false,
+      buckets: bucketPositions(unconverted),
+      groupCount: groups.length,
+      lastCleared: await loadLastCleared(userId, { db: options.db }),
+    };
+  }
+
+  const { positions, quotedOnDates } = await convertPositions(
+    unconverted,
+    displayCurrency,
+    now,
+  );
 
   const netPosition = netPositionOf(positions, displayCurrency);
   const squareEverywhere = netPosition !== null && isZeroNet(netPosition);
@@ -510,6 +541,75 @@ export async function loadHomeOverview(
       ? await loadLastCleared(userId, { db: options.db })
       : null,
   };
+}
+
+/**
+ * The home screen's overview, computed at most once per server render.
+ *
+ * Home draws it, and the sidebar beside Home lists the same groups from it
+ * (`loadNavigationGroups`); both are in one render, and each used to walk
+ * every group's balances for itself. Keyed on primitives only, as
+ * `oncePerRender` asks: the day rather than the instant, because the day is
+ * all `now` decides — which fixing the conversions look up — and two callers
+ * a few milliseconds apart hold two different instants on one day.
+ *
+ * Every render starts from nothing, so a render after a Server Action never
+ * sees the overview from before it wrote; outside a render it reads every
+ * time. Callers that pass a database handle of their own call
+ * `loadHomeOverview` instead.
+ */
+export const loadHomeOverviewOnce = oncePerRender(
+  (
+    userId: string,
+    preferredCurrency: string | null,
+    today: string,
+  ): Promise<HomeOverview> =>
+    loadHomeOverview(userId, {
+      preferredCurrency,
+      // Midnight UTC of `today`, which `todayIso` reads back as `today`.
+      now: new Date(`${today}T00:00:00.000Z`),
+    }),
+);
+
+/**
+ * Where the user stands in some of their groups, each exactly as
+ * `loadHomeOverview` has it — or null when that cannot be known without
+ * reading every group.
+ *
+ * A position depends on the rest of the list through one thing only: the
+ * currency its net is converted into. A stated preference fixes that currency
+ * without reading anything; without one it is whichever currency the user's
+ * balances across every group use most, and only the whole overview can say.
+ * So this answers when the preference is stated and supported, and leaves the
+ * other case to the caller, who reads the whole list as before.
+ *
+ * For a screen that shows a few groups and has no use for totals — the
+ * command palette's matches — so nobody pays for every group's ledger to show
+ * two of them.
+ */
+export async function loadPositionsAmong(
+  groups: readonly GroupSummary[],
+  options: {
+    preferredCurrency: string | null;
+    now?: Date;
+    db?: Database;
+  },
+): Promise<GroupPosition[] | null> {
+  const { preferredCurrency } = options;
+  if (!preferredCurrency || !isSupportedCurrency(preferredCurrency)) {
+    return null;
+  }
+  if (groups.length === 0) return [];
+
+  const unconverted = await readPositions(groups, options.db);
+  const { positions } = await convertPositions(
+    unconverted,
+    // What `resolveDisplayCurrency` answers for a stated preference, without
+    // asking it to look at positions it would not use.
+    preferredCurrency,
+    options.now ?? new Date(),
+  );
+  return positions;
 }
 
 /** Square overall *and* square in every group — not merely netting to zero. */

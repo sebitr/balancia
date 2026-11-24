@@ -1,16 +1,20 @@
 import "server-only";
 import { oncePerRender } from "@/lib/render-memo";
 import { getUserPreferredCurrency } from "@/modules/auth/service";
+import { todayIso } from "@/modules/currencies/provider";
 import {
   isGroupIcon,
   isGroupIconColor,
   type GroupIcon,
   type GroupIconColor,
 } from "@/modules/groups/icons";
+import type { GroupSummary } from "@/modules/groups/service";
 import {
+  bucketPositions,
   directionOf,
   displayAmountsOf,
-  loadHomeOverview,
+  loadHomeOverviewOnce,
+  loadPositionsAmong,
   type GroupPosition,
   type PositionDirection,
 } from "./overview";
@@ -75,15 +79,58 @@ function toNavigationGroup(position: GroupPosition): NavigationGroup {
  * anyone is going next.
  *
  * Memoised per request, because the sidebar asks for it from more than one
- * place in the same render.
+ * place in the same render. The overview under it is memoised too, and keyed
+ * as Home asks for it — the same user, preference and day — so on Home the
+ * sidebar is handed the overview the screen beside it already computed rather
+ * than walking every group's balances a second time.
  */
 export const loadNavigationGroups = oncePerRender(
   async (userId: string): Promise<NavigationGroup[]> => {
     const preferredCurrency = await getUserPreferredCurrency(userId);
-    const { buckets } = await loadHomeOverview(userId, { preferredCurrency });
+    const { buckets } = await loadHomeOverviewOnce(
+      userId,
+      preferredCurrency,
+      todayIso(),
+    );
 
     return [...buckets.needsYou, ...buckets.youAreOwed, ...buckets.settled].map(
       toNavigationGroup,
     );
   },
 );
+
+/**
+ * Some of the reader's groups, each as `loadNavigationGroups` lists it and in
+ * the same order — reading only those groups' balances where that gives the
+ * same answer.
+ *
+ * `groups` are the reader's own memberships, from `listGroupsForUser`, already
+ * narrowed by the caller (the command palette's name match); archived ones are
+ * the caller's to leave out, as `loadNavigationGroups` does. With a stated
+ * display currency each position is the one Home computes, and Home's ranking
+ * is applied to the few; without one, the currency itself depends on every
+ * group, so the whole list is read as before and narrowed to these.
+ *
+ * Nothing is read at all when nothing is asked for — the usual answer to a
+ * search for a transaction or a person, which names no group.
+ */
+export async function loadNavigationGroupsAmong(
+  userId: string,
+  groups: readonly GroupSummary[],
+): Promise<NavigationGroup[]> {
+  if (groups.length === 0) return [];
+
+  const preferredCurrency = await getUserPreferredCurrency(userId);
+  const positions = await loadPositionsAmong(groups, { preferredCurrency });
+  if (positions === null) {
+    const wanted = new Set(groups.map((group) => group.id));
+    return (await loadNavigationGroups(userId)).filter((group) =>
+      wanted.has(group.id),
+    );
+  }
+
+  const buckets = bucketPositions(positions);
+  return [...buckets.needsYou, ...buckets.youAreOwed, ...buckets.settled].map(
+    toNavigationGroup,
+  );
+}
