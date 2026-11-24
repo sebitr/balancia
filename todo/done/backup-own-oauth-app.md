@@ -1,6 +1,6 @@
 # Connect Google Drive, Dropbox and OneDrive through an app of your own, not only the server's
 
-Branch: `feat/backup-own-oauth-app`
+Merged: 2026-10-09 in #463
 
 Cloud backup shipped with one client ID and secret per provider, set by the server's operator. On a server whose operator registered nothing, the three account providers were switched off; on one that did, every owner's backups shared a single app's quota, review status and secret. Each owner can now register an app in their own provider account and paste its client ID and secret into the wizard, and it is sealed with their connection and used for every refresh. The server-wide app stays as an optional single button.
 
