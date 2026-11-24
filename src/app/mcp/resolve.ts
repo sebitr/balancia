@@ -41,14 +41,18 @@ function plain(value: string): string {
  * the account is in — and for a pinned credential, among that one — so a name
  * can never reach a group the id could not.
  *
- * **For a change, an exact name is not enough when another group's name
- * contains it.** The groups an account is in include ones somebody else made,
- * and anybody can call theirs "Lisbon". A person who says "add dinner to
- * Lisbon" and means "Lisbon trip 2026" would otherwise have the dinner, its
- * amount and a notification land in a group whose owner chose the name to catch
- * exactly that. A change that could go to two places is refused with both ids;
- * a read is still answered from the exact match, since reading the wrong group
- * tells nobody anything.
+ * **An exact name does not beat a longer one that contains it.** The groups an
+ * account is in include ones somebody else made, and anybody can call theirs
+ * "Lisbon". A person who says "add dinner to Lisbon" and means "Lisbon trip
+ * 2026" would otherwise have the dinner, its amount and a notification land in
+ * a group whose owner chose the name to catch exactly that. So every group the
+ * words could mean is a candidate, the exact one included, and more than one is
+ * refused with every id.
+ *
+ * Reads are held to the same rule as changes. A read is where a model learns
+ * the ids it writes with — `balancia_get_group` is the call it is told to make
+ * before recording anything — and an id goes straight through, so a read
+ * answered from the wrong group is a change sent to it one call later.
  */
 export async function resolveGroup(
   actor: UserActor,
@@ -65,28 +69,33 @@ export async function resolveGroup(
       actor.tokenGroupId === undefined || group.id === actor.tokenGroupId,
   );
   const wanted = plain(ref);
-  const exact = mine.filter((group) => plain(group.name) === wanted);
-  const near = mine.filter((group) => plain(group.name).includes(wanted));
   const choices = (groups: typeof mine) =>
     groups.map((group) => `${shown(group.name)} = ${group.id}`).join("; ");
 
-  if (exact.length === 1) {
-    const changing = options.requireActive === true;
-    if (changing && wanted.length >= 3 && near.length > 1) {
-      throw new ToolFailure(
-        `"${shown(ref)}" is the name of one group and part of the name of another, so this change could go to either. Nothing was changed. Ask the person which they mean, then use the id: ${choices(near)}.`,
-      );
-    }
-    return authorizeGroup(actor, exact[0]!.id, options);
-  }
+  const exact = mine.filter((group) => plain(group.name) === wanted);
   if (exact.length > 1) {
     throw new ToolFailure(
-      `More than one group is called "${shown(ref)}". Use the id: ${choices(exact)}.`,
+      `More than one group is called "${shown(ref)}". Nothing was changed. Ask the person which they mean, then use the id: ${choices(exact)}.`,
     );
   }
 
-  if (wanted.length >= 3 && near.length === 1) {
-    return authorizeGroup(actor, near[0]!.id, options);
+  const candidates = mine.filter((group) => {
+    const name = plain(group.name);
+    // The whole name, its first word, or — when the words are long enough to
+    // mean something — any part of it.
+    return (
+      name === wanted ||
+      name.split(" ")[0] === wanted ||
+      (wanted.length >= 3 && name.includes(wanted))
+    );
+  });
+  if (candidates.length === 1) {
+    return authorizeGroup(actor, candidates[0]!.id, options);
+  }
+  if (candidates.length > 1) {
+    throw new ToolFailure(
+      `"${shown(ref)}" could be more than one group: ${choices(candidates)}. Nothing was changed. Ask the person which they mean, then use the id.`,
+    );
   }
 
   throw new ToolFailure(
@@ -127,6 +136,17 @@ const SELF = new Set(["me", "myself", "i", "self", "moi"]);
  * "me" is the connected account's own seat in this group — the one thing a
  * name cannot say, since the person's name in the group may not be the one on
  * the account.
+ *
+ * **An exact name does not beat a longer one that starts with it.** Anybody
+ * with a group's join link picks their own name, so a guest can arrive as
+ * "Ben" in a group where Ben Carter is owed money — and if "Ben" went to
+ * whoever is called exactly that, "Ben paid me back" would be recorded against
+ * the guest. Every member the words could mean is a candidate, and two or more
+ * are refused with their ids, so the assistant has to ask.
+ *
+ * An id is taken only as the id of somebody in the group. One that is not is
+ * refused rather than read as a name, since a display name can be any text —
+ * a removed member's id included.
  */
 export function pickPerson(
   people: readonly Person[],
@@ -148,26 +168,28 @@ export function pickPerson(
   }
 
   if (uuid.safeParse(ref).success) {
-    const byId = people.find((person) => person.id === ref);
+    const byId = people.find(
+      (person) => person.id.toLowerCase() === ref.toLowerCase(),
+    );
     if (byId) return byId;
+    throw new ToolFailure(
+      `Nobody in this group has the id ${ref}. Look the ${role} up in balancia_get_group.`,
+    );
   }
 
-  const exact = people.filter((person) => plain(person.name) === wanted);
-  if (exact.length === 1) return exact[0]!;
-  if (exact.length > 1) throw ambiguous(ref, exact, role);
-
-  const partial = people.filter((person) => {
+  const candidates = people.filter((person) => {
     const name = plain(person.name);
-    // A first name is an exact match; a prefix has to be long enough to mean
+    // A first name counts in full; a prefix has to be long enough to mean
     // something. "A" is not an abbreviation of anybody, and the only thing it
     // can do here is pick the wrong person when the group has one name in it.
     return (
+      name === wanted ||
       name.split(" ")[0] === wanted ||
       (wanted.length >= 3 && name.startsWith(wanted))
     );
   });
-  if (partial.length === 1) return partial[0]!;
-  if (partial.length > 1) throw ambiguous(ref, partial, role);
+  if (candidates.length === 1) return candidates[0]!;
+  if (candidates.length > 1) throw ambiguous(ref, candidates, role);
 
   throw new ToolFailure(
     `No ${role} in this group matches "${shown(ref)}". Members: ${people
@@ -181,9 +203,10 @@ function ambiguous(
   matches: readonly Person[],
   role: string,
 ): ToolFailure {
+  const listed = matches
+    .map((person) => `${shown(person.name)} (${person.id})`)
+    .join("; ");
   return new ToolFailure(
-    `"${shown(ref)}" could be more than one ${role}: ${matches
-      .map((person) => `${shown(person.name)} (${person.id})`)
-      .join("; ")}. Use the id.`,
+    `"${shown(ref)}" could be more than one ${role}: ${listed}. Nothing was changed. Ask the person which they mean, then use the id.`,
   );
 }

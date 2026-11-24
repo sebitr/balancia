@@ -31,13 +31,75 @@ const VENDORS = [
   },
 ] as const;
 
-/** Letters only, lower case, accents off: what "C l a u d e" and "CLAUDE" share. */
-function letters(value: string): string {
-  return value
-    .normalize("NFKD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .replace(/[^a-z]/g, "");
+/**
+ * Characters that are drawn like a Latin letter and are not one: Cyrillic and
+ * Greek lookalikes, and the digits and marks that stand in for a letter. NFKD
+ * already folds the fullwidth and mathematical alphabets; it leaves these
+ * alone, and "Сlaude" with a Cyrillic С reads as Claude to anybody looking at
+ * the screen.
+ */
+const LOOKALIKES: Record<string, string> = {
+  а: "a",
+  в: "b",
+  с: "c",
+  ԁ: "d",
+  е: "e",
+  ё: "e",
+  һ: "h",
+  і: "i",
+  ӏ: "l",
+  ј: "j",
+  к: "k",
+  м: "m",
+  н: "h",
+  о: "o",
+  р: "p",
+  ԛ: "q",
+  г: "r",
+  ѕ: "s",
+  т: "t",
+  у: "y",
+  х: "x",
+  α: "a",
+  β: "b",
+  ε: "e",
+  η: "n",
+  ι: "i",
+  κ: "k",
+  ν: "v",
+  ο: "o",
+  ρ: "p",
+  τ: "t",
+  υ: "u",
+  χ: "x",
+  ı: "i",
+  ɡ: "g",
+  ℓ: "l",
+  "0": "o",
+  "3": "e",
+  "4": "a",
+  "5": "s",
+  "|": "l",
+  "!": "i",
+};
+
+/**
+ * Letters only, lower case, accents and lookalikes folded: what "C l a u d e",
+ * "CLAUDE" and "Сlаude" share. Two readings, because a "1" is drawn for an l
+ * as often as for an i.
+ */
+function letters(value: string): string[] {
+  const folded = [
+    ...value
+      .normalize("NFKD")
+      .replace(/\p{Diacritic}/gu, "")
+      .toLowerCase(),
+  ]
+    .map((char) => LOOKALIKES[char] ?? char)
+    .join("");
+  return ["l", "i"].map((one) =>
+    folded.replaceAll("1", one).replace(/[^a-z]/g, ""),
+  );
 }
 
 export interface Impersonation {
@@ -61,10 +123,13 @@ export function impersonation(
   // Only a web address can be compared with a vendor's.
   if (url.protocol !== "https:") return null;
 
-  const name = letters(clientName);
+  const readings = letters(clientName);
   const host = url.hostname.toLowerCase();
   for (const vendor of VENDORS) {
-    if (!vendor.claimed.some((word) => name.includes(word))) continue;
+    const claimed = vendor.claimed.some((word) =>
+      readings.some((name) => name.includes(word)),
+    );
+    if (!claimed) continue;
     const real = vendor.hosts.some(
       (own) => host === own || host.endsWith(`.${own}`),
     );

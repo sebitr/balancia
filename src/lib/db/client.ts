@@ -204,6 +204,12 @@ export async function closeDb(): Promise<void> {
   if (pool) {
     await pool.end();
   }
+  // The few connections `withTryLock` holds its locks on (see try-lock.ts).
+  const locks = globalThis.__balanciaLockPool;
+  globalThis.__balanciaLockPool = undefined;
+  if (locks) {
+    await locks.end();
+  }
 }
 
 export { schema };

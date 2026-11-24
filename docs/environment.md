@@ -233,7 +233,11 @@ Default `10`. Maximum PostgreSQL connections per process. The app container
 opens one pool, and pg-boss a small one of its own alongside it. If you gave
 the background jobs [their own container](#background-jobs), that is a second
 app-sized pool as well — plan for roughly `2 × DATABASE_POOL_MAX` against
-PostgreSQL's `max_connections` in that shape.
+PostgreSQL's `max_connections` in that shape. When an AI assistant is
+connected, the app also opens up to four connections of its own to hold the
+lock that stops two identical changes being written at once; they are kept
+apart from the main pool so that a burst of changes can never take every
+connection the changes themselves need.
 
 Every connection in the app's pool is opened with two limits, which are not
 environment variables: PostgreSQL cancels a statement that runs for more than

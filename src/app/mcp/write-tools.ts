@@ -209,7 +209,7 @@ export function registerWriteTools(server: McpServer, principal: Principal) {
 
         const id = await onlyOnce(
           input.allowDuplicate,
-          `expense:${access.groupId}:${JSON.stringify(built)}`,
+          expenseLockKey(access.groupId, built),
           async () => {
             if (!input.allowDuplicate) {
               const twin = await recentTwin(access.groupId, built);
@@ -468,7 +468,7 @@ export function registerWriteTools(server: McpServer, principal: Principal) {
 
         const id = await onlyOnce(
           input.allowDuplicate,
-          `repayment:${access.groupId}:${JSON.stringify(built)}`,
+          repaymentLockKey(access.groupId, built),
           async () => {
             if (!input.allowDuplicate) {
               const twin = await recentRepaymentTwin(access.groupId, built);
@@ -487,7 +487,9 @@ export function registerWriteTools(server: McpServer, principal: Principal) {
             id,
             kind: "repayment",
             from: from.name,
+            fromId: from.id,
             to: to.name,
+            toId: to.id,
             amount: amountText(amount, currency),
             date,
             paymentMethod: input.paymentMethod ?? null,
@@ -604,6 +606,37 @@ async function onlyOnce<T>(
     );
   }
   return attempt.value;
+}
+
+/**
+ * What the lock in `onlyOnce` is taken on: exactly what `recentTwin` compares,
+ * and nothing it does not. Keyed on the whole entry instead, two calls that the
+ * duplicate check would call identical — "Taxi" and "taxi", or the same taxi
+ * with a different note — took different locks, both found nothing written yet,
+ * and both wrote.
+ */
+function expenseLockKey(groupId: string, built: ExpenseInput): string {
+  return JSON.stringify([
+    "mcp-expense",
+    groupId,
+    built.amount,
+    built.currency,
+    built.expenseDate,
+    built.description.trim().toLowerCase(),
+  ]);
+}
+
+/** The same for a repayment: what `recentRepaymentTwin` compares. */
+function repaymentLockKey(groupId: string, built: SettlementInput): string {
+  return JSON.stringify([
+    "mcp-repayment",
+    groupId,
+    built.fromParticipantId,
+    built.toParticipantId,
+    built.amount,
+    built.currency,
+    built.settledOn,
+  ]);
 }
 
 /** The group's currency, or the one the caller named — never a guess. */
@@ -914,13 +947,17 @@ async function describeExpense(groupId: string, expenseId: string) {
     amount: money(expense.amount),
     date: expense.expenseDate,
     category: expense.category,
+    // By id as well as by name: a name is whatever its owner typed, and two
+    // members can share one, so the id is what tells the person who was meant.
     paidBy: expense.payers.map((payer) => ({
       member: payer.displayName,
+      memberId: payer.participantId,
       amount: money(payer.amount),
     })),
     splitMethod: expense.splitMethod,
     sharedBy: expense.shares.map((share) => ({
       member: share.displayName,
+      memberId: share.participantId,
       owes: money(share.amount),
     })),
   };

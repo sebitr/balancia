@@ -68,6 +68,14 @@ export async function readParameters(
     .split(";")[0]!
     .trim()
     .toLowerCase();
+  // Refused before a byte of it is read: there is no reason to take in a body
+  // that nothing here would parse.
+  if (
+    type !== "application/x-www-form-urlencoded" &&
+    type !== "application/json"
+  ) {
+    return null;
+  }
 
   // Counted as it is read, not trusted from the header: a chunked body declares
   // no length at all, and `request.text()` would buffer all of it first.

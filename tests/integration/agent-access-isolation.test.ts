@@ -727,11 +727,51 @@ describe("a group whose name is the start of another's", () => {
       name: "Lisbon trip 2026",
     });
 
-    // Reading is still answered from the exact name: a wrong read tells nobody
-    // anything.
-    expect(
-      (await tool(token, "balancia_get_group", { group: "Lisbon" })).failed,
-    ).toBe(false);
+    // Nor a read: a read is where the assistant learns the id it then writes
+    // with, and an id goes straight through.
+    const read = await tool(token, "balancia_get_group", { group: "Lisbon" });
+    expect(read.failed).toBe(true);
+    expect(read.text).toContain(mine.groupId);
+    expect(read.text).toContain(trap.groupId);
+  });
+});
+
+describe("a guest who joins under somebody's first name", () => {
+  it("does not take a repayment meant for that somebody", async () => {
+    const w = await world();
+    const carter = await addTestParticipant(w.lisbon.groupId, "Ben Carter");
+    // Anybody with the join link picks their own name.
+    const guest = await addTestParticipant(w.lisbon.groupId, "Ben");
+
+    const vague = await tool(w.adaToken, "balancia_record_repayment", {
+      group: w.lisbon.groupId,
+      from: "Ben",
+      to: "me",
+      amount: "40",
+      currency: "EUR",
+    });
+    expect(vague.failed).toBe(true);
+    expect(vague.text).toContain(carter);
+    expect(vague.text).toContain(guest);
+    const [written] = await getDb()
+      .select({ n: count() })
+      .from(settlements)
+      .where(eq(settlements.groupId, w.lisbon.groupId));
+    expect(written?.n).toBe(0);
+
+    // With the id it goes where it was meant, and the result says who by id.
+    const sure = await tool(w.adaToken, "balancia_record_repayment", {
+      group: w.lisbon.groupId,
+      from: carter,
+      to: "me",
+      amount: "40",
+      currency: "EUR",
+    });
+    expect(sure.failed).toBe(false);
+    expect(sure.json.created).toMatchObject({
+      from: "Ben Carter",
+      fromId: carter,
+    });
   });
 });
 

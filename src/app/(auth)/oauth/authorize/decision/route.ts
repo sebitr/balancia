@@ -103,6 +103,11 @@ async function handle(request: Request): Promise<Response> {
     return Response.json({ error: "not_found" }, { status: 404 });
   }
 
+  // Who is asking before what they sent: a caller with no session is turned
+  // away without the server reading a byte of the body.
+  const user = await getCurrentUser();
+  if (!user) return problem("expired");
+
   let form: FormData;
   try {
     // Four short fields and a seal of a few hundred bytes: anything larger than
@@ -118,8 +123,7 @@ async function handle(request: Request): Promise<Response> {
   }
 
   const claims = openConsent(form.get("request"));
-  const user = await getCurrentUser();
-  if (!claims || !user || user.userId !== claims.u) return problem("expired");
+  if (!claims || user.userId !== claims.u) return problem("expired");
 
   // The client and its address are re-read rather than believed: the seal says
   // what was true ten minutes ago, and a client can have been removed since.

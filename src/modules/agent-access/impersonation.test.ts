@@ -32,6 +32,25 @@ describe("an application that names an assistant it is not", () => {
     );
   });
 
+  it("is caught when a letter is borrowed from another alphabet or a digit", () => {
+    for (const name of [
+      "Сlaude", // Cyrillic С
+      "Clаude", // Cyrillic а
+      "Claudе", // Cyrillic е
+      "\u{1D402}\u{1D425}\u{1D41A}\u{1D42E}\u{1D41D}\u{1D41E}", // mathematical bold
+      "C1aude",
+      "Anthrop1c",
+      "ChaтGPT", // Cyrillic т
+      "Chat GPT",
+      "0penAI",
+    ]) {
+      expect(
+        impersonation(name, "https://evil.example/cb"),
+        name,
+      ).not.toBeNull();
+    }
+  });
+
   it("is caught when the vendor's name is only the start of the host", () => {
     // `endsWith("claude.ai")` alone would let this through.
     expect(impersonation("Claude", "https://evilclaude.ai/cb")).not.toBeNull();
