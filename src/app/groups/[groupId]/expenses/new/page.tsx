@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { EntryScreen } from "../../entry-screen";
+import { titleAccess } from "../../title-access";
 
 /**
  * Add an entry: expense, income, or a repayment.
@@ -24,9 +25,21 @@ import { EntryScreen } from "../../entry-screen";
  * its page after the reader has walked away from it (see `entry-screen.tsx`),
  * and a title from there would go on naming a drawer that had closed.
  */
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("addEntry");
-  return { title: t("titles.expense") };
+export async function generateMetadata({
+  params,
+}: PageProps<"/groups/[groupId]/expenses/new">): Promise<Metadata> {
+  const { groupId } = await params;
+  const [t, access] = await Promise.all([
+    getTranslations("addEntry"),
+    titleAccess(groupId),
+  ]);
+  // "Add expense · Flat 4", so a tab among several says which group it adds
+  // to. A reader who may not see the group gets the bare title, as before.
+  return {
+    title: access
+      ? `${t("titles.expense")} · ${access.group.name}`
+      : t("titles.expense"),
+  };
 }
 
 export default async function NewEntryPage({
