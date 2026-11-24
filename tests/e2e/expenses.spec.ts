@@ -3,6 +3,7 @@ import {
   addParticipant,
   createGroup,
   expectToast,
+  openAddDrawer,
   registerAndSignIn,
 } from "./helpers";
 
@@ -15,14 +16,30 @@ async function expectEntrySaved(page: Page, title: string): Promise<void> {
 }
 
 /**
+ * Whether the window is a desk's, which is `lg` and up — the same line
+ * `useDeskWidth` draws, since the form is laid out differently either side.
+ */
+function isDesk(page: Page): boolean {
+  return (page.viewportSize()?.width ?? 0) >= 1024;
+}
+
+/**
  * Opens the split editor.
  *
- * The summary row states the current split — "Split equally between 3 · about
- * CHF 3.33 each" — and doubles as the way in, so it is matched on the part
- * that does not move with the numbers.
+ * On a phone the summary row states the current split — "Split equally between
+ * 3 · about CHF 3.33 each" — and doubles as the way in, so it is matched on the
+ * part that does not move with the numbers. On a desk the editor is already on
+ * the form, laid out in place, and there is no row to open.
  */
 async function openSplit(page: Page): Promise<void> {
+  if (isDesk(page)) return;
   await page.getByRole("button", { name: /Split .* between|Split by/ }).click();
+}
+
+/** Closes the split editor, which on a desk was never a sheet to close. */
+async function closeSplit(page: Page): Promise<void> {
+  if (isDesk(page)) return;
+  await page.getByRole("button", { name: "Done" }).click();
 }
 
 /**
@@ -46,7 +63,8 @@ test("register, create a group and add an equal expense", async ({ page }) => {
   await expectEntrySaved(page, "Expense added");
 
   await page.goto(`/groups/${groupId}/expenses`);
-  await expect(page.getByText("Dinner")).toBeVisible();
+  // The row says it twice, once as the title and once as the link over the row.
+  await expect(page.getByText("Dinner").first()).toBeVisible();
 
   // The transfer that clears it, written as a sentence on the settle screen.
   await page.goto(`/groups/${groupId}/settle`);
@@ -69,7 +87,7 @@ test("shows the rounding difference when a split does not divide evenly", async 
   // split lives behind its summary row now, and the note with it.
   await openSplit(page);
   await expect(page.getByText(/could not be split evenly/)).toBeVisible();
-  await page.getByRole("button", { name: "Done" }).click();
+  await closeSplit(page);
 
   await page.getByRole("button", { name: "Add expense" }).click();
   await expectEntrySaved(page, "Expense added");
@@ -91,13 +109,13 @@ test("records an expense split by percentage", async ({ page }) => {
   const inputs = page.getByLabel(/Percentage for/);
   await inputs.nth(0).fill("60");
   await inputs.nth(1).fill("40");
-  await page.getByRole("button", { name: "Done" }).click();
+  await closeSplit(page);
 
   await page.getByRole("button", { name: "Add expense" }).click();
   await expectEntrySaved(page, "Expense added");
 
   await page.goto(`/groups/${groupId}/expenses`);
-  await expect(page.getByText("Weekly shop")).toBeVisible();
+  await expect(page.getByText("Weekly shop").first()).toBeVisible();
 });
 
 test("rejects percentages that do not add up to 100", async ({ page }) => {
@@ -132,10 +150,10 @@ test("records a settlement and clears the balance", async ({ page }) => {
   // Recording opens the add-entry drawer over the screen, on the settle tab
   // with the pair and the outstanding amount already in place.
   await page.goto(`/groups/${groupId}/settle`);
-  await page
-    .getByRole("link", { name: /^Record/ })
-    .first()
-    .click();
+  // The transfer's own row, "Record Blaise's repayment to Ada Lovelace" — not
+  // the header's "Record a repayment" that a desk adds above it, which opens
+  // the form with no pair chosen and so nothing to save.
+  await page.getByRole("link", { name: /s repayment to / }).click();
 
   await page.getByLabel("Paying back").fill("10.00");
   await page.getByRole("button", { name: "Record repayment" }).click();
@@ -185,7 +203,7 @@ test("records a multi-currency expense in a converted group", async ({
    * dropped on the floor.
    */
   await page.goto(`/groups/${groupId}/expenses`);
-  await expect(page.getByText("€101.20")).toBeVisible();
+  await expect(page.getByText("€101.20").first()).toBeVisible();
 
   // And balanced in that same base currency.
   await page.goto(`/groups/${groupId}/settle`);
@@ -197,16 +215,20 @@ test("configures a recurring expense", async ({ page }) => {
   const groupId = await createGroup(page, { name: "Recurring" });
   await addParticipant(page, groupId, "Blaise");
 
-  await page.goto(`/groups/${groupId}/recurring`);
+  // A recurring expense is made on the entry form, as a repeat switched on: the
+  // recurring list only shows and edits what already exists. Monthly is what
+  // the switch starts at.
+  await page.goto(`/groups/${groupId}/expenses/new`);
   await page.getByLabel("Description").fill("Rent");
   await page.getByLabel("Amount").fill("1200.00");
-  await page.getByLabel("Repeats").selectOption("monthly");
-  await page.getByLabel("Day of month").fill("1");
+  await page.getByRole("switch", { name: "Repeats" }).click();
 
-  await page.getByRole("button", { name: "Create recurring expense" }).click();
+  await page.getByRole("button", { name: "Save recurring expense" }).click();
+  await expect(page).not.toHaveURL(/\/expenses\/new/);
 
-  await expect(page.getByText("Rent")).toBeVisible();
-  await expect(page.getByText(/Every month on day 1/)).toBeVisible();
+  await page.goto(`/groups/${groupId}/recurring`);
+  await expect(page.getByText("Rent").first()).toBeVisible();
+  await expect(page.getByText(/Every month on the/).first()).toBeVisible();
 });
 
 /**
@@ -228,7 +250,7 @@ test("saving from the intercepted drawer leaves the group uncovered", async ({
   await addParticipant(page, groupId, "Blaise");
 
   await page.goto(`/groups/${groupId}`);
-  await page.getByRole("link", { name: "Add", exact: true }).click();
+  await openAddDrawer(page);
 
   const drawer = page.getByRole("dialog", { name: "Add expense" });
   await expect(drawer).toBeVisible();

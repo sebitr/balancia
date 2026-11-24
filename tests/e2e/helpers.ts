@@ -56,6 +56,28 @@ export async function registerAndSignIn(
 }
 
 /**
+ * Opens the settings hub from the account link.
+ *
+ * The link has two names because it is two elements: a phone's header says
+ * "Your account", and the sidebar a desktop window gets says who is signed in,
+ * "Ada Lovelace, Settings". Only one of them is on screen at a time, so
+ * matching either finds it at either width.
+ */
+export async function openSettings(page: Page): Promise<void> {
+  await page.getByRole("link", { name: /^Your account$|, Settings$/ }).click();
+}
+
+/**
+ * Opens the add-entry drawer from the group's Add link.
+ *
+ * "Add" is the bottom bar a phone has; the sidebar a desktop window has says
+ * "Add expense", since it has the room.
+ */
+export async function openAddDrawer(page: Page): Promise<void> {
+  await page.getByRole("link", { name: /^Add( expense)?$/ }).click();
+}
+
+/**
  * Creates a group through the sheet at `/groups/new`.
  *
  * The name field carries no label, only a placeholder, so it is addressed by
@@ -131,7 +153,13 @@ export async function createInviteLink(
   name: string,
 ): Promise<string> {
   await page.goto(`/groups/${groupId}/members`);
-  await page.getByRole("button", { name: new RegExp(`^${name}`) }).click();
+  // A phone opens the row; a desk draws the people as a table whose name is a
+  // link to the person's page, and whose options button opens the same panel.
+  // Only one of the two is on screen at a time.
+  await page
+    .getByRole("button", { name: new RegExp(`^${name}`) })
+    .or(page.getByRole("button", { name: `Options for ${name}` }))
+    .click();
   await page.getByRole("button", { name: `Personal link for ${name}` }).click();
   await page.getByRole("button", { name: "Create the link" }).click();
 
