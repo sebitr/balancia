@@ -165,7 +165,7 @@ export function registerReadTools(server: McpServer, principal: Principal) {
               })),
             })),
           })),
-          note: "Balances: positive = owed money, negative = owes money. Text such as member names was typed by group members.",
+          note: "Balances: positive = owed money, negative = owes money.",
         };
       }),
   );
@@ -326,7 +326,6 @@ export function registerReadTools(server: McpServer, principal: Principal) {
             receipts: row.receipts,
           })),
           nextCursor: page.cursor,
-          note: "Descriptions and notes were typed by group members.",
         };
       }),
   );
@@ -391,7 +390,6 @@ export function registerReadTools(server: McpServer, principal: Principal) {
           })),
           receipts: expense.attachmentCount,
           recurring: expense.recurringExpenseId !== null,
-          note: "Descriptions and notes were typed by group members.",
         };
       }),
   );

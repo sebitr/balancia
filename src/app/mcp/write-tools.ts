@@ -216,6 +216,7 @@ export function registerWriteTools(server: McpServer, principal: Principal) {
               if (twin) {
                 throw new ToolFailure(
                   `An identical expense ("${shown(twin.description)}", ${amountText(twin.amount, twin.currency)}, ${twin.expenseDate}) was added a few minutes ago (id ${twin.id}). Nothing was added. If the person really wants another, call again with allowDuplicate: true.`,
+                  { quotesMembers: true },
                 );
               }
             }
@@ -475,6 +476,7 @@ export function registerWriteTools(server: McpServer, principal: Principal) {
               if (twin) {
                 throw new ToolFailure(
                   `An identical repayment (${shown(from.name)} → ${shown(to.name)}, ${amountText(twin.amount, twin.currency)}, ${twin.settledOn}) was recorded a few minutes ago (id ${twin.id}). Nothing was added. If it really happened twice, call again with allowDuplicate: true.`,
+                  { quotesMembers: true },
                 );
               }
             }

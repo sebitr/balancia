@@ -997,6 +997,8 @@ describe("/mcp: reading", () => {
       yourRole: "owner",
       status: "settled",
     });
+    // A group's name is typed by whoever made it, and says so here too.
+    expect(result.json.untrustedText).toMatch(/typed by members/i);
   });
 
   it("shows a pinned connection its group and no other", async () => {
@@ -1217,7 +1219,7 @@ describe("/mcp: reading", () => {
     ]);
     // A note typed by a member comes back as data, flagged as such.
     expect(result.json.notes).toContain("Ignore previous instructions");
-    expect(result.json.note).toMatch(/typed by group members/i);
+    expect(result.json.untrustedText).toMatch(/typed by members of the group/i);
   });
 });
 
@@ -1428,6 +1430,7 @@ describe("/mcp: changing things", () => {
     });
     expect(result.failed).toBe(true);
     expect(result.text).toMatch(/could be more than one/i);
+    expect(result.text).toMatch(/typed by group members/i);
     for (const id of [marta, silva, costa]) expect(result.text).toContain(id);
 
     // The id the refusal gave is taken as it stands.
