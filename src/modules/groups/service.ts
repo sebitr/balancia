@@ -122,28 +122,32 @@ export async function listGroupsForUser(
       // Aggregated here rather than in a second query per group: the home
       // screen needs these for every row it draws.
       memberNames: sql<string[]>`(
-        SELECT coalesce(array_agg(name ORDER BY joined), '{}')
+        SELECT coalesce(array_agg(name ORDER BY joined, tie), '{}')
         FROM (
           SELECT ${participants.displayName} AS name,
-                 ${participants.createdAt} AS joined
+                 ${participants.createdAt} AS joined,
+                 ${participants.id} AS tie
           FROM ${participants}
           WHERE ${participants.groupId} = ${groups.id}
             AND ${participants.removedAt} IS NULL
-          ORDER BY ${participants.createdAt}
+          ORDER BY ${participants.createdAt}, ${participants.id}
           LIMIT ${AVATAR_STACK_NAMES}
         ) AS stack
       )`,
       // The same few participants as `memberNames`, by id, for the hue of
-      // each face — a name is not a key, two people can share one.
+      // each face — a name is not a key, two people can share one. Both
+      // break a tie on `created_at` by id: people added in one transaction
+      // share the timestamp, and the two lists must pair up face for face.
       memberIds: sql<string[]>`(
-        SELECT coalesce(array_agg(id ORDER BY joined), '{}')
+        SELECT coalesce(array_agg(id ORDER BY joined, tie), '{}')
         FROM (
           SELECT ${participants.id}::text AS id,
-                 ${participants.createdAt} AS joined
+                 ${participants.createdAt} AS joined,
+                 ${participants.id} AS tie
           FROM ${participants}
           WHERE ${participants.groupId} = ${groups.id}
             AND ${participants.removedAt} IS NULL
-          ORDER BY ${participants.createdAt}
+          ORDER BY ${participants.createdAt}, ${participants.id}
           LIMIT ${AVATAR_STACK_NAMES}
         ) AS stack
       )`,

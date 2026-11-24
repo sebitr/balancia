@@ -20,7 +20,10 @@ function moneyHues(): number[] {
 }
 
 /** The `oklch(L C var(--avatar-hue))` pair a theme's rule paints. */
-function pair(selector: string): { bg: [number, number]; fg: [number, number] } {
+function pair(selector: string): {
+  bg: [number, number];
+  fg: [number, number];
+} {
   const block = new RegExp(
     `${selector.replace(/[.[\]]/g, "\\$&")}\\s*\\{([^}]*)\\}`,
   ).exec(CSS)?.[1];
@@ -68,7 +71,9 @@ describe("avatar hues", () => {
 
   it("use more than one hue across a handful of ids", () => {
     const seen = new Set(
-      Array.from({ length: 40 }, (_, index) => avatarHue(`participant-${index}`)),
+      Array.from({ length: 40 }, (_, index) =>
+        avatarHue(`participant-${index}`),
+      ),
     );
     expect(seen.size).toBeGreaterThanOrEqual(4);
   });
