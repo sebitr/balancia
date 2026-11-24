@@ -124,7 +124,8 @@ Implemented in this repository — there is no third-party auth service.
   revokes every API key. A reset leaves the account's passkeys and its Apple
   link in place: they are the owner's own in the ordinary case, and each can be
   removed from Settings → Security. Changing a password while signed in ends
-  every other session and nothing else.
+  every other session and every connected AI assistant, and leaves API keys,
+  passkeys and the Apple link alone.
 - **The first proof of an address removes everything from before it.** A
   passkey signup takes its address on trust, so an account can exist, with
   credentials, before anybody has shown they read its inbox. The first reset
@@ -224,8 +225,9 @@ and the sign-in is built to the current MCP and OAuth security guidance.
 - **A signed-in person allows each assistant, once, on a screen of Balancia's
   own** — read only or read and write, every group or one. It cannot be given
   more than it asked for, is listed in Settings → AI assistants, and ends
-  at once when disconnected, and also when the password is reset, the email
-  address changes, the account is disabled or its pinned group is deleted. The
+  at once when disconnected, and also when the password is changed or reset,
+  the email address changes, the account is disabled or its pinned group is
+  deleted. The
   screen starts on read only, a form that does not name write gets read, and any
   code issued but not yet exchanged is deleted when the account is taken back.
 - **It acts as the person and cannot exceed them.** Every tool call goes through

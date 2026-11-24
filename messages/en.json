@@ -2441,7 +2441,7 @@
     "control3": "Keep your assistant’s ask-first prompt on for anything that changes something. Adding an expense or repayment tells the other members, as if you had done it.",
     "control4": "It can never change your account, add or remove people, create invitation links, export or delete a group, or see anybody’s payment details.",
     "control5": "Notes and names in a group are typed by other members, and one of them could try to give your assistant orders. Read what it is about to do before you allow it.",
-    "control6": "A connection ends by itself when you reset your password or change your email address.",
+    "control6": "A connection ends by itself when you change or reset your password, or change your email address.",
     "troubleTitle": "If it does not work",
     "trouble1": "It cannot add expenses: it was connected as Read only. Disconnect it and connect again, choosing Read and make changes.",
     "trouble2": "Claude or ChatGPT says it cannot reach the server: the address has to be reachable from the internet over HTTPS. Whoever runs this Balancia can tell you whether it is.",

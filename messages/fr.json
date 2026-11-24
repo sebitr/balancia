@@ -2441,7 +2441,7 @@
     "control3": "Garde activée la confirmation de ton assistant pour tout ce qui modifie quelque chose. Ajouter une dépense ou un remboursement prévient les autres membres, comme si tu l’avais fait toi-même.",
     "control4": "Il ne pourra jamais modifier ton compte, ajouter ou retirer des personnes, créer des liens d’invitation, exporter ou supprimer un groupe, ni voir les moyens de paiement de qui que ce soit.",
     "control5": "Les notes et les noms d’un groupe sont saisis par les autres membres, et l’un d’eux pourrait essayer de donner des ordres à ton assistant. Lis ce qu’il s’apprête à faire avant d’autoriser.",
-    "control6": "Une connexion prend fin d’elle-même quand tu réinitialises ton mot de passe ou changes d’adresse e-mail.",
+    "control6": "Une connexion prend fin d’elle-même quand tu changes ou réinitialises ton mot de passe, ou que tu changes d’adresse e-mail.",
     "troubleTitle": "Si ça ne marche pas",
     "trouble1": "Il ne peut pas ajouter de dépenses : il a été connecté en lecture seule. Déconnecte-le puis reconnecte-le en choisissant Lire et modifier.",
     "trouble2": "Claude ou ChatGPT dit qu’il ne peut pas joindre le serveur : l’adresse doit être accessible depuis internet en HTTPS. La personne qui gère ce Balancia peut te dire si c’est le cas.",

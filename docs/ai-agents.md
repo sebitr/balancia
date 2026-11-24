@@ -117,9 +117,11 @@ assistants** with what it may do and when it last did anything
 — "not used yet" on one connected last month means whatever it was added to
 never got as far as asking. **Disconnect** ends it at once.
 
-A connection also ends by itself when the password is reset, when the account's
-email address changes, when the account is closed or disabled, when its group is
-deleted, and after ninety days of not being used. When an account is taken back
+A connection also ends by itself when the password is changed or reset, when
+the account's email address changes, when the account is closed or disabled,
+when its group is deleted, and after ninety days of not being used. Changing
+the password ends every connection and not only the one you suspect: connect
+again the ones you meant to keep. When an account is taken back
 like that, a code that had been issued and not yet exchanged is deleted too, so
 it cannot be turned into a new connection afterwards.
 
@@ -346,7 +348,7 @@ What the sign-in guarantees, and where each is enforced:
   here, or the instance's database was restored from before it registered. Start the
   connection again from the assistant.
 - **An assistant stopped working** — look in Settings. A connection that is gone was
-  disconnected, or ended by a password reset or an address change; one that is
+  disconnected, or ended by a change of password or of address; one that is
   there but "not used yet" never got as far as asking. Disconnect and connect again.
 - **It works for reading and not for writing** — the connection was allowed
   read-only. Disconnect it and connect again, choosing _Read and make changes_.

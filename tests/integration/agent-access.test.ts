@@ -39,6 +39,8 @@ import {
 } from "@/modules/agent-access/grants";
 import { challengeFor } from "@/modules/agent-access/pkce";
 import { revokeAllApiTokensForUser } from "@/modules/api-tokens/service";
+import { hashPassword } from "@/modules/auth/passwords";
+import { changePassword } from "@/modules/auth/service";
 import { createTestGroup, createTestUser } from "../helpers/factories";
 
 /**
@@ -947,6 +949,29 @@ describe("ending a connection", () => {
 
     expect((await rejection(flow.exchange())).code).toBe("invalid_grant");
     expect(await getDb().select().from(agentGrants)).toHaveLength(0);
+  });
+
+  it("goes when the password is changed, with a code nobody has exchanged yet", async () => {
+    // Changing a password is how somebody answers a suspicion, and it ends
+    // every other session. An assistant allowed from one of those sessions
+    // would otherwise carry on for ninety days.
+    const person = await createTestUser();
+    await getDb()
+      .update(users)
+      .set({ passwordHash: await hashPassword("the-old-password-1") })
+      .where(eq(users.id, person.userId));
+    const connected = await (await connectFor(person.userId)).exchange();
+    const waiting = await connectFor(person.userId);
+
+    await changePassword(
+      person.userId,
+      "the-old-password-1",
+      "a-new-password-1",
+    );
+
+    expect(await resolveAccessToken(connected.accessToken)).toBeNull();
+    expect(await listConnections(person.userId)).toEqual([]);
+    expect((await rejection(waiting.exchange())).code).toBe("invalid_grant");
   });
 
   it("disconnects every one an account has", async () => {
