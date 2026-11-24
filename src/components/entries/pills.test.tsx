@@ -49,4 +49,21 @@ describe("MemberPill", () => {
       "Include Blaise in the split",
     );
   });
+
+  it("leads with the word it shows when its label does not hold it", () => {
+    render(
+      <MemberPill
+        name="Ada Lovelace"
+        shownAs="You"
+        label="Include yourself in the split"
+        selected
+        onToggle={() => {}}
+      />,
+    );
+
+    // "yourself" is not "You": the label alone was a name the pill did not
+    // show, and axe failed the entry form on it.
+    const name = "You, Include yourself in the split";
+    expectLabelInName(screen.getByRole("button", { name }), name);
+  });
 });

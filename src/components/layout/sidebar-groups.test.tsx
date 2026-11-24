@@ -273,6 +273,18 @@ describe("SidebarGroups", () => {
     );
   });
 
+  it("lights the group being read with the card, not the plum wash", () => {
+    renderList([LISBON], { groupId: "g1", pathname: "/groups/g1" });
+
+    // Its figures sit on whatever lights the row, and the light theme's
+    // --sidebar-accent took the inks under 4.5:1. The dark themes keep the
+    // wash, which they clear (token-contrast.test.ts).
+    const lisbon = screen.getByRole("link", { name: /^Lisbon, March/ });
+    expect(lisbon).toHaveAttribute("aria-current", "true");
+    expect(lisbon).toHaveClass("bg-card", "dark:bg-sidebar-accent");
+    expect(lisbon).not.toHaveClass("bg-sidebar-accent");
+  });
+
   it("shows only words its name says in the phone's switcher too", () => {
     cleanup();
     renderWithIntl(

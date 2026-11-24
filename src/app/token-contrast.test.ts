@@ -113,11 +113,14 @@ const CASCADES: readonly Cascade[] = [
 const INK_SURFACES: Record<string, readonly string[]> = {
   // Balance figures sit on cards and on the page; the tinted badges in
   // detail-blocks and transactions put them on a wash of their own fill.
-  "positive-ink": ["card", "background", "tint"],
-  "negative-ink": ["card", "background", "tint"],
+  // The sidebar's group rows print where the reader stands on --sidebar, and
+  // on --card for the group being read — except in a dark theme, which
+  // lights that row with --sidebar-accent; see the test after this loop.
+  "positive-ink": ["card", "background", "tint", "sidebar"],
+  "negative-ink": ["card", "background", "tint", "sidebar"],
   "payer-ink": ["card", "background", "tint"],
   // position-card draws the settled row on --muted.
-  "neutral-balance-ink": ["card", "background", "muted"],
+  "neutral-balance-ink": ["card", "background", "muted", "sidebar"],
   // Links, active nav labels and check glyphs; also the /15 and /18 washes on
   // the self pill and the money-format badges.
   "primary-ink": ["card", "background", "tint"],
@@ -277,6 +280,21 @@ describe.each(CASCADES)("$name", ({ theme, selectors, more }) => {
           Number(worst.toFixed(2)),
           `--${ink} on ${surface}`,
         ).toBeGreaterThanOrEqual(textFloor);
+      });
+    }
+  }
+
+  /*
+   * The group being read, in the sidebar: lit with the card in the light
+   * theme, where --sidebar-accent took the neutral ink to 4.0:1, and with
+   * --sidebar-accent in the dark ones, where the card is the sidebar's own
+   * colour and would light nothing. `GroupRow` in sidebar-groups.tsx.
+   */
+  if (theme === "dark") {
+    for (const ink of ["positive-ink", "negative-ink", "neutral-balance-ink"]) {
+      it(`--${ink} reads as text on the lit sidebar row at ${textFloor}:1`, () => {
+        const ratio = contrastRatio(colour(ink), colour("sidebar-accent"));
+        expect(Number(ratio.toFixed(2))).toBeGreaterThanOrEqual(textFloor);
       });
     }
   }

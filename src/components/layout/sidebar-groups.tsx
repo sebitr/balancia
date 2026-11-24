@@ -237,9 +237,17 @@ export function GroupRow({
       <Link
         href={href}
         transitionTypes={transitionTypes}
-        // The group being read is lit with the sidebar's wash and the tile
-        // in the accent's fill — never a money colour, and never on the
-        // figures, which keep their own ink.
+        /*
+         * The group being read is lit, and the tile takes the accent's fill —
+         * never a money colour, and never on the figures, which keep their
+         * own ink. What it is lit with is the card, raised off the sidebar
+         * as the desk's current tab is, and not the sidebar's plum wash: the
+         * figures sit on whatever lights the row, and the wash took every
+         * one of them under 4.5:1 in the light theme — "Settled" in the
+         * neutral ink came to 4.0:1, and the money colours do not move to
+         * make room. In the dark themes the card is the sidebar's own
+         * colour, so the wash stays, and there the inks clear it.
+         */
         aria-current={isCurrent ? "true" : undefined}
         aria-label={spoken}
         className={cn(
@@ -247,7 +255,9 @@ export function GroupRow({
           folded
             ? "mx-auto size-11 justify-center"
             : "min-h-12 gap-2.5 px-2 py-1.5",
-          isCurrent ? "bg-sidebar-accent" : "hover:bg-wash-2",
+          isCurrent
+            ? "bg-card shadow-card ring-1 ring-sidebar-border dark:bg-sidebar-accent dark:shadow-none dark:ring-0"
+            : "hover:bg-wash-2",
         )}
       >
         {tile}
