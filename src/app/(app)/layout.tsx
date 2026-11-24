@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
+import { readNarrowWindow } from "@/components/layout/narrow-window-cookie";
 import { readSidebarCollapsed } from "@/components/layout/sidebar-cookie";
 import { getCurrentUser } from "@/lib/security/actor";
 
@@ -20,6 +21,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     <AppShell
       actor={{ label: user.name, isGuest: false }}
       sidebarCollapsed={await readSidebarCollapsed()}
+      narrow={await readNarrowWindow()}
     >
       {children}
     </AppShell>
