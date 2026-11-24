@@ -332,20 +332,23 @@ describe.each(CASCADES)("$name", ({ theme, selectors, more }) => {
       expect(tokens.get("ring")).toBe("var(--primary-ink)");
     });
 
-    it.each(ACCENT_COLORS)("%s: reads at 3:1 on card and background", (accent) => {
-      const painted = accentTokens(accent);
-      const value = tokens.get("primary-ink")!;
-      const indirect = value.match(/^var\((--[a-z0-9-]+),\s*(.+)\)$/i)!;
-      const ring = oklchToHex(
-        parseOklch(painted[indirect[1]!] ?? indirect[2]!)!,
-      );
-      for (const surface of ["card", "background"]) {
-        expect(
-          contrastRatio(ring, colour(surface)),
-          `${accent} ring on ${surface}`,
-        ).toBeGreaterThanOrEqual(AA_GRAPHIC);
-      }
-    });
+    it.each(ACCENT_COLORS)(
+      "%s: reads at 3:1 on card and background",
+      (accent) => {
+        const painted = accentTokens(accent);
+        const value = tokens.get("primary-ink")!;
+        const indirect = value.match(/^var\((--[a-z0-9-]+),\s*(.+)\)$/i)!;
+        const ring = oklchToHex(
+          parseOklch(painted[indirect[1]!] ?? indirect[2]!)!,
+        );
+        for (const surface of ["card", "background"]) {
+          expect(
+            contrastRatio(ring, colour(surface)),
+            `${accent} ring on ${surface}`,
+          ).toBeGreaterThanOrEqual(AA_GRAPHIC);
+        }
+      },
+    );
   });
 
   it.each(ACCENT_COLORS)(

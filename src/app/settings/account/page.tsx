@@ -83,7 +83,7 @@ export default async function AccountSettingsPage({
         </SettingsCard>
       )}
 
-      <DangerCard email={user.email} />
+      <DangerCard email={user.email} demo={getEnv().DEMO_MODE} />
     </SettingsScreen>
   );
 }

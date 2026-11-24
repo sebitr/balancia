@@ -166,9 +166,12 @@ export type SettingsHubFacts = Awaited<ReturnType<typeof loadSettingsHub>>;
 export function SettingsHub({
   user,
   hub,
+  demo = false,
 }: {
   user: { readonly name: string; readonly email: string };
   hub: SettingsHubFacts;
+  /** The public demo: signing out says it ends the visit. */
+  demo?: boolean;
 }) {
   const t = useTranslations("userSettings");
   const tBackup = useTranslations("cloudBackup");
@@ -321,7 +324,7 @@ export function SettingsHub({
         </SettingsRows>
       </SettingsGroup>
 
-      <SignOutButton />
+      <SignOutButton demo={demo} />
     </>
   );
 }

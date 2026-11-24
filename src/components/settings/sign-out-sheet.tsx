@@ -16,9 +16,15 @@ import { signOut } from "./sign-out";
 export function SignOutSheet({
   open,
   onOpenChange,
+  demo = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * This is the public demo. Its visitor has no passkey or password to come
+   * back with and its data is swept, so the usual promise would be false.
+   */
+  demo?: boolean;
 }) {
   const t = useTranslations("userSettings");
 
@@ -27,7 +33,7 @@ export function SignOutSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={t("signOutTitle")}
-      body={t("signOutBody")}
+      body={demo ? t("signOutBodyDemo") : t("signOutBody")}
       confirmLabel={t("signOut")}
       cancelLabel={t("signOutCancel")}
       // Clears this device, ends the session and redirects, so there is
