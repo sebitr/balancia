@@ -102,6 +102,7 @@
     "searchLabel": "Rechercher une devise",
     "clear": "Effacer",
     "favorites": "Favoris",
+    "inGroup": "Dans ce groupe",
     "allCurrencies": "Toutes les devises",
     "results": "{count, plural, one {# résultat} other {# résultats}}",
     "favorite": "Ajouter {code} aux favoris",

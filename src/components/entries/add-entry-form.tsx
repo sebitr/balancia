@@ -114,7 +114,10 @@ import { AmountCard } from "./amount-card";
 import { AttachFile, type EntryAttachment } from "./attach-file";
 import { CategorySheet } from "./category-sheet";
 import { useVocabulary } from "./vocabulary";
-import { CurrencyPicker } from "@/components/money/currency-picker";
+import {
+  CurrencyPicker,
+  openOnCurrencySearch,
+} from "@/components/money/currency-picker";
 import {
   confirmationKey,
   directionOf,
@@ -2541,9 +2544,34 @@ export function AddEntryForm({
     />
   );
 
+  /*
+   * The currencies this group already deals in, for the top of the picker: its
+   * own money first, then the ones its debts are held in (most rows first),
+   * then whatever this entry is in now. The form has no usage counts, so
+   * "most used" is the nearest thing it knows.
+   */
+  const groupCurrencies = useMemo(() => {
+    const held = new Map<string, number>();
+    for (const row of outstanding) {
+      held.set(row.currency, (held.get(row.currency) ?? 0) + 1);
+    }
+    const byRows = [...held.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([code]) => code);
+    return [
+      ...new Set([
+        baseCurrency ?? defaultCurrency,
+        ...byRows,
+        defaultCurrency,
+        currency,
+      ]),
+    ];
+  }, [outstanding, baseCurrency, defaultCurrency, currency]);
+
   const currencyPicker = (
     <CurrencyPicker
       value={currency}
+      suggested={groupCurrencies}
       title={t("currency.title")}
       // What is already typed has to survive the new currency's rules:
       // 84.60 picked up again as yen is ¥84, not an amount the server
@@ -3140,6 +3168,9 @@ export function AddEntryForm({
     <div
       className="flex min-h-0 flex-1 flex-col"
       onKeyDown={desk ? saveFromKeyboard : undefined}
+      // A sheet over the form owns the keyboard: nothing typed while it is
+      // open can reach a field behind it.
+      inert={sheetShown || undefined}
     >
       {/*
        * The header holds *how* the entry is being filled in; the body holds the
@@ -3403,7 +3434,11 @@ export function AddEntryForm({
           // Every one of these sheets opens on what it has to show — the
           // category chips, the currency list, who is in the split — and none
           // of them wants a keyboard over it before anybody has asked to type.
-          onOpenAutoFocus={openOnContent}
+          onOpenAutoFocus={
+            // The currency list is searched: focus goes to its field, or to
+            // the sheet on a touch screen. Never left on the field behind.
+            sheet === "currency" ? openOnCurrencySearch : openOnContent
+          }
           className={cn(
             "gap-0 rounded-t-[26px]",
             // The currency list is the one sheet here that is a whole screen
@@ -3418,7 +3453,17 @@ export function AddEntryForm({
             // which is over the indicator and leaves nothing to clear.
             sheet === "currency"
               ? "h-[min(800px,calc(100dvh-48px-env(safe-area-inset-top)))] max-h-[calc(100%-48px-env(safe-area-inset-top))] overflow-hidden p-0"
-              : "max-h-[86vh] overflow-y-auto px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] data-[keyboard]:pb-5",
+              : cn(
+                  "max-h-[86vh] overflow-y-auto px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] data-[keyboard]:pb-5",
+                  // The split sheet has a height of its own. Sized by its
+                  // content it grew upward by a row or two with every tap on
+                  // a payer or a share ("Always split like this", "still to
+                  // assign"), and the next tap landed on the chip that had
+                  // moved into the finger's place. Fixed, the chips stay put
+                  // and the body scrolls inside.
+                  sheet === "split" &&
+                    "h-[min(86dvh,44rem)] max-h-[86dvh] overflow-y-hidden",
+                ),
           )}
         >
           {/* The room above the contents on a desk, where the grabber that

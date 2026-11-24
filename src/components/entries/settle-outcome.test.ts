@@ -126,7 +126,7 @@ describe("paying somebody who was owed nothing", () => {
       currency: "CHF",
       amountAgainstDebtMinor: 5000n,
       awaitingRate: false,
-      });
+    });
     expect(result.kind).toBe("custom");
     // Seb pays Cyril, so Cyril ends up owing Seb.
     expect(result.remainder).toEqual({
@@ -229,7 +229,7 @@ describe("paying in a currency the debt is not held in", () => {
       currency: "EUR",
       amountAgainstDebtMinor: null,
       awaitingRate: false,
-      });
+    });
     expect(result.kind).toBe("custom");
     expect(result.remainder).toEqual({
       fromName: "Cyril",

@@ -84,6 +84,7 @@
     "searchLabel": "Währung suchen",
     "clear": "Löschen",
     "favorites": "Favoriten",
+    "inGroup": "In dieser Gruppe",
     "allCurrencies": "Alle Währungen",
     "results": "{count, plural, one {# Ergebnis} other {# Ergebnisse}}",
     "favorite": "{code} zu Favoriten hinzufügen",

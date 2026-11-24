@@ -102,6 +102,7 @@
     "searchLabel": "Search a currency",
     "clear": "Clear",
     "favorites": "Favourites",
+    "inGroup": "In this group",
     "allCurrencies": "All currencies",
     "results": "{count, plural, one {# result} other {# results}}",
     "favorite": "Add {code} to favourites",

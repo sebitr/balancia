@@ -150,13 +150,8 @@ export interface SettleOutcomeInput {
  * closed when it was not.
  */
 export function settleOutcome(input: SettleOutcomeInput): SettleOutcome {
-  const {
-    pair,
-    amountMinor,
-    currency,
-    amountAgainstDebtMinor,
-    awaitingRate,
-  } = input;
+  const { pair, amountMinor, currency, amountAgainstDebtMinor, awaitingRate } =
+    input;
 
   if (!pair) return { kind: "noPair" };
 

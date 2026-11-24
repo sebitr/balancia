@@ -29,11 +29,34 @@ import { cn } from "@/lib/utils";
  * choice, and the back arrow leaves without making one.
  */
 
+/**
+ * Where focus goes when the picker opens in a sheet: the search field where a
+ * keyboard is already at hand, the sheet itself where the first thing a
+ * thumb wants is the list and not a keyboard over it.
+ *
+ * It has to be one or the other. Left on the field that opened the sheet, the
+ * next keys typed, "eur" to find the euro, went into the description behind
+ * it. Pass as the sheet's `onOpenAutoFocus`.
+ */
+export function openOnCurrencySearch(event: Event): void {
+  const content = event.currentTarget;
+  if (!(content instanceof HTMLElement)) return;
+  event.preventDefault();
+  const fine =
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(pointer: fine)").matches;
+  const search = content.querySelector<HTMLInputElement>(
+    "input[data-currency-search]",
+  );
+  (fine && search ? search : content).focus();
+}
+
 export function CurrencyPicker({
   value,
   title,
   onSelect,
   onBack,
+  suggested = [],
 }: {
   /** The currently chosen code. Marked in the list, never moved to the top. */
   value: string;
@@ -41,6 +64,13 @@ export function CurrencyPicker({
   title: string;
   onSelect: (code: string) => void;
   onBack: () => void;
+  /**
+   * The codes this group deals in, most used first. Offered above everything
+   * else as "In this group", because the currency somebody is reaching for is
+   * nearly always one the group already holds. A section with no codes in the
+   * catalogue is not shown.
+   */
+  suggested?: readonly string[];
 }) {
   const t = useTranslations("currencyPicker");
   const locale = useLocale();
@@ -60,8 +90,8 @@ export function CurrencyPicker({
   const [pinned] = useState(favorites);
 
   const sections = useMemo(
-    () => buildSections(catalogue, pinned, query, t),
-    [catalogue, pinned, query, t],
+    () => buildSections(catalogue, pinned, suggested, query, t),
+    [catalogue, pinned, suggested, query, t],
   );
 
   const empty = sections.length === 0;
@@ -152,6 +182,7 @@ function SearchField({
         placeholder={t("searchPlaceholder")}
         aria-label={t("searchLabel")}
         autoComplete="off"
+        data-currency-search=""
         // 16px on a phone or Safari zooms the sheet in on focus and never
         // zooms back out. The 15px the design asks for comes back from `md:`.
         className="h-10 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground md:text-sm"
@@ -283,6 +314,7 @@ interface Section {
 function buildSections(
   catalogue: readonly CurrencyEntry[],
   favorites: readonly string[],
+  suggested: readonly string[],
   query: string,
   t: ReturnType<typeof useTranslations<"currencyPicker">>,
 ): readonly Section[] {
@@ -301,14 +333,24 @@ function buildSections(
   }
 
   const byCode = new Map(catalogue.map((entry) => [entry.code, entry]));
+  // The group's own currencies lead and are not repeated below: a code is
+  // listed once, in the first section that claims it.
+  const inGroup = [...new Set(suggested)]
+    .map((code) => byCode.get(code))
+    .filter((entry): entry is CurrencyEntry => entry !== undefined);
+  const claimed = new Set(inGroup.map((entry) => entry.code));
   const starred = favorites
+    .filter((code) => !claimed.has(code))
     .map((code) => byCode.get(code))
     .filter((entry): entry is CurrencyEntry => entry !== undefined);
   const rest = [...catalogue]
-    .filter((entry) => !favorites.includes(entry.code))
+    .filter(
+      (entry) => !favorites.includes(entry.code) && !claimed.has(entry.code),
+    )
     .sort((a, b) => a.code.localeCompare(b.code));
 
   return [
+    ...(inGroup.length > 0 ? [{ title: t("inGroup"), items: inGroup }] : []),
     ...(starred.length > 0 ? [{ title: t("favorites"), items: starred }] : []),
     { title: t("allCurrencies"), items: rest },
   ];
