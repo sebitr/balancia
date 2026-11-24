@@ -4,12 +4,13 @@ import { authorizeGroup } from "@/lib/security/authorization";
 import { createExpense } from "@/modules/expenses/service";
 import {
   createGroup,
+  listGroupsForUser,
   listParticipants,
   setGroupArchived,
 } from "@/modules/groups/service";
 import { createSettlement } from "@/modules/settlements/service";
 import { createTestUser, isoToday } from "../../../tests/helpers/factories";
-import { loadHomeOverview } from "./overview";
+import { loadHomeOverview, loadPositionsAmong } from "./overview";
 
 /**
  * The home screen's read model, end to end against PostgreSQL.
@@ -325,5 +326,45 @@ describe("loadHomeOverview", () => {
     expect(overview.buckets.needsYou.map((p) => p.group.name)).toEqual([
       "Flatshare",
     ]);
+  });
+});
+
+describe("loadPositionsAmong", () => {
+  /*
+   * The command palette reads only the groups whose name matches, and shows
+   * them as the sidebar does. That is only honest if each position is the one
+   * the whole overview computes — so it is compared with it here, figure for
+   * figure, conversion and creditor included.
+   */
+  it("gives each group the position the whole overview gives it", async () => {
+    const actor = await createTestUser({ name: "Amélie" });
+    const owing = await groupWhereOwing(actor, "Flatshare", ["Mika"], "20000");
+    await groupWhereOwed(actor, "Lisbon", ["Mika", "Jonas"], "9000");
+
+    const overview = await loadHomeOverview(actor.userId, {
+      preferredCurrency: "EUR",
+    });
+    const all = await listGroupsForUser(actor.userId);
+    const among = await loadPositionsAmong(
+      all.filter((group) => group.id === owing.created.id),
+      { preferredCurrency: "EUR" },
+    );
+
+    expect(among).toEqual(
+      overview.buckets.needsYou.filter(
+        (position) => position.group.id === owing.created.id,
+      ),
+    );
+    expect(among?.[0]?.owedTo).toEqual({ kind: "single", name: "Mika" });
+  });
+
+  it("declines without a stated currency, which depends on every group", async () => {
+    const actor = await createTestUser({ name: "Amélie" });
+    await groupWhereOwing(actor, "Flatshare", ["Mika"], "20000");
+    const all = await listGroupsForUser(actor.userId);
+
+    expect(await loadPositionsAmong(all, { preferredCurrency: null })).toBe(
+      null,
+    );
   });
 });

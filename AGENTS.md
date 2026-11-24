@@ -46,6 +46,15 @@ is why the reaper walked straight past `docs/shallow-clone-install` on its first
 run. Without `gh` to ask, it touches nothing at all. It throttles itself to
 once a half hour, and `--dry-run` says what it would take without taking it.
 
+Never touched is not the same as fine. `.claude/hooks/report-branch.sh` names,
+at session start, every branch no remote has that has not moved for a week,
+and every worktree whose uncommitted changes nobody has touched for a week. A
+hardening of the MCP server sat unpushed for six weeks while the code it fixed
+was live, and a bug fix sat uncommitted in a worktree for two months, because
+nothing ever said they were there. When the list shows something, tell the
+person; pushing it, finishing it or deleting it is their call.
+`src/lib/report-branch.test.ts` keeps it naming the right things.
+
 The commit is the part that is easy to leave out, because a name looks like an
 identity and is not one. Weblate opens every translation pull request from the
 same branch, `weblate-balancia-messages`, and while the reaper matched on names,

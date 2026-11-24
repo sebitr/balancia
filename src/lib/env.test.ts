@@ -738,6 +738,54 @@ describe("configuration reaches the containers", () => {
 });
 
 /**
+ * Settings an operator is never meant to write in `.env`, and so that
+ * `.env.example` leaves out. Say why next to each.
+ */
+const NOT_IN_EXAMPLE = new Set<string>([
+  // Set by Next and by the image, never by an operator.
+  "NODE_ENV",
+]);
+
+/** Whether `name` appears in `text` as a whole word, not inside a longer name. */
+function names(text: string, name: string): boolean {
+  return new RegExp(`(^|[^A-Z0-9_])${name}([^A-Z0-9_]|$)`, "m").test(text);
+}
+
+describe("every setting is written down", () => {
+  /**
+   * The two files an operator reads before setting anything. The six-file
+   * rule in AGENTS.md lists both, and nothing checked either:
+   * AUTH_RATE_LIMIT_MAX was in the schema and the docs for months without a
+   * line in `.env.example`.
+   */
+  it("in .env.example", () => {
+    const example = readFileSync(
+      path.join(process.cwd(), ".env.example"),
+      "utf8",
+    );
+    const missing = ENV_VARIABLE_NAMES.filter(
+      (name) => !NOT_IN_EXAMPLE.has(name) && !names(example, name),
+    );
+    expect(
+      missing,
+      ".env.example says nothing about these; add each with the prose an operator reads before setting it",
+    ).toEqual([]);
+  });
+
+  it("in docs/environment.md", () => {
+    const doc = readFileSync(
+      path.join(process.cwd(), "docs", "environment.md"),
+      "utf8",
+    );
+    const missing = ENV_VARIABLE_NAMES.filter((name) => !names(doc, name));
+    expect(
+      missing,
+      "docs/environment.md does not describe these settings",
+    ).toEqual([]);
+  });
+});
+
+/**
  * What a Compose file publishes on an `.env` that says nothing: every entry
  * under a `ports:` key, with each `${VAR:-default}` replaced by its default.
  *

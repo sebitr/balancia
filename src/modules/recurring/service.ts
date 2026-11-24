@@ -2,6 +2,7 @@ import "server-only";
 import {
   and,
   asc,
+  count,
   eq,
   inArray,
   isNotNull,
@@ -1078,10 +1079,6 @@ export async function listRecurringExpenses(
       lastRunAt: recurringExpenses.lastRunAt,
       pausedAt: recurringExpenses.pausedAt,
       timezone: recurringExpenses.timezone,
-      generatedCount: sql<number>`(
-        SELECT count(*)::int FROM ${recurringOccurrences}
-        WHERE ${recurringOccurrences.recurringExpenseId} = ${recurringExpenses.id}
-      )`,
     })
     .from(recurringExpenses)
     .where(
@@ -1092,10 +1089,37 @@ export async function listRecurringExpenses(
     )
     .orderBy(asc(recurringExpenses.createdAt));
 
+  /*
+   * Counted in a query of its own rather than as a subquery in the select
+   * above. A select from one table has Drizzle write every column in it
+   * unqualified, a subquery's included, so `recurring_expense_id = id` bound
+   * both sides to the occurrence and every template read zero.
+   */
+  const counts =
+    rows.length === 0
+      ? []
+      : await db
+          .select({
+            templateId: recurringOccurrences.recurringExpenseId,
+            count: count(),
+          })
+          .from(recurringOccurrences)
+          .where(
+            inArray(
+              recurringOccurrences.recurringExpenseId,
+              rows.map((row) => row.id),
+            ),
+          )
+          .groupBy(recurringOccurrences.recurringExpenseId);
+  const generatedByTemplate = new Map(
+    counts.map((row) => [row.templateId, row.count]),
+  );
+
   // `week_of_month` is `text`, so it is narrowed here rather than trusted.
   return rows.map((row) => ({
     ...row,
     weekOfMonth: weekOfMonthFrom(row.weekOfMonth),
+    generatedCount: generatedByTemplate.get(row.id) ?? 0,
   }));
 }
 

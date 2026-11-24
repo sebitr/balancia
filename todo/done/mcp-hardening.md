@@ -1,6 +1,6 @@
 # Make the MCP server hold against an assistant that has been steered, and say where its changes went
 
-Branch: `fix/mcp-hardening`
+Merged: 2026-11-24 in #492
 
 A red-team pass over `/mcp` after #465, by hand and by an independent reviewer
 who traced every tool to the SQL it runs. No path to a group the account is not

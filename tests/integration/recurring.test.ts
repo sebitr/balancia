@@ -1087,3 +1087,71 @@ describe("a template that stood still", () => {
     ]);
   });
 });
+
+/**
+ * The "generated 4 times" under a template, which the mobile API and the
+ * export carry too.
+ *
+ * It was a correlated subquery in the list's select, and a select from one
+ * table writes its columns unqualified — so `recurring_expense_id = id` bound
+ * both sides to the occurrence row, and every template read zero however many
+ * it had made. Three templates with different histories sit side by side here,
+ * so a count that leaks from one to another fails as well.
+ */
+describe("how many times a template has generated", () => {
+  const now = new Date("2026-04-15T12:00:00Z");
+
+  it("counts each template's own occurrences", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    const other = await addTestParticipant(group.groupId, "Blaise");
+    const payer = group.ownerParticipantId;
+    const split = [payer, other];
+
+    const rent = await createRecurringExpense(
+      group.access,
+      rentInput(payer, split),
+    );
+    const internet = await createRecurringExpense(
+      group.access,
+      rentInput(payer, split, {
+        description: "Internet",
+        startDate: "2026-03-01",
+      }),
+    );
+    const gym = await createRecurringExpense(
+      group.access,
+      rentInput(payer, split, { description: "Gym", startDate: "2026-06-01" }),
+    );
+
+    await generateDueOccurrences({ groupId: group.groupId, now });
+
+    const listed = await listRecurringExpenses(group.groupId);
+    expect(
+      Object.fromEntries(
+        listed.map((template) => [template.id, template.generatedCount]),
+      ),
+    ).toEqual({ [rent]: 4, [internet]: 2, [gym]: 0 });
+  });
+
+  it("reaches the rule's own count once a counted series has ended", async () => {
+    const actor = await createTestUser();
+    const group = await createTestGroup(actor);
+    const other = await addTestParticipant(group.groupId, "Blaise");
+    await createRecurringExpense(
+      group.access,
+      rentInput(group.ownerParticipantId, [group.ownerParticipantId, other], {
+        count: 3,
+      }),
+    );
+
+    await generateDueOccurrences({ groupId: group.groupId, now });
+
+    const [listed] = await listRecurringExpenses(group.groupId);
+    expect(listed).toMatchObject({
+      occurrenceCount: 3,
+      generatedCount: 3,
+      nextRunAt: null,
+    });
+  });
+});
