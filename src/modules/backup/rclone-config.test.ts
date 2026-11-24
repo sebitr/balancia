@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildRemote, type BuildContext } from "./rclone-config";
+import { scrub } from "./errors";
+import { buildRemote, inFolder, type BuildContext } from "./rclone-config";
 import { credentialSchemas } from "./providers";
 
 /**
@@ -247,6 +248,136 @@ describe("experimental providers", () => {
 
     expect(env.RCLONE_CONFIG_BACKUP_TYPE).toBe("iclouddrive");
     expect(JSON.stringify(env)).not.toContain("apple-password");
+  });
+});
+
+describe("what counts as a secret", () => {
+  const app = { clientId: "app-id", clientSecret: "app-secret" };
+  const everyProvider = async () => [
+    await buildRemote("s3", s3, context),
+    await buildRemote(
+      "webdav",
+      credentialSchemas.webdav.parse({
+        url: "https://cloud.example.com/remote.php/dav/files/ada",
+        username: "ada",
+        password: "hunter2-hunter2",
+      }),
+      context,
+    ),
+    await buildRemote("google_drive", { refreshToken: "r", app }, context),
+    await buildRemote("dropbox", { refreshToken: "r", app }, context),
+    await buildRemote(
+      "onedrive",
+      {
+        refreshToken: "r",
+        app,
+        driveId: "b!abc",
+        driveType: "personal",
+        rootFolderId: "FOLDER123",
+      },
+      context,
+    ),
+    await buildRemote(
+      "proton_drive",
+      credentialSchemas.proton_drive.parse({
+        username: "ada@proton.me",
+        password: "pw-one-pw-one",
+        mailboxPassword: "pw-two-pw-two",
+        otpSecret: "JBSWY3DPEHPK3PXP",
+      }),
+      context,
+    ),
+    await buildRemote(
+      "icloud_drive",
+      credentialSchemas.icloud_drive.parse({
+        appleId: "ada@icloud.com",
+        password: "apple-password",
+        trustToken: "trust-token-value",
+        cookies: "X-APPLE-WEBAUTH=cookie-value",
+      }),
+      context,
+    ),
+  ];
+
+  it("includes every option whose name says it is one, on every provider", async () => {
+    // The rule that matters most, kept by name rather than by list: an option
+    // added later that holds a password, a key, a token or a cookie is a
+    // secret whether or not somebody remembered to mark it.
+    for (const remote of await everyProvider()) {
+      for (const [name, value] of Object.entries(remote.env)) {
+        if (/PASS|SECRET|TOKEN|KEY|COOKIE/.test(name)) {
+          expect(remote.secrets, name).toContain(value);
+        }
+      }
+    }
+  });
+
+  it("includes what was typed as well as what rclone was handed for it", async () => {
+    const all = (await everyProvider()).flatMap((remote) => remote.secrets);
+
+    for (const typed of [
+      "very-secret-key",
+      "AKIAEXAMPLE",
+      "hunter2-hunter2",
+      "OBSCURED(15)",
+      "app-secret",
+      "access-abc",
+      "refresh-xyz",
+      "pw-one-pw-one",
+      "pw-two-pw-two",
+      "JBSWY3DPEHPK3PXP",
+      "apple-password",
+      "trust-token-value",
+      "X-APPLE-WEBAUTH=cookie-value",
+    ]) {
+      expect(all).toContain(typed);
+    }
+  });
+
+  it("leaves out what a person needs to read in an error", async () => {
+    const all = (await everyProvider()).flatMap((remote) => remote.secrets);
+
+    for (const plain of [
+      "https://s3.eu-central-003.backblazeb2.com",
+      "eu-central-003",
+      "s3",
+      "Other",
+      "webdav",
+      "https://cloud.example.com/remote.php/dav/files/ada",
+      "ada",
+      "drive.file",
+      "app-id",
+      "b!abc",
+      "FOLDER123",
+      "ada@proton.me",
+      "ada@icloud.com",
+    ]) {
+      expect(all).not.toContain(plain);
+    }
+  });
+
+  it("keeps the secrets when aimed at a folder inside the backup folder", async () => {
+    const remote = await buildRemote("s3", s3, context);
+
+    expect(inFolder(remote, "receipts").secrets).toEqual(remote.secrets);
+  });
+
+  it("is scrubbed out of what rclone says, and the address and region are not", async () => {
+    for (const remote of await everyProvider()) {
+      const said = [
+        "Failed to create file system for BACKUP: couldn't connect",
+        ...remote.secrets.map((secret) => `got back ${secret} here`),
+        "dial tcp: lookup s3.eu-central-003.backblazeb2.com: no such host (region eu-central-003)",
+      ].join("\n");
+
+      const scrubbed = scrub(said, remote.secrets, 100_000);
+
+      for (const secret of remote.secrets) {
+        if (secret.length >= 6) expect(scrubbed).not.toContain(secret);
+      }
+      expect(scrubbed).toContain("s3.eu-central-003.backblazeb2.com");
+      expect(scrubbed).toContain("region eu-central-003");
+    }
   });
 });
 

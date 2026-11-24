@@ -792,14 +792,15 @@ export async function listBackupFiles(
 
 /**
  * One backup, still encrypted, for the restore screen to decrypt in the browser.
- * The server reads ciphertext and passes ciphertext on.
+ * The server reads ciphertext and passes ciphertext on, as it arrives, without
+ * holding the file.
  */
 export async function readBackupFile(
   userId: string,
   destinationId: string,
   name: string,
   seams: Seams = {},
-): Promise<Buffer> {
+): Promise<ReadableStream<Uint8Array>> {
   if (parseBundleName(name) === null) throw new BackupInputError("notFound");
   const db = seams.db ?? getDb();
   const dest = await loadOwn(userId, destinationId, db);

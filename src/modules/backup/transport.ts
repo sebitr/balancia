@@ -35,7 +35,14 @@ export interface BackupTransport {
   put(name: string, bytes: Uint8Array, folder?: BackupSubfolder): Promise<void>;
   list(folder?: BackupSubfolder): Promise<string[]>;
   remove(name: string, folder?: BackupSubfolder): Promise<void>;
-  read(name: string, folder?: BackupSubfolder): Promise<Buffer>;
+  /**
+   * One file, as it arrives: resolves when it has begun to, and errors the
+   * stream if it is cut short. See `rclone.streamObject`.
+   */
+  read(
+    name: string,
+    folder?: BackupSubfolder,
+  ): Promise<ReadableStream<Uint8Array>>;
 }
 
 export interface OpenOptions {
@@ -225,6 +232,6 @@ export async function openTransport(
     remove: async (name, folder) =>
       rclone.deleteObject(inFolder(await current(), folder), name),
     read: async (name, folder) =>
-      rclone.readObject(inFolder(await current(), folder), name),
+      rclone.streamObject(inFolder(await current(), folder), name),
   };
 }

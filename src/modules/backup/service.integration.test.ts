@@ -88,8 +88,21 @@ class FakeCloud implements BackupTransport {
     this.files.delete(name);
   }
   async read(name: string) {
-    return Buffer.from(this.files.get(name) ?? []);
+    const bytes = this.files.get(name) ?? new Uint8Array();
+    return new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes);
+        controller.close();
+      },
+    });
   }
+}
+
+/** A streamed file, whole. */
+async function readAll(stream: ReadableStream<Uint8Array>): Promise<Buffer> {
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  return Buffer.concat(chunks);
 }
 
 let cloud: FakeCloud;
@@ -1536,7 +1549,9 @@ describe("reading backups back", () => {
     await runBackup(id, { trigger: "manual", ...seams() });
     const name = nameAt(id, clock);
 
-    const bytes = await readBackupFile(owner.userId, id, name, seams());
+    const bytes = await readAll(
+      await readBackupFile(owner.userId, id, name, seams()),
+    );
 
     expect(
       Buffer.from(bytes).equals(Buffer.from(cloud.files.get(name) ?? [])),

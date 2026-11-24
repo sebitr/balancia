@@ -39,7 +39,7 @@ const fakeTransport = (fail?: BackupError): BackupTransport => ({
   put: async () => {},
   list: async () => [],
   remove: async () => {},
-  read: async () => Buffer.alloc(0),
+  read: async () => new ReadableStream<Uint8Array>({ start: (c) => c.close() }),
 });
 
 let transport: BackupTransport;

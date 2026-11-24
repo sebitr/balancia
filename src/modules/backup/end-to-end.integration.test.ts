@@ -184,8 +184,15 @@ describe.skipIf(!HAVE_RCLONE)("a backup, end to end", () => {
     });
     const files = await listBackupFiles(owner.userId, id);
     expect(files.map((file) => file.name)).toEqual(names);
-    const readBack = await readBackupFile(owner.userId, id, names[0] ?? "");
-    expect(Buffer.from(readBack).equals(onDisk)).toBe(true);
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of await readBackupFile(
+      owner.userId,
+      id,
+      names[0] ?? "",
+    )) {
+      chunks.push(chunk);
+    }
+    expect(Buffer.concat(chunks).equals(onDisk)).toBe(true);
   });
 
   it("leaves nothing but backups behind: the connection test cleaned up after itself", async () => {

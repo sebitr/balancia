@@ -87,7 +87,13 @@ class FakeCloud implements BackupTransport {
     this.removed.push(`${folder ?? "."}/${name}`);
   }
   async read(name: string, folder?: "receipts") {
-    return Buffer.from(this.bucket(folder).get(name) ?? []);
+    const bytes = this.bucket(folder).get(name) ?? new Uint8Array();
+    return new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes);
+        controller.close();
+      },
+    });
   }
 }
 

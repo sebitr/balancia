@@ -347,7 +347,11 @@ whether the token really lasts. It is in `todo/next/`.
 destination is connected), and paste or drop your recovery key.
 
 Decryption happens **in your browser**. The key is not sent anywhere, and the
-file, if it came through this server, was ciphertext on the way. You get the
+file, if it came through this server, was ciphertext on the way — passed on as it
+arrived from the cloud, never held whole. A file larger than 64 MiB is not passed
+on at all (a backup is a few megabytes after years of use; one that size would
+have been several hundred megabytes of JSON to write): download it from your
+cloud and open it here or with `age` as below. You get the
 groups found in the backup, each with **Download as JSON**. Create a group for it
 and use _Import a backup_ in group settings; the details, and what does and does
 not come back, are in [data-migration.md](data-migration.md#restoring-a-balancia-backup).
@@ -442,8 +446,12 @@ people with accounts are people you would give a shell.
 ### When something goes wrong
 
 Each failed run records a code and the provider's own words, scrubbed and cut to
-a few hundred characters, in the card's history. The worker logs the code and the
-destination, never a credential. The codes:
+a few hundred characters, in the card's history. Scrubbed means every password,
+key, token and client secret the connection holds is taken out by value, as typed
+and as rclone was handed it, and then anything shaped like one; the address,
+region, user name and folder stay, because they are what tells you which setting
+is wrong. The worker logs the code and the destination, never a credential. The
+codes:
 
 | Code               | Meaning                                                                                         | What happens next                                |
 | ------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------ |
