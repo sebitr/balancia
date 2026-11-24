@@ -512,19 +512,3 @@ function splitWays(
     total: everyone.size,
   };
 }
-
-/*
- * Which of the two renderers is mounted.
- *
- * `lg` is 64rem, and from there the table is drawn instead of the list. Both
- * are in the server's HTML and the first client render — the server cannot
- * know the width, and hydration has to match what it sent — with CSS showing
- * exactly one; `display: none` keeps the other out of the accessibility tree
- * as well as off the screen. From the next render on, only the one the window
- * can see is mounted, so a phone does not carry a hidden table of every row it
- * holds, nor a desk a hidden list of them.
- *
- * The hook itself is shared with the entry dialog, which lays its split out in
- * place from the same width.
- */
-export { useDeskWidth } from "@/components/ui/use-desk-width";

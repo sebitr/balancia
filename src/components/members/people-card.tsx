@@ -14,7 +14,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { useDeskWidth } from "@/components/expenses/transactions-table";
+import { useDeskWidth } from "@/components/ui/use-desk-width";
 import {
   removeParticipantAction,
   restoreParticipantAction,

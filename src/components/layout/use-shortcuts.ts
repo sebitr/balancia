@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { PUSH } from "@/components/motion/transitions";
+import { DESK_QUERY } from "@/components/ui/use-desk-width";
 import { readSingleKeys } from "./single-keys";
 
 /**
@@ -43,9 +44,6 @@ import { readSingleKeys } from "./single-keys";
  * palette, then the dialog under it, which is the order the rules board asks
  * for. A second listener here would close the palette under an open menu.
  */
-
-/** `lg`, 64rem: where the sidebar, and with it every shortcut, begins. */
-export const DESK_QUERY = "(min-width: 64rem)";
 
 /** A Mac's ⌘ rather than everybody else's Ctrl. */
 export function isApplePlatform(): boolean {
