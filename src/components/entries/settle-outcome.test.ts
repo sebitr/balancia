@@ -31,7 +31,6 @@ const outcome = (overrides: Partial<SettleOutcomeInput> = {}) => {
     currency: "CHF",
     amountAgainstDebtMinor: amountMinor,
     awaitingRate: false,
-    hasMethod: true,
     ...overrides,
     amountMinor,
   });
@@ -46,7 +45,6 @@ describe("what is still missing", () => {
         currency: "CHF",
         amountAgainstDebtMinor: 0n,
         awaitingRate: false,
-        hasMethod: false,
       }).kind,
     ).toBe("noPair");
     // Still the pair, even with everything else answered.
@@ -57,22 +55,19 @@ describe("what is still missing", () => {
         currency: "CHF",
         amountAgainstDebtMinor: 5000n,
         awaitingRate: false,
-        hasMethod: true,
       }).kind,
     ).toBe("noPair");
   });
 
-  it("then the method, then the amount", () => {
-    expect(outcome({ hasMethod: false }).kind).toBe("noMethod");
+  it("then the amount, and never asks how it was paid", () => {
     expect(outcome({ amountMinor: 0n }).kind).toBe("zeroAmount");
-    // The order holds: no method outranks no amount.
-    expect(outcome({ hasMethod: false, amountMinor: 0n }).kind).toBe(
-      "noMethod",
-    );
+    // The method is optional metadata, so a pair and an amount is enough to
+    // state the outcome.
+    expect(outcome({}).kind).toBe("exact");
   });
 
   it("names nothing to owe while a question is open", () => {
-    expect(outcome({ hasMethod: false }).remainder).toBeUndefined();
+    expect(outcome({ amountMinor: 0n }).remainder).toBeUndefined();
     expect(outcome({ amountMinor: 0n }).remainder).toBeUndefined();
   });
 });
@@ -131,8 +126,7 @@ describe("paying somebody who was owed nothing", () => {
       currency: "CHF",
       amountAgainstDebtMinor: 5000n,
       awaitingRate: false,
-      hasMethod: true,
-    });
+      });
     expect(result.kind).toBe("custom");
     // Seb pays Cyril, so Cyril ends up owing Seb.
     expect(result.remainder).toEqual({
@@ -154,7 +148,6 @@ describe("paying somebody who was owed nothing", () => {
         currency: "CHF",
         amountAgainstDebtMinor: 5000n,
         awaitingRate: false,
-        hasMethod: true,
       }).kind,
     ).toBe("over");
   });
@@ -219,7 +212,6 @@ describe("paying in a currency the debt is not held in", () => {
       amountAgainstDebtMinor: null,
       awaitingRate: true,
     } as const;
-    expect(outcome({ ...missing, hasMethod: false }).kind).toBe("noMethod");
     expect(outcome({ ...missing, amountMinor: 0n }).kind).toBe("zeroAmount");
   });
 
@@ -237,8 +229,7 @@ describe("paying in a currency the debt is not held in", () => {
       currency: "EUR",
       amountAgainstDebtMinor: null,
       awaitingRate: false,
-      hasMethod: true,
-    });
+      });
     expect(result.kind).toBe("custom");
     expect(result.remainder).toEqual({
       fromName: "Cyril",

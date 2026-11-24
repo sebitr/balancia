@@ -1737,14 +1737,12 @@ export function AddEntryForm({
         currency !== row.currency &&
         needsRate &&
         row.currency === baseCurrency,
-      hasMethod: methodLabel !== "",
     });
   }, [
     selectedPair,
     settlePairs,
     outstandingIndex,
     totalMinor,
-    methodLabel,
     currency,
     baseCurrency,
     needsRate,
@@ -3584,7 +3582,6 @@ function SettleOutcomeLine({
   const t = useTranslations("addEntry.settle");
 
   if (outcome.kind === "noPair") return t("outcomeNoPair");
-  if (outcome.kind === "noMethod") return t("outcomeNoMethod");
   if (outcome.kind === "zeroAmount") return t("outcomeZero");
   if (outcome.kind === "awaitingRate") return t("outcomeAwaitingRate");
   if (outcome.kind === "exact") {

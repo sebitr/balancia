@@ -30,9 +30,7 @@
 export type SettleOutcomeKind =
   /** Nothing has been chosen yet — who is paying whom. */
   | "noPair"
-  /** A pair, but no way the money changed hands. */
-  | "noMethod"
-  /** A pair and a method, but nothing to move. */
+  /** A pair, but nothing to move. */
   | "zeroAmount"
   /**
    * The payment is in a currency the debt is not, and the rate that would
@@ -139,16 +137,17 @@ export interface SettleOutcomeInput {
    * field and stating a fact.
    */
   readonly awaitingRate: boolean;
-  /** Whether a payment method has been chosen. */
-  readonly hasMethod: boolean;
 }
 
 /**
  * The sentence to show, in the order the questions get answered.
  *
- * Pair, then method, then amount: it names the first thing still missing
- * rather than the most recently touched, so the line reads as a checklist
- * being worked down instead of flickering between complaints.
+ * Pair, then amount: it names the first thing still missing rather than the
+ * most recently touched, so the line reads as a checklist being worked down
+ * instead of flickering between complaints. How the money changed hands is
+ * not on that list: it is optional metadata, the server stores a repayment
+ * without it, and a line that asked for it read as a reason the button was
+ * closed when it was not.
  */
 export function settleOutcome(input: SettleOutcomeInput): SettleOutcome {
   const {
@@ -157,14 +156,12 @@ export function settleOutcome(input: SettleOutcomeInput): SettleOutcome {
     currency,
     amountAgainstDebtMinor,
     awaitingRate,
-    hasMethod,
   } = input;
 
   if (!pair) return { kind: "noPair" };
 
   const pairNames = { fromName: pair.fromName, toName: pair.toName };
 
-  if (!hasMethod) return { kind: "noMethod", pairNames };
   if (amountMinor <= 0n) return { kind: "zeroAmount", pairNames };
 
   /*

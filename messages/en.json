@@ -3661,7 +3661,6 @@
       "namedByYou": "Named by you",
       "notListed": "Not listed",
       "useMethodName": "Use “{name}”",
-      "outcomeNoMethod": "Pick how the money changed hands.",
       "outcomeNoPair": "Pick who is paying whom.",
       "outcomeZero": "Enter how much changed hands.",
       "outcomeAwaitingRate": "Enter the rate, so this can count against what is owed.",

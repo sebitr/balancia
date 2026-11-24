@@ -3661,7 +3661,6 @@
       "namedByYou": "Nommé par toi",
       "notListed": "Absent de la liste",
       "useMethodName": "Utiliser « {name} »",
-      "outcomeNoMethod": "Choisis comment l’argent a changé de mains.",
       "outcomeNoPair": "Choisis qui paie qui.",
       "outcomeZero": "Saisis le montant qui a changé de mains.",
       "outcomeAwaitingRate": "Saisis le taux, pour que ce remboursement compte sur ce qui est dû.",
