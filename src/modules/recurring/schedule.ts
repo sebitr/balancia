@@ -344,7 +344,7 @@ export function occurrencesUpTo(
     maxOccurrences?: number;
     /**
      * How many of this series already exist, for a rule that ends after a
-     * count. The worker knows: it is the template's `generatedCount`.
+     * count. The worker counts the occurrence rows; see `seriesSoFar`.
      *
      * Without it a caller resuming from `from` would start counting at zero
      * and the series would never end.
