@@ -1,6 +1,6 @@
 # A ready primary button no longer looks disabled, and focus, touch targets and small accessibility gaps are fixed
 
-Branch: `fix/accent-a11y-review`
+Merged: 2026-11-24 in #508
 
 From the UX review: plum gets real weight (cream text, a ring from the accent's
 ink), a disabled primary is a wash rather than a faded fill, the bottom bar fits

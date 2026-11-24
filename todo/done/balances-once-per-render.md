@@ -1,6 +1,6 @@
 # Work out every group's balances once per screen, not once per thing on it
 
-Branch: `perf/balances-once-per-render`
+Merged: 2026-11-24 in #500
 
 Home and the sidebar beside it each walked every group's balances, with
 slightly different arguments, so a visit to Home did the work twice. The
