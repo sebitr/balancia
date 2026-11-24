@@ -14,5 +14,5 @@ connections, as a reset already did.
 comment on `homeQuestions` says the llms files describe the software rather
 than the instance, so gating it is left to the owner.
 
-The integration suites `agent-access-routes` and `auth` were edited without
-being run locally; CI is their first run.
+The integration suites `agent-access-routes` and `agent-access` were edited
+without being run locally; CI is their first run.
