@@ -8,6 +8,7 @@ import {
 } from "@/components/layout/group-header-facts";
 import { GroupNav } from "@/components/layout/group-nav";
 import { GroupSwitcher } from "@/components/layout/group-switcher";
+import { readNarrowWindow } from "@/components/layout/narrow-window-cookie";
 import { readSidebarCollapsed } from "@/components/layout/sidebar-cookie";
 import { SidebarGroupAdd } from "@/components/layout/sidebar-group-add";
 import { OfflineEntryProvider } from "@/components/offline/offline-entry";
@@ -57,7 +58,10 @@ export default async function GroupLayout({
 }: LayoutProps<"/groups/[groupId]">) {
   const { groupId } = await params;
   const access = await resolveAccess(groupId);
-  const sidebarCollapsed = await readSidebarCollapsed();
+  const [sidebarCollapsed, narrow] = await Promise.all([
+    readSidebarCollapsed(),
+    readNarrowWindow(),
+  ]);
 
   /*
    * Wrapping the shell rather than sitting inside it, so that the bottom
@@ -92,19 +96,26 @@ export default async function GroupLayout({
         group={{ id: access.groupId, name: access.group.name }}
         sidebarAdd={<SidebarGroupAdd groupId={access.groupId} />}
         sidebarCollapsed={sidebarCollapsed}
+        narrow={narrow}
         // The same navigation as the bar, as tabs under the group's name,
         // from `lg` up. The name is drawn at once from the authorization
-        // above; the tile and the counts stream in behind it.
+        // above; the tile and the counts stream in behind it — unless this
+        // device's window was last a phone's, where the header is not drawn
+        // and its counts are not read (see `narrow-window.ts`).
         groupHeader={
           <GroupHeader groupId={access.groupId}>
-            <Suspense
-              fallback={<GroupHeaderFactsFallback name={access.group.name} />}
-            >
-              <GroupHeaderFacts
-                groupId={access.groupId}
-                name={access.group.name}
-              />
-            </Suspense>
+            {narrow ? (
+              <GroupHeaderFactsFallback name={access.group.name} />
+            ) : (
+              <Suspense
+                fallback={<GroupHeaderFactsFallback name={access.group.name} />}
+              >
+                <GroupHeaderFacts
+                  groupId={access.groupId}
+                  name={access.group.name}
+                />
+              </Suspense>
+            )}
           </GroupHeader>
         }
         // The name is already resolved by the authorization above, so the header

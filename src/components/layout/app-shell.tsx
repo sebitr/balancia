@@ -11,6 +11,7 @@ import { Screen } from "@/components/motion/screen";
 import { DemoBanner } from "@/components/demo/demo-banner";
 import { AppSidebar } from "./app-sidebar";
 import { CommandPalette } from "./command-palette";
+import { NarrowWindowHint } from "./narrow-window-hint";
 import { RefreshOnReturn } from "./refresh-on-return";
 import { SidebarFrame } from "./sidebar-context";
 import { SidebarGroupsFallback } from "./sidebar-groups";
@@ -74,6 +75,7 @@ export function AppShell({
   groupHeader,
   sidebarAdd,
   sidebarCollapsed = false,
+  narrow = false,
 }: {
   children: ReactNode;
   actor: {
@@ -106,6 +108,13 @@ export function AppShell({
   sidebarAdd?: ReactNode;
   /** Whether this device keeps the sidebar folded; see `sidebar-state.ts`. */
   sidebarCollapsed?: boolean;
+  /**
+   * Whether this device's window was last below `lg`, where the sidebar is
+   * not drawn; see `narrow-window.ts`. Its list of groups — every group's
+   * balances — is then left unread, and what stands in for it is the list's
+   * own placeholder, which nobody sees at that width either.
+   */
+  narrow?: boolean;
 }) {
   const t = useTranslations("nav");
   const tGuest = useTranslations("guestWidget");
@@ -150,7 +159,9 @@ export function AppShell({
           actor.isGuest ? undefined : <NotificationBell variant="sidebar" />
         }
         groups={
-          actor.isGuest ? undefined : (
+          actor.isGuest ? undefined : narrow ? (
+            <SidebarGroupsFallback groupId={group?.id ?? null} />
+          ) : (
             <Suspense
               fallback={<SidebarGroupsFallback groupId={group?.id ?? null} />}
             >
@@ -257,6 +268,11 @@ export function AppShell({
           exactly the same way, and an installed app gives neither of them a
           reload button. */}
       <RefreshOnReturn />
+
+      {/* Tells the server whether the next screen needs the desk-only reads,
+          and asks for this one again if it was drawn without them and the
+          window has since become a desk's. */}
+      <NarrowWindowHint leftOut={narrow} />
 
       {/* The service worker, and with it the offline screen, the precache
           and push, from the first screen of the app rather than from the

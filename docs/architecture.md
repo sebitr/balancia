@@ -250,7 +250,12 @@ after a Server Action starts from nothing, and the action itself, route
 handlers and the worker run outside any render and read every time. A caller
 passing its own handle (a transaction) always reads for itself. The home screen
 reads every active group's rows in one batch and skips archived groups, whose
-figures nothing shows.
+figures nothing shows. That overview is itself computed once per render
+(`loadHomeOverviewOnce`), so Home and the sidebar beside it share one; the
+command palette reads only the groups whose name matches
+(`loadPositionsAmong`); and a device whose window was last below `lg` is drawn
+without the sidebar's list and the group header's counts, which it never shows
+(`src/components/layout/narrow-window.ts`).
 
 ## Security model
 

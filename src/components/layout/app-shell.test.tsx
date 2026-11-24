@@ -86,7 +86,11 @@ const { default: Link } = await import("next/link");
 
 function renderShell(
   actor: { label: string; isGuest: boolean },
-  options: { group?: { id: string; name: string }; pathname?: string } = {},
+  options: {
+    group?: { id: string; name: string };
+    pathname?: string;
+    narrow?: boolean;
+  } = {},
 ) {
   cleanup();
   nav.pathname = options.pathname ?? "/dashboard";
@@ -94,6 +98,7 @@ function renderShell(
     <AppShell
       actor={actor}
       group={options.group ?? null}
+      narrow={options.narrow}
       leading={
         options.group ? (
           <Link href={`/groups/${options.group.id}`}>{options.group.name}</Link>
@@ -188,6 +193,19 @@ describe("AppShell sidebar, from lg", () => {
     expect(
       within(side).getByRole("button", { name: "Add expense" }),
     ).toHaveAttribute("aria-haspopup", "dialog");
+  });
+
+  it("leaves the list of groups unread for a window last seen narrow", () => {
+    // Every group's balances, for a column a phone never shows; the list's
+    // own placeholder stands in, and the hint asks for the screen again if
+    // the window becomes a desk's. See `narrow-window.ts`.
+    renderShell({ label: "Ada", isGuest: false }, { narrow: true });
+
+    const side = sidebar();
+    expect(within(side).queryByText("Lisbon, March")).toBeNull();
+    expect(
+      within(side).getByRole("navigation", { name: "Your groups" }),
+    ).toBeTruthy();
   });
 
   it("lights the group and adds to it, inside a group", () => {
