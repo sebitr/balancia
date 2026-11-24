@@ -62,6 +62,7 @@ const { CommandPalette } = await import("./command-palette");
 const { SidebarGroupAdd } = await import("./sidebar-group-add");
 const { SidebarFrame } = await import("./sidebar-context");
 const { SidebarGroups } = await import("./sidebar-groups");
+const { KnownGroupsOwner } = await import("./known-groups");
 
 const GROUPS: NavigationGroup[] = [
   {
@@ -113,23 +114,26 @@ function renderSidebar({
     ? "balancia_sidebar=collapsed; path=/"
     : "balancia_sidebar=; path=/; max-age=0";
   renderWithIntl(
-    <SidebarFrame initialCollapsed={collapsed}>
-      <AppSidebar
-        actor={{ label: isGuest ? "Tomás" : "Sébastien B.", isGuest }}
-        group={group}
-        // What the group layout hands the shell: the group's own Add.
-        add={group ? <SidebarGroupAdd groupId={group.id} /> : undefined}
-        notifications={
-          isGuest ? undefined : <a href="/notifications">Notifications</a>
-        }
-        groups={
-          isGuest ? undefined : (
-            <SidebarGroups groups={groups} groupId={group?.id ?? null} />
-          )
-        }
-        guestCard={isGuest ? <p>Keep Lisbon, March</p> : undefined}
-      />
-    </SidebarFrame>,
+    // Whose groups may be kept, as the layouts say it; see `known-groups.tsx`.
+    <KnownGroupsOwner userId={isGuest ? null : "user-sebastien"}>
+      <SidebarFrame initialCollapsed={collapsed}>
+        <AppSidebar
+          actor={{ label: isGuest ? "Tomás" : "Sébastien B.", isGuest }}
+          group={group}
+          // What the group layout hands the shell: the group's own Add.
+          add={group ? <SidebarGroupAdd groupId={group.id} /> : undefined}
+          notifications={
+            isGuest ? undefined : <a href="/notifications">Notifications</a>
+          }
+          groups={
+            isGuest ? undefined : (
+              <SidebarGroups groups={groups} groupId={group?.id ?? null} />
+            )
+          }
+          guestCard={isGuest ? <p>Keep Lisbon, March</p> : undefined}
+        />
+      </SidebarFrame>
+    </KnownGroupsOwner>,
   );
   return screen.getByRole("banner");
 }

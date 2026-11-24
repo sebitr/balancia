@@ -32,7 +32,8 @@ import { formatMoney, money } from "@/modules/currencies/money";
 import { searchPaletteAction } from "@/modules/search/actions";
 import type { PalettePerson, PaletteResults } from "@/modules/search/service";
 import { cn } from "@/lib/utils";
-import { useKnownGroups, usePositionLines } from "./sidebar-groups";
+import { useKnownGroups } from "./known-groups";
+import { usePositionLines } from "./sidebar-groups";
 import { readSingleKeys } from "./single-keys";
 import {
   commandHeld,

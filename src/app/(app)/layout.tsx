@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
+import { KnownGroupsOwner } from "@/components/layout/known-groups";
 import { readSidebarCollapsed } from "@/components/layout/sidebar-cookie";
 import { getCurrentUser } from "@/lib/security/actor";
 
@@ -16,12 +17,15 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     redirect("/sign-in");
   }
 
+  // Whose groups the sidebar may keep and draw again; see `known-groups.tsx`.
   return (
-    <AppShell
-      actor={{ label: user.name, isGuest: false }}
-      sidebarCollapsed={await readSidebarCollapsed()}
-    >
-      {children}
-    </AppShell>
+    <KnownGroupsOwner userId={user.userId}>
+      <AppShell
+        actor={{ label: user.name, isGuest: false }}
+        sidebarCollapsed={await readSidebarCollapsed()}
+      >
+        {children}
+      </AppShell>
+    </KnownGroupsOwner>
   );
 }
