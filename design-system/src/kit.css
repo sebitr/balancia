@@ -978,6 +978,106 @@ a.list-row:focus-visible {
   font-size: 0.75rem;
   color: var(--muted-foreground);
 }
+
+/* ── transactions, on a phone: a card per day, two lines per row ── */
+.tx-days {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 24rem;
+}
+.tx-day {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.tx-day > h3 {
+  margin: 0;
+  padding: 0 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+.tx-card {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: var(--card);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground) 10%, transparent);
+}
+.tx-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-left: 0.875rem;
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 150ms ease;
+}
+a.tx-row:hover {
+  background: color-mix(in oklch, var(--muted) 60%, transparent);
+}
+.tx-tile {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  background: var(--muted);
+  color: var(--foreground);
+}
+.tx-tile svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+.tx-body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.875rem 0.875rem 0.875rem 0;
+}
+.tx-card > li + li .tx-body {
+  border-top: 1px solid var(--border);
+}
+.tx-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+.tx-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 1rem;
+  line-height: 1.375;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.tx-amount {
+  flex-shrink: 0;
+  font-size: 1rem;
+  line-height: 1.375;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tx-sub {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  overflow-wrap: anywhere;
+}
+.tx-pos {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
 .tbl {
   width: 100%;
   border-collapse: collapse;
