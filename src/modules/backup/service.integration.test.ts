@@ -590,12 +590,16 @@ describe("a backup run", () => {
       await runBackup(id, { trigger: "schedule", ...seams() });
     }
 
-    expect([...cloud.files.keys()].sort()).toEqual([
-      "README.txt",
-      "balancia-backup-20200101T000000Z.json.gz.age.old",
-      nameAt(id, new Date("2026-10-11T03:30:00Z")),
-      nameAt(id, new Date("2026-10-12T03:30:00Z")),
-    ]);
+    // Both sides sorted: the destination id in a bundle's name is random, so
+    // where it falls against "20200101" changes from one run to the next.
+    expect([...cloud.files.keys()].sort()).toEqual(
+      [
+        "README.txt",
+        "balancia-backup-20200101T000000Z.json.gz.age.old",
+        nameAt(id, new Date("2026-10-11T03:30:00Z")),
+        nameAt(id, new Date("2026-10-12T03:30:00Z")),
+      ].sort(),
+    );
   });
 
   it("keeps its own newest N in a folder another owner shares, and deletes none of theirs", async () => {
