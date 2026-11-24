@@ -63,7 +63,12 @@ export interface GroupSummary {
   readonly lastActivityAt: Date;
   /** First few participants, oldest first, for an avatar stack. */
   readonly memberNames: readonly string[];
-  /** The same participants' ids, in the same order. */
+  /**
+   * The same participants' ids, in the same order, for each face's hue. The
+   * reader's own slot is "": they are a different participant in every
+   * group, so a hue keyed by it would colour them differently on each row,
+   * and every group screen already draws the reader in the "you" tone.
+   */
   readonly memberIds: readonly string[];
 }
 
@@ -141,7 +146,8 @@ export async function listGroupsForUser(
       memberIds: sql<string[]>`(
         SELECT coalesce(array_agg(id ORDER BY joined, tie), '{}')
         FROM (
-          SELECT ${participants.id}::text AS id,
+          SELECT CASE WHEN ${participants.userId} = ${userId} THEN ''
+                      ELSE ${participants.id}::text END AS id,
                  ${participants.createdAt} AS joined,
                  ${participants.id} AS tie
           FROM ${participants}
