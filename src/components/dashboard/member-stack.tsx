@@ -5,7 +5,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
  * Overlapping initials, one letter each.
  *
  * A single letter is not a stylistic choice: at 20px the next avatar in the
- * overlap clips a second one. The whole stack carries one label naming the
+ * overlap clips a second one. The overlap is two pixels, not six: with the
+ * page-coloured ring each avatar wears, six covered the right half of the
+ * letter beneath it and a D read as a C. The whole stack carries one label naming the
  * people, so a screen reader reads "Sofia, Mika and 4 others" rather than a
  * run of stray letters.
  */
@@ -33,7 +35,7 @@ export function MemberStack({
     <span
       role="img"
       aria-label={label}
-      className="flex shrink-0 -space-x-1.5 *:ring-2 *:ring-background"
+      className="flex shrink-0 -space-x-0.5 *:ring-2 *:ring-background"
     >
       {shown.map((name, index) => (
         <Avatar key={`${name}-${index}`} className="size-5">

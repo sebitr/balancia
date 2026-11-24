@@ -264,11 +264,11 @@ function StatusBadge({ status }: { status: "active" | "expired" | "revoked" }) {
   if (status === "active") {
     return (
       /*
-        The tint pair the app already uses for a positive chip, rather than the
-        design's darkened literal: that value only reads on cream, and this
-        badge has to work on the dark theme too.
+        The accent's own chip, as "Recurring" wears. An active link is a state,
+        not money: green means somebody owes the reader, and a link that is
+        merely switched on must not borrow it.
       */
-      <Badge className="bg-positive/15 text-positive-ink">
+      <Badge className="bg-accent text-accent-foreground">
         {t("statusActive")}
       </Badge>
     );

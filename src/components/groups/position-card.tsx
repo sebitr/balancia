@@ -167,6 +167,9 @@ export function PositionCard({
               )}
             </Button>
 
+            {/* Only a reader who is owed something has anyone to remind:
+                owing in every currency, this was a disabled "Reminded" about
+                nobody, beside the one action that matters. */}
             {settled ? (
               <Button
                 variant="outline"
@@ -178,7 +181,7 @@ export function PositionCard({
                 <Bell aria-hidden="true" className="size-4" />
                 {t("remindAll")}
               </Button>
-            ) : (
+            ) : outgoing ? null : (
               <RemindButton
                 groupId={groupId}
                 groupName={groupName}
@@ -245,9 +248,8 @@ export function PositionCard({
  * One currency the reader is not square in, as a signed figure.
  *
  * The sign is the app's own — a real plus or minus, then the figure — and the
- * colour follows it, so the direction survives greyscale. The word is there
- * for a screen reader only when the card has not already said it once for
- * every figure.
+ * colour follows it, so the direction survives greyscale. The word sits beside
+ * the figure whenever the card has not already said it once for every figure.
  */
 function PositionFigure({
   position,
@@ -266,7 +268,7 @@ function PositionFigure({
   const size = count <= 2 ? "text-[2.125rem]" : "text-[1.625rem]";
 
   return (
-    <li>
+    <li className="flex flex-wrap items-baseline gap-x-2">
       <Amount
         minorUnits={position.minorUnits}
         currency={position.currency}
@@ -277,8 +279,11 @@ function PositionFigure({
           TONE[tone].ink,
         )}
       />
+      {/* Seen, not only heard: a card that is owed in one currency and owes
+          in another has no single word under it, and a sign and a colour
+          alone are what AGENTS.md rules out. */}
       {worded && (
-        <span className="sr-only">
+        <span className={cn("text-xs font-medium", TONE[tone].ink)}>
           {" "}
           {tone === "positive" ? t("youGetBack") : t("youOwe")}
         </span>

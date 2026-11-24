@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { buttonVariants } from "@/components/ui/button";
 import { BalanceAmount } from "@/components/money/amount";
+import { TONE } from "@/components/money/balance-tone";
 
 /**
  * A corner of the app, drawn with whatever the screen below has chosen.
@@ -20,6 +21,7 @@ import { BalanceAmount } from "@/components/money/amount";
  */
 export function AppearancePreview({ currency }: { currency: string }) {
   const t = useTranslations("userSettings");
+  const tMoney = useTranslations("money");
   const self = t("accentPreviewSelf");
 
   return (
@@ -48,7 +50,10 @@ export function AppearancePreview({ currency }: { currency: string }) {
       <div className="flex flex-col gap-1">
         <BalanceAmount minorUnits="4250" currency={currency} size="small" />
         <BalanceAmount minorUnits="-1800" currency={currency} size="small" />
-        <BalanceAmount minorUnits="0" currency={currency} size="small" />
+        {/* Settled is phrased, never drawn as a zero with a minus. */}
+        <span className={`text-sm font-medium ${TONE.neutral.ink}`}>
+          {tMoney("settledUpBadge")}
+        </span>
       </div>
 
       <span

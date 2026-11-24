@@ -190,6 +190,10 @@ export function PositionHero({
                         : (-BigInt(position.minorUnits)).toString()
                     }
                     incoming={incoming}
+                    // One line is already worded by the sentence under it.
+                    // With several, each needs its own: a group can be owed
+                    // in one currency and owe in another.
+                    worded={open.length > 1}
                   />
                 );
               })}
@@ -274,7 +278,10 @@ export function PositionHero({
             ) : (
               <>
                 {settlement(true)}
-                {(mixed || recipients.length > 0) && (
+                {/* Only a reader who is owed something has anyone to remind:
+                    when they owe in every currency this would be a disabled
+                    "Reminded" about nobody. */}
+                {mixed && (
                   <RemindButton
                     groupId={groupId}
                     groupName={groupName}
@@ -347,11 +354,15 @@ function HeroAmount({
   currency,
   minorUnits,
   incoming,
+  worded = false,
 }: {
   currency: string;
   minorUnits: string;
   incoming: boolean;
+  /** Say which way it runs, in an arrow and a word, beside the figure. */
+  worded?: boolean;
 }) {
+  const t = useTranslations("money");
   const locale = useNumberLocale();
   const parts = new Intl.NumberFormat(locale, {
     style: "currency",
@@ -384,6 +395,16 @@ function HeroAmount({
     >
       {codeFirst ? code : amount}
       {codeFirst ? amount : code}
+      {worded && (
+        <span className="flex items-center gap-1 text-sm font-medium">
+          {incoming ? (
+            <ArrowDownLeft aria-hidden="true" className="size-3.5" />
+          ) : (
+            <ArrowUpRight aria-hidden="true" className="size-3.5" />
+          )}
+          {t(TONE[incoming ? "positive" : "negative"].labelKey)}
+        </span>
+      )}
     </p>
   );
 }

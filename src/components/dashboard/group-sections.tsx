@@ -22,8 +22,11 @@ import { PUSH } from "@/components/motion/transitions";
  * A row's only job is to open its group. Every action lives inside the group,
  * so there are no buttons out here competing with the one that matters.
  *
- * Direction is carried by the section label, so each amount's own word moves
- * into `sr-only` rather than being dropped — colour is never the only signal.
+ * The section label says which way a row mostly runs, but a group can owe in
+ * one currency and be owed in another, and money.html asks that a balance
+ * always carry its word, icon and colour. So each figure has its own word at
+ * every width: stacked under the figure on a phone, where beside it would
+ * crush the name, and inline from `lg` up.
  *
  * Amounts are rounded to whole units, as a converted total is in the widget
  * above: this list is scanned, not reconciled, and the group's own screen has
@@ -150,7 +153,7 @@ export function GroupList({
               {group.amounts.map((amount) => (
                 <span
                   key={amount.currency}
-                  className="flex items-baseline gap-1.5"
+                  className="flex flex-col items-end gap-0 lg:flex-row lg:items-baseline lg:gap-1.5"
                 >
                   {/* From `lg` the figure loses its sign — the child
                       `BalanceAmount` hides from assistive technology, which
@@ -175,8 +178,9 @@ export function GroupList({
 }
 
 /**
- * The figure's direction in words, from `lg` — the reader's own words, "you
- * owe" and "you are owed", which the position widget already uses.
+ * The figure's direction in words — the reader's own words, "you owe" and
+ * "you are owed", which the position widget already uses. Under the figure on
+ * a phone, beside it from `lg`.
  *
  * Hidden from assistive technology: `BalanceAmount` already says the
  * direction to a screen reader at every width, and this is the same fact
@@ -190,10 +194,7 @@ function RowWord({ minorUnits }: { minorUnits: string }) {
   return (
     <span
       aria-hidden="true"
-      className={cn(
-        "hidden text-xs whitespace-nowrap lg:inline",
-        TONE[tone].ink,
-      )}
+      className={cn("text-xs whitespace-nowrap", TONE[tone].ink)}
     >
       {tone === "positive" ? t("wordOwedToYou") : t("wordYouOwe")}
     </span>
