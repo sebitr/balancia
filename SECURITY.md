@@ -260,11 +260,44 @@ and the sign-in is built to the current MCP and OAuth security guidance.
   malformed request to a registered one: with open registration that address is a
   stranger's claim, and redirecting to it by itself would make Balancia an open
   redirector.
-- **One call per request at `/mcp`.** Batches are refused, so the rate limit
-  counts what it says and identical writes cannot race the duplicate check.
-- **Writes are guarded and reversible.** Deleting is a soft delete with a
-  restore; an entry identical to one written in the last ten minutes is refused
-  once; write tools are annotated so clients can ask first.
+- **One call per request at `/mcp`, and a body is counted as it is read.**
+  Batches are refused, so the rate limit counts what it says. A body announcing
+  no length is cut off at the cap rather than buffered and measured afterwards,
+  here and on every OAuth endpoint, and no event stream is ever held open
+  (`subscriptions/listen` shares one pool between every caller on an instance).
+- **Writes are guarded, metered and reversible.** Deleting is a soft delete with
+  a restore; an entry identical to one written in the last ten minutes is
+  refused once. Refusing batches does not stop two such calls arriving together
+  on separate requests, so the check and the write run under a non-blocking
+  PostgreSQL advisory lock keyed on exactly what the check compares, and the
+  second call is refused rather than both written. The lock is held on a small
+  pool of its own, so a burst of writes cannot exhaust the connections the
+  writes need. A connection may make a hundred changes an hour,
+  because each one tells the other members of a group; write tools are
+  annotated so clients can ask first.
+- **Nothing a stranger typed is repeated at length, and a change says where it
+  went.** Names of groups and people are cut to sixty characters when an error
+  quotes them, the list of groups returns a count of members rather than their
+  names, a repayment's note is cut to two hundred characters in a list, and every
+  result that is about a group names it, and names the people involved by id.
+- **A name that could mean two things is refused, even beside an exact
+  match.** A group's name is refused, for a read as for a change, when another
+  group's name contains it ("Lisbon" beside "Lisbon trip 2026"), because anybody
+  can call their group anything and be a member of yours by invitation — and a
+  read is where an assistant learns the id it then writes with. A member's name
+  is refused when it is also the first name or start of another's ("Ben" beside
+  "Ben Carter"), because anybody with a join link picks their own name. Every
+  candidate is listed with its id; an id resolves directly, and one that is not
+  a member's is refused rather than read as a name.
+- **An unequal split cannot give a person nothing or less.** The engine accepts a
+  negative exact amount for a receipt's discount; a model has no such receipt,
+  and one written by an injected instruction would leave a co-member owing a
+  sum nobody agreed.
+- **A name on the consent screen is a claim, and one is checked.** An
+  application that calls itself Claude or ChatGPT — spelled with a Cyrillic
+  letter or a digit for one of its own included — while sending the answer
+  somewhere that is not that vendor's own address is told so, in red, above the
+  buttons.
 - **It can be switched off** with `AGENT_ACCESS=false`, which makes every route
   answer `404`.
 

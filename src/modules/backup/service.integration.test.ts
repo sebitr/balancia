@@ -18,7 +18,7 @@ import {
 import { createRecoveryKey, decryptWith } from "./age";
 import { type BackupBundle } from "./bundle";
 import { BackupError } from "./errors";
-import { bundleName } from "./naming";
+import { bundleName, destinationTag } from "./naming";
 import {
   createDestination,
   deleteDestination,
@@ -110,6 +110,9 @@ const S3 = {
   pathStyle: false,
 };
 
+/** The file a run of destination `id` writes at `at`. */
+const nameAt = (id: string, at: Date) => bundleName(at, destinationTag(id));
+
 async function setUp() {
   const owner = await createTestUser({ name: "Amélie" });
   const key = await createRecoveryKey();
@@ -189,6 +192,71 @@ describe("the recovery key", () => {
 
     expect((await getBackupKey(ada.userId))?.recipient).toBe(second.recipient);
     expect((await getBackupKey(sam.userId))?.recipient).toBe(first.recipient);
+  });
+});
+
+describe("a new recovery key", () => {
+  it("brings the next backup forward, and that backup is written though nothing else changed", async () => {
+    const { owner } = await setUp();
+    await createTestGroup(owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3, frequency: "weekly" },
+      seams(),
+    );
+    await runBackup(id, { trigger: "schedule", ...seams() });
+
+    // The old key is lost; a new one is made the next morning.
+    const next = await createRecoveryKey();
+    clock = new Date("2026-10-10T08:00:00Z");
+    await saveBackupKey(owner.userId, next.recipient, { now: clock });
+
+    const [view] = await listDestinations(owner.userId);
+    expect(view?.nextRunAt).toEqual(clock);
+
+    clock = new Date("2026-10-10T08:10:00Z");
+    const outcome = await runBackup(id, { trigger: "schedule", ...seams() });
+
+    expect(outcome?.status).toBe("succeeded");
+    expect(cloud.files.size).toBe(2);
+    // The newest copy is one the new key opens.
+    const bundle = await openFile(next.identity);
+    expect(bundle.groups).toHaveLength(1);
+  });
+
+  it("leaves the schedule alone when the same key is saved again, and a paused destination paused", async () => {
+    const { owner, key } = await setUp();
+    await createTestGroup(owner);
+    const { id: running } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    const { id: paused } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    await runBackup(running, { trigger: "schedule", ...seams() });
+    await runBackup(paused, { trigger: "schedule", ...seams() });
+    await updateDestination(owner.userId, paused, { paused: true }, seams());
+    const before = await listDestinations(owner.userId);
+
+    clock = new Date("2026-10-09T12:00:00Z");
+    await saveBackupKey(owner.userId, key.recipient, { now: clock });
+    expect(
+      (await listDestinations(owner.userId)).map((view) => view.nextRunAt),
+    ).toEqual(before.map((view) => view.nextRunAt));
+
+    await saveBackupKey(owner.userId, (await createRecoveryKey()).recipient, {
+      now: clock,
+    });
+    const after = await listDestinations(owner.userId);
+    expect(after.find((view) => view.id === running)?.nextRunAt).toEqual(clock);
+    expect(after.find((view) => view.id === paused)).toMatchObject({
+      status: "paused",
+      nextRunAt: before.find((view) => view.id === paused)?.nextRunAt,
+    });
   });
 });
 
@@ -330,9 +398,9 @@ describe("a backup run", () => {
     const outcome = await runBackup(id, { trigger: "manual", ...seams() });
 
     expect(outcome?.status).toBe("succeeded");
-    expect([...cloud.files.keys()]).toEqual([bundleName(clock)]);
+    expect([...cloud.files.keys()]).toEqual([nameAt(id, clock)]);
 
-    const bytes = cloud.files.get(bundleName(clock)) ?? new Uint8Array();
+    const bytes = cloud.files.get(nameAt(id, clock)) ?? new Uint8Array();
     expect(Buffer.from(bytes).toString("latin1")).not.toContain("Lisbon");
     expect(Buffer.from(bytes).toString("latin1")).not.toContain("Dinner");
 
@@ -425,7 +493,7 @@ describe("a backup run", () => {
     expect(view?.latestRun).toMatchObject({
       status: "succeeded",
       groupCount: 1,
-      objectName: bundleName(clock),
+      objectName: nameAt(id, clock),
     });
     expect(view?.latestRun?.bytes).toBeGreaterThan(0);
   });
@@ -509,9 +577,104 @@ describe("a backup run", () => {
     expect([...cloud.files.keys()].sort()).toEqual([
       "README.txt",
       "balancia-backup-20200101T000000Z.json.gz.age.old",
-      "balancia-backup-20261011T033000Z.json.gz.age",
-      "balancia-backup-20261012T033000Z.json.gz.age",
+      nameAt(id, new Date("2026-10-11T03:30:00Z")),
+      nameAt(id, new Date("2026-10-12T03:30:00Z")),
     ]);
+  });
+
+  it("keeps its own newest N in a folder another owner shares, and deletes none of theirs", async () => {
+    // One fake cloud for both: two people who pointed their backups at the
+    // same bucket and prefix.
+    const ada = await setUp();
+    const sam = await setUp();
+    const adaGroup = await createTestGroup(ada.owner);
+    const samGroup = await createTestGroup(sam.owner);
+    const { id: adaId } = await createDestination(
+      ada.owner.userId,
+      { provider: "s3", credentials: S3, keepLast: 2 },
+      seams(),
+    );
+    const { id: samId } = await createDestination(
+      sam.owner.userId,
+      { provider: "s3", credentials: S3, keepLast: 3 },
+      seams(),
+    );
+
+    for (let day = 9; day <= 13; day += 1) {
+      clock = new Date(`2026-10-${String(day).padStart(2, "0")}T03:30:00Z`);
+      await expense(adaGroup, `Ada ${day}`);
+      await expense(samGroup, `Sam ${day}`);
+      // The same second, both of them: neither file may replace the other.
+      await runBackup(adaId, { trigger: "schedule", ...seams() });
+      await runBackup(samId, { trigger: "schedule", ...seams() });
+    }
+
+    expect([...cloud.files.keys()].sort()).toEqual(
+      [
+        nameAt(adaId, new Date("2026-10-12T03:30:00Z")),
+        nameAt(adaId, new Date("2026-10-13T03:30:00Z")),
+        nameAt(samId, new Date("2026-10-11T03:30:00Z")),
+        nameAt(samId, new Date("2026-10-12T03:30:00Z")),
+        nameAt(samId, new Date("2026-10-13T03:30:00Z")),
+      ].sort(),
+    );
+    // And each file is still the one its owner's key opens.
+    const adaBundle = await openFile(
+      ada.key.identity,
+      nameAt(adaId, new Date("2026-10-13T03:30:00Z")),
+    );
+    expect(adaBundle.groups.map((group) => group.group.id)).toEqual([
+      adaGroup.groupId,
+    ]);
+  });
+
+  it("deletes an untagged backup from before the change only when its own history says it wrote it", async () => {
+    const { owner } = await setUp();
+    const other = await setUp();
+    const group = await createTestGroup(owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3, keepLast: 1 },
+      seams(),
+    );
+    const { id: otherId } = await createDestination(
+      other.owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+
+    const mine = "balancia-backup-20261001T033000Z.json.gz.age";
+    const nobodys = "balancia-backup-20261002T033000Z.json.gz.age";
+    const theirs = "balancia-backup-20261003T033000Z.json.gz.age";
+    // Written by both in the same second, back when that meant one file.
+    const shared = "balancia-backup-20261004T033000Z.json.gz.age";
+    for (const name of [mine, nobodys, theirs, shared]) {
+      cloud.files.set(name, new Uint8Array([1]));
+    }
+    const ran = (destinationId: string, objectName: string) => ({
+      destinationId,
+      trigger: "schedule" as const,
+      status: "succeeded" as const,
+      startedAt: new Date("2026-10-01T03:30:00Z"),
+      finishedAt: new Date("2026-10-01T03:31:00Z"),
+      objectName,
+    });
+    await getDb()
+      .insert(backupRuns)
+      .values([
+        ran(id, mine),
+        ran(otherId, theirs),
+        ran(id, shared),
+        ran(otherId, shared),
+      ]);
+
+    await expense(group);
+    const outcome = await runBackup(id, { trigger: "manual", ...seams() });
+
+    expect(outcome?.deleted).toEqual([mine]);
+    expect([...cloud.files.keys()].sort()).toEqual(
+      [nobodys, theirs, shared, nameAt(id, clock)].sort(),
+    );
   });
 
   it("does not lose the new copy if pruning the old ones fails", async () => {
@@ -727,6 +890,122 @@ describe("a backup that fails", () => {
     await expect(
       runBackup(id, { trigger: "schedule", ...seams() }),
     ).resolves.toMatchObject({ status: "failed", errorCode: "unknown" });
+  });
+});
+
+describe("what the person does while a run is going", () => {
+  /** Makes the next upload wait for `during`, a quarter of an hour into the run. */
+  function midway(during: () => Promise<void>, fail?: BackupError) {
+    const put = cloud.put.bind(cloud);
+    cloud.put = async (name, bytes) => {
+      clock = new Date(clock.getTime() + 5 * 60_000);
+      await during();
+      clock = new Date(clock.getTime() + 10 * 60_000);
+      if (fail) throw fail;
+      await put(name, bytes);
+    };
+  }
+
+  it("keeps a pause made while a run was going", async () => {
+    const { owner } = await setUp();
+    await createTestGroup(owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    midway(() =>
+      updateDestination(owner.userId, id, { paused: true }, seams()),
+    );
+
+    const outcome = await runBackup(id, { trigger: "schedule", ...seams() });
+
+    expect(outcome?.status).toBe("succeeded");
+    const [view] = await listDestinations(owner.userId);
+    expect(view?.status).toBe("paused");
+    expect(view?.lastSuccessAt).toEqual(clock);
+  });
+
+  it("keeps a pause made while a failing run was going, rather than asking to reconnect", async () => {
+    const { owner } = await setUp();
+    await createTestGroup(owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    midway(
+      () => updateDestination(owner.userId, id, { paused: true }, seams()),
+      new BackupError("reconnect", "invalid_grant"),
+    );
+
+    const outcome = await runBackup(id, { trigger: "schedule", ...seams() });
+
+    expect(outcome?.status).toBe("failed");
+    const [view] = await listDestinations(owner.userId);
+    expect(view?.status).toBe("paused");
+    expect(view?.consecutiveFailures).toBe(1);
+  });
+
+  it("keeps a resume made during a manual run on a paused destination, and its run straight away", async () => {
+    const { owner } = await setUp();
+    await createTestGroup(owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    await updateDestination(owner.userId, id, { paused: true }, seams());
+    let resumedAt: Date | undefined;
+    midway(async () => {
+      resumedAt = clock;
+      await updateDestination(owner.userId, id, { paused: false }, seams());
+    });
+
+    const outcome = await runBackup(id, { trigger: "manual", ...seams() });
+
+    expect(outcome?.status).toBe("succeeded");
+    const [view] = await listDestinations(owner.userId);
+    expect(view?.status).toBe("active");
+    expect(view?.nextRunAt).toEqual(resumedAt);
+  });
+
+  it("counts the next run from the schedule chosen while it went on", async () => {
+    const { owner } = await setUp();
+    await createTestGroup(owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3, frequency: "daily" },
+      seams(),
+    );
+    midway(() =>
+      updateDestination(owner.userId, id, { frequency: "weekly" }, seams()),
+    );
+
+    await runBackup(id, { trigger: "schedule", ...seams() });
+
+    const [view] = await listDestinations(owner.userId);
+    expect(view?.frequency).toBe("weekly");
+    expect(view?.nextRunAt).toEqual(
+      new Date(clock.getTime() + 7 * 24 * 60 * 60 * 1000),
+    );
+  });
+
+  it("does not trip over a destination removed while it ran", async () => {
+    const { owner } = await setUp();
+    await createTestGroup(owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    midway(() => deleteDestination(owner.userId, id, seams()));
+
+    // The run row goes with the destination; the run must still end quietly.
+    await expect(
+      runBackup(id, { trigger: "schedule", ...seams() }),
+    ).resolves.toMatchObject({ status: "succeeded" });
+    expect(await listDestinations(owner.userId)).toEqual([]);
   });
 });
 
@@ -1038,10 +1317,39 @@ describe("reading backups back", () => {
     const files = await listBackupFiles(owner.userId, id, seams());
 
     expect(files.map((file) => file.name)).toEqual([
-      "balancia-backup-20261010T033000Z.json.gz.age",
-      "balancia-backup-20261009T033000Z.json.gz.age",
+      nameAt(id, new Date("2026-10-10T03:30:00Z")),
+      nameAt(id, new Date("2026-10-09T03:30:00Z")),
     ]);
     expect(files[0]?.takenAt).toEqual(new Date("2026-10-10T03:30:00Z"));
+  });
+
+  it("offers neither another owner's backups in a shared folder nor a way to read them", async () => {
+    const { owner } = await setUp();
+    const other = await setUp();
+    await createTestGroup(owner);
+    await createTestGroup(other.owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    const { id: otherId } = await createDestination(
+      other.owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    await runBackup(id, { trigger: "manual", ...seams() });
+    await runBackup(otherId, { trigger: "manual", ...seams() });
+    const legacy = "balancia-backup-20261001T033000Z.json.gz.age";
+    cloud.files.set(legacy, new Uint8Array([1]));
+
+    const files = await listBackupFiles(owner.userId, id, seams());
+
+    // Its own, and the untagged one from before names said whose they were.
+    expect(files.map((file) => file.name)).toEqual([nameAt(id, clock), legacy]);
+    await expect(
+      readBackupFile(owner.userId, id, nameAt(otherId, clock), seams()),
+    ).rejects.toMatchObject({ code: "notFound" });
   });
 
   it("hands back the ciphertext the worker wrote, byte for byte", async () => {
@@ -1053,7 +1361,7 @@ describe("reading backups back", () => {
       seams(),
     );
     await runBackup(id, { trigger: "manual", ...seams() });
-    const name = bundleName(clock);
+    const name = nameAt(id, clock);
 
     const bytes = await readBackupFile(owner.userId, id, name, seams());
 
@@ -1103,7 +1411,7 @@ describe("reading backups back", () => {
       code: "notFound",
     });
     await expect(
-      readBackupFile(stranger.userId, id, bundleName(clock), seams()),
+      readBackupFile(stranger.userId, id, nameAt(id, clock), seams()),
     ).rejects.toMatchObject({ code: "notFound" });
   });
 });

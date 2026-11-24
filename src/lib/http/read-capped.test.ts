@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readCapped } from "./read-capped";
+import { readCapped, readRequestText } from "./read-capped";
 
 /**
  * A body that never ends, handed out one chunk per read.
@@ -65,5 +65,64 @@ describe("reading a response without trusting its length", () => {
     const text = await readCapped(new Response("aéé"), 4);
 
     expect(text).toBe(`aé${String.fromCodePoint(0xfffd)}`);
+  });
+});
+
+describe("reading a request without trusting its length", () => {
+  /** What a chunked upload looks like: a body, and no Content-Length at all. */
+  function chunked(stream: ReadableStream<Uint8Array>): Request {
+    return new Request("https://balancia.test/mcp", {
+      method: "POST",
+      body: stream,
+      duplex: "half",
+    } as RequestInit);
+  }
+
+  it("stops a chunked body that never ends, and cancels it", async () => {
+    const { stream, state } = endlessBody(
+      new TextEncoder().encode("x".repeat(64)),
+    );
+
+    expect(await readRequestText(chunked(stream), 1_000)).toBeNull();
+    expect(state.cancelled).toBe(true);
+    expect(state.pulls).toBeLessThan(40);
+  });
+
+  it("refuses a declared size without reading anything", async () => {
+    const { stream, state } = endlessBody(new TextEncoder().encode("x"));
+    const request = new Request("https://balancia.test/mcp", {
+      method: "POST",
+      headers: { "Content-Length": "999999" },
+      body: stream,
+      duplex: "half",
+    } as RequestInit);
+
+    expect(await readRequestText(request, 1_000)).toBeNull();
+    // A stream pulls once to fill its own queue before anybody reads it.
+    expect(state.pulls).toBeLessThanOrEqual(1);
+  });
+
+  it("reads a body within the cap whole, multi-byte characters included", async () => {
+    const request = new Request("https://balancia.test/mcp", {
+      method: "POST",
+      body: '{"a":"éé"}',
+    });
+
+    expect(await readRequestText(request, 1_000)).toBe('{"a":"éé"}');
+  });
+
+  it("reads nothing from a request without a body", async () => {
+    const request = new Request("https://balancia.test/mcp");
+
+    expect(await readRequestText(request, 1_000)).toBe("");
+  });
+
+  it("takes a body of exactly the cap", async () => {
+    const request = new Request("https://balancia.test/mcp", {
+      method: "POST",
+      body: "y".repeat(100),
+    });
+
+    expect(await readRequestText(request, 100)).toBe("y".repeat(100));
   });
 });

@@ -31,6 +31,38 @@ export function nextRunAfter(from: Date, frequency: Frequency): Date {
   return new Date(from.getTime() + PERIOD_MS[frequency]);
 }
 
+export interface FinishInput {
+  /** When the run began. */
+  readonly startedAt: Date;
+  /** When it ended. */
+  readonly finishedAt: Date;
+  /** `next_run_at` as the row holds it now, at the run's end. */
+  readonly current: Date;
+  /** When the run's outcome says the next should be. */
+  readonly planned: Date;
+}
+
+/**
+ * When the next run is due, once one has finished.
+ *
+ * Normally `planned`. But a run takes a while, and in that while the person
+ * may have asked for one sooner — resumed the destination, switched receipts
+ * on, reconnected, saved a new recovery key — each of which sets `next_run_at`
+ * to the moment they did it. A due time that falls inside the run (after it
+ * began, no later than its end) can only have been put there that way, since
+ * a due time from before the run is what started it, or was in the future
+ * when it was pressed. That request was made knowing nothing of this run's
+ * result, and is kept, rather than pushed back a day by a run that began
+ * before it.
+ */
+export function nextRunOnFinish(input: FinishInput): Date {
+  const current = input.current.getTime();
+  const askedForDuringRun =
+    current > input.startedAt.getTime() &&
+    current <= input.finishedAt.getTime();
+  return askedForDuringRun ? input.current : input.planned;
+}
+
 /**
  * How long to wait after the `failures`th failure in a row: an hour, then two,
  * four, and so on, never more than a day.

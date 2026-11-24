@@ -4,6 +4,7 @@ import { z, ZodError } from "zod";
 import { mobileApiError } from "@/app/api/mobile";
 import { logger } from "@/lib/logger";
 import type { UserActor } from "@/lib/security/authorization";
+import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { actorOf, type Principal } from "@/modules/agent-access/principal";
 import { money, toMajorString } from "@/modules/currencies/money";
 
@@ -39,6 +40,36 @@ export class ToolFailure extends Error {
     super(message);
     this.name = "ToolFailure";
   }
+}
+
+/**
+ * A name as it is repeated back to the model: one that somebody else typed, so
+ * cut to a length a sentence can carry. The names of groups and members are
+ * edited by other people, and what comes back in an error is read by a model
+ * that has not been told to distrust it.
+ */
+export function shown(name: string): string {
+  return name.length > 60 ? `${name.slice(0, 60)}…` : name;
+}
+
+/**
+ * The start of a long piece of somebody else's text, with a mark when it was
+ * cut so the model knows there is more and where to ask for it.
+ */
+export function excerpt(text: string | null, max = 200): string | null {
+  if (text === null || text.length <= max) return text;
+  return `${text.slice(0, max)}… [cut; ${text.length - max} more characters]`;
+}
+
+/**
+ * Which group a result is about, in every result that is about one.
+ *
+ * A model resolves "Lisbon" to a group and then says "done" — and the person
+ * has no way to know which group that was. Naming it in the result puts it in
+ * front of the model's own answer, where a wrong one can be caught.
+ */
+export function groupRef(access: { groupId: string; group: { name: string } }) {
+  return { id: access.groupId, name: shown(access.group.name) };
 }
 
 export function jsonResult(data: unknown): CallToolResult {
@@ -138,4 +169,32 @@ export function requireWrite(principal: Principal): void {
       "This connection is read-only. Disconnect and reconnect Balancia with permission to make changes.",
     );
   }
+}
+
+/**
+ * Runs a tool that changes something: `runTool`, behind both locks a write has.
+ *
+ * The scope is checked first and the allowance second, in the one place, so that
+ * a write tool added next year cannot forget either. The allowance is what a
+ * connection that has been steered into writing runs into: every change tells
+ * the other members of a group, and an hour's worth is bounded.
+ */
+export async function runWriteTool(
+  tool: string,
+  principal: Principal,
+  body: (actor: UserActor) => Promise<unknown>,
+): Promise<CallToolResult> {
+  return runTool(tool, principal, async (actor) => {
+    requireWrite(principal);
+    const allowance = await consumeRateLimit(
+      "agentWrite",
+      principal.credentialId,
+    );
+    if (!allowance.allowed) {
+      throw new ToolFailure(
+        `This connection has made as many changes as it may for now. Nothing was changed. Tell the person, and try again in ${Math.ceil(allowance.retryAfterSeconds / 60)} minutes.`,
+      );
+    }
+    return body(actor);
+  });
 }

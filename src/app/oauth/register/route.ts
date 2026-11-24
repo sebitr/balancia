@@ -1,3 +1,4 @@
+import { readRequestText } from "@/lib/http/read-capped";
 import { trackRoute } from "@/lib/metrics/http";
 import { getClientIp } from "@/lib/security/actor";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
@@ -5,7 +6,6 @@ import { registerClient } from "@/modules/agent-access/clients";
 import { OAuthError } from "@/modules/agent-access/errors";
 import {
   agentAccessOff,
-  declaredLength,
   MAX_BODY_BYTES,
   oauthErrorResponse,
   oauthJson,
@@ -52,10 +52,8 @@ async function handle(request: Request): Promise<Response> {
 
     let body: unknown;
     try {
-      if (declaredLength(request) > MAX_BODY_BYTES)
-        throw new Error("too large");
-      const text = await request.text();
-      if (text.length > MAX_BODY_BYTES) throw new Error("too large");
+      const text = await readRequestText(request, MAX_BODY_BYTES);
+      if (text === null) throw new Error("too large");
       body = JSON.parse(text);
     } catch {
       throw new OAuthError(

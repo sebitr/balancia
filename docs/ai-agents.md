@@ -141,7 +141,28 @@ assistant is immune to it, and Balancia does what it can on its side:
 - Nothing is permanent. Deleting is a soft delete that `balancia_restore_entry`
   undoes, and an expense or repayment that is identical to one written in the
   last ten minutes is refused once — so a retried call cannot quietly double a
-  debt.
+  debt. Two calls that arrive at the same moment and that this check would call
+  identical — same group, amount, currency, date and description, or for a
+  repayment the same two people — are refused too: the second finds the first
+  holding a lock and is turned away rather than both being written.
+- A name that could mean two things is never guessed at, even when one of them
+  matches exactly. Anybody can name a group "Lisbon" and invite you to it, so
+  "add dinner to Lisbon" is not acted on while another group of yours is called
+  "Lisbon trip 2026" — and neither is "show me Lisbon", because that is where
+  the assistant would learn the id it then writes with. People are held to the
+  same rule: anybody with a group's join link picks their own name, so a guest
+  who arrives as "Ben" does not take "Ben paid me back" from Ben Carter.
+  Balancia lists every candidate with its id and the assistant has to ask you;
+  an id is taken as it stands. Every result says which group it was about and
+  names the people in it by id as well as by name, so a wrong one shows up in
+  the assistant's own answer.
+- It cuts what strangers typed. The list of groups gives how many people are in
+  each, not who; a long note on a repayment is cut to its first two hundred
+  characters in a list (an expense's full notes are in `balancia_get_expense`);
+  and a group or person's name is cut to sixty characters when an error quotes
+  it. An unequal split cannot give a person nothing or less.
+- It is metered. A connection may make a hundred changes an hour, because each
+  one notifies the other members of a group; reading is not counted here.
 - Adding or changing something notifies the other members, as it does when you
   do it yourself. An assistant that adds a wrong expense is something other
   people will see, which is a reason to read before you approve.
@@ -184,8 +205,8 @@ token lasts an hour, a refresh token ninety days.
 
 Requests are counted under the route `/mcp` in the [metrics](environment.md),
 and rate limited per credential — 600 requests in ten minutes, the same budget
-as an API key — with the token endpoint limited per application and
-registration per address and per instance.
+as an API key, and within it a hundred changes an hour — with the token endpoint
+limited per application and registration per address.
 
 ## How it works
 

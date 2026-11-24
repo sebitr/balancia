@@ -1,6 +1,7 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { getEnv } from "@/lib/env";
+import { readRequestText } from "@/lib/http/read-capped";
 import { trackRoute } from "@/lib/metrics/http";
 import { getCurrentUser } from "@/lib/security/actor";
 import {
@@ -102,21 +103,27 @@ async function handle(request: Request): Promise<Response> {
     return Response.json({ error: "not_found" }, { status: 404 });
   }
 
+  // Who is asking before what they sent: a caller with no session is turned
+  // away without the server reading a byte of the body.
+  const user = await getCurrentUser();
+  if (!user) return problem("expired");
+
   let form: FormData;
   try {
-    // Four short fields and a seal of a few hundred bytes: anything announcing
-    // itself as more than this is not the screen's form.
-    if (Number(request.headers.get("Content-Length") ?? 0) > 64 * 1024) {
-      return problem("expired");
-    }
-    form = await request.formData();
+    // Four short fields and a seal of a few hundred bytes: anything larger than
+    // this is not the screen's form. Counted as it is read, since a chunked body
+    // declares no length for a header check to refuse.
+    const text = await readRequestText(request, 64 * 1024);
+    if (text === null) return problem("expired");
+    form = await new Response(text, {
+      headers: { "Content-Type": request.headers.get("Content-Type") ?? "" },
+    }).formData();
   } catch {
     return problem("expired");
   }
 
   const claims = openConsent(form.get("request"));
-  const user = await getCurrentUser();
-  if (!claims || !user || user.userId !== claims.u) return problem("expired");
+  if (!claims || user.userId !== claims.u) return problem("expired");
 
   // The client and its address are re-read rather than believed: the seal says
   // what was true ten minutes ago, and a client can have been removed since.

@@ -1,7 +1,11 @@
 import "server-only";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
-import { isInternalHost } from "@/lib/security/internal-hosts";
+import {
+  isInternalHost,
+  parseIpv4,
+  parseIpv6,
+} from "@/lib/security/internal-hosts";
 import { BackupError } from "./errors";
 
 /**
@@ -24,8 +28,8 @@ import { BackupError } from "./errors";
  *    is named here so it is not mistaken for solved;
  *  - the operator can **allow the local network** (`BACKUP_ALLOW_PRIVATE_ENDPOINTS`),
  *    because backing up to a NAS is the commonest reason to self-host in the
- *    first place. Even then the link-local range stays refused: nothing a
- *    person wants to back up to lives at 169.254.169.254.
+ *    first place. Even then the platform's metadata addresses stay refused:
+ *    nothing a person wants to back up to lives at 169.254.169.254.
  */
 
 export interface GuardOptions {
@@ -39,14 +43,67 @@ async function resolveAll(hostname: string): Promise<readonly string[]> {
   return records.map((record) => record.address);
 }
 
-/** The metadata services every cloud answers on, whatever else is allowed. */
-function isMetadataAddress(address: string): boolean {
-  const value = address.toLowerCase().replace(/^\[|\]$/g, "");
+/**
+ * IPv4 addresses a cloud's metadata service answers on: the link-local range,
+ * where AWS, Google, Azure, DigitalOcean and most others put it at
+ * 169.254.169.254, and Alibaba's 100.100.100.200.
+ */
+function isMetadataIpv4(octets: readonly number[]): boolean {
+  const [a, b, c, d] = octets;
   return (
-    value.startsWith("169.254.") ||
-    value === "fd00:ec2::254" ||
-    value.startsWith("fe80:")
+    (a === 169 && b === 254) ||
+    (a === 100 && b === 100 && c === 100 && d === 200)
   );
+}
+
+/** AWS's IPv6 metadata address, `fd00:ec2::254`, as groups. */
+const AWS_IPV6_METADATA = [0xfd00, 0xec2, 0, 0, 0, 0, 0, 0x254];
+
+/**
+ * The metadata services every cloud answers on, whatever else is allowed.
+ *
+ * Read as numbers, never matched as text. One address has many spellings, and
+ * the one that arrives here is not the one anybody typed: `new URL()` rewrites
+ * `http://[::ffff:169.254.169.254]/` to `[::ffff:a9fe:a9fe]`, and a check for
+ * the prefix "169.254." let that through to the metadata service. So an IPv6
+ * address that carries an IPv4 one in its last 32 bits — mapped
+ * (`::ffff:0:0/96`), compatible (`::/96`) or NAT64 (`64:ff9b::/96`), each of
+ * which reaches that IPv4 address — is judged by the address it carries.
+ *
+ * Takes a host or an address, bracketed or not. A name that is neither is not
+ * judged here; the addresses it resolves to are.
+ */
+export function isMetadataAddress(hostOrAddress: string): boolean {
+  const value = hostOrAddress
+    .trim()
+    .toLowerCase()
+    .replace(/^\[|\]$/g, "")
+    .replace(/\.$/, "");
+
+  const ipv4 = parseIpv4(value);
+  if (ipv4) return isMetadataIpv4(ipv4);
+  if (!value.includes(":")) return false;
+
+  const groups = parseIpv6(value);
+  // An IPv6 literal that cannot be read is not one to connect to.
+  if (!groups) return true;
+  const [g0 = 0, g1 = 0] = groups;
+  const [g5 = 0, g6 = 0, g7 = 0] = groups.slice(5);
+  const zeros = (from: number, to: number) =>
+    groups.slice(from, to).every((group) => group === 0);
+
+  if ((g0 & 0xffc0) === 0xfe80) return true; // fe80::/10 link-local
+  if (groups.every((group, index) => group === AWS_IPV6_METADATA[index])) {
+    return true;
+  }
+
+  const mapped = zeros(0, 5) && g5 === 0xffff;
+  const compatible = zeros(0, 6);
+  const nat64 = g0 === 0x64 && g1 === 0xff9b && zeros(2, 6);
+  if (mapped || compatible || nat64) {
+    return isMetadataIpv4([g6 >> 8, g6 & 0xff, g7 >> 8, g7 & 0xff]);
+  }
+  return false;
 }
 
 export async function assertEndpointAllowed(

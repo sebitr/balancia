@@ -635,7 +635,7 @@ Namespace `cloudBackup`. ICU message syntax, as the rest of `messages/en.json`. 
 
 Read from `docs/cloud-backup.md` and `src/modules/backup` in the working tree. The boards follow it.
 
-- **Files.** `balancia-backup-20261009T033012Z.json.gz.age`: gzip, then age. One per run, with a `groups` array. Receipts are separate objects, `receipt-<id>.age`, each sent once. Drawn on H (file name, the one-line command).
+- **Files.** `balancia-backup-20261009T033012Z.json.gz.age`: gzip, then age. One per run, with a `groups` array. Receipts are separate objects, `receipt-<id>.age`, each sent once. (Since November 2026 a backup's name also carries the destination's tag, `balancia-backup-<tag>-<stamp>…`, and a receipt's the key's fingerprint, `receipt-<id>-<fingerprint>.age`; `docs/cloud-backup.md` says why.) Drawn on H (file name, the one-line command).
 - **Folder.** Backups go in “Balancia Backups” (D2).
 - **Retention.** The newest N data backups are kept, 1 to 100, default 10, and only files with Balancia's own name are ever deleted. Receipts are never deleted. Drawn in the “Backups to keep” help text.
 - **Unchanged nights.** A scheduled run that finds nothing new writes nothing and is recorded “No changes”; Back up now always writes; a fresh copy is still written at least weekly. Drawn in History.

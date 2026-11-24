@@ -1,5 +1,6 @@
 import "server-only";
 import { getEnv } from "@/lib/env";
+import { readRequestText } from "@/lib/http/read-capped";
 import { logger } from "@/lib/logger";
 import { OAuthError } from "@/modules/agent-access/errors";
 
@@ -21,12 +22,6 @@ const HEADERS = {
 
 /** What any of these endpoints reads: a handful of short parameters. */
 export const MAX_BODY_BYTES = 16_384;
-
-/** The `Content-Length` the sender declared, or 0 when it sent none. */
-export function declaredLength(request: Request): number {
-  const declared = Number(request.headers.get("Content-Length") ?? 0);
-  return Number.isFinite(declared) ? declared : 0;
-}
 
 export function oauthJson(
   body: unknown,
@@ -73,17 +68,24 @@ export async function readParameters(
     .split(";")[0]!
     .trim()
     .toLowerCase();
+  // Refused before a byte of it is read: there is no reason to take in a body
+  // that nothing here would parse.
+  if (
+    type !== "application/x-www-form-urlencoded" &&
+    type !== "application/json"
+  ) {
+    return null;
+  }
 
-  // A body that announces itself as large is refused without being read.
-  if (declaredLength(request) > MAX_BODY_BYTES) return null;
-
-  let text: string;
+  // Counted as it is read, not trusted from the header: a chunked body declares
+  // no length at all, and `request.text()` would buffer all of it first.
+  let text: string | null;
   try {
-    text = await request.text();
+    text = await readRequestText(request, MAX_BODY_BYTES);
   } catch {
     return null;
   }
-  if (text.length > MAX_BODY_BYTES) return null;
+  if (text === null) return null;
 
   if (type === "application/x-www-form-urlencoded") {
     return new URLSearchParams(text);

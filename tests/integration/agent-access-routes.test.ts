@@ -1268,13 +1268,17 @@ describe("/mcp: changing things", () => {
     expect(added.json.created.amount).toBe("4.00 EUR");
     expect(added.json.created.date).toBe(new Date().toISOString().slice(0, 10));
     expect(added.json.created.paidBy).toEqual([
-      { member: "Ada", amount: "4.00 EUR" },
+      {
+        member: "Ada",
+        memberId: expect.any(String),
+        amount: "4.00 EUR",
+      },
     ]);
     expect(added.json.created.sharedBy).toHaveLength(2);
   });
 
   it("splits unequally when asked", async () => {
-    const { accessToken } = await lisbon();
+    const { accessToken, marta } = await lisbon();
     const added = await tool(accessToken, "balancia_add_expense", {
       group: "Lisbon trip",
       description: "Hotel",
@@ -1289,8 +1293,8 @@ describe("/mcp: changing things", () => {
       },
     });
     expect(added.json.created.sharedBy).toEqual([
-      { member: "Ada", owes: "70.00 EUR" },
-      { member: "Marta", owes: "30.00 EUR" },
+      { member: "Ada", memberId: expect.any(String), owes: "70.00 EUR" },
+      { member: "Marta", memberId: marta, owes: "30.00 EUR" },
     ]);
 
     const exact = await tool(accessToken, "balancia_add_expense", {
@@ -1309,6 +1313,7 @@ describe("/mcp: changing things", () => {
     expect(exact.failed).toBe(false);
     expect(exact.json.created.sharedBy).toContainEqual({
       member: "Marta",
+      memberId: marta,
       owes: "20.00 EUR",
     });
   });
@@ -1406,10 +1411,13 @@ describe("/mcp: changing things", () => {
   });
 
   it("refuses to guess between two members with one name", async () => {
-    const { accessToken, group } = await lisbon();
-    await addTestParticipant(group.groupId, "Marta Silva");
-    await addTestParticipant(group.groupId, "Marta Costa");
+    const { accessToken, group, marta } = await lisbon();
+    const silva = await addTestParticipant(group.groupId, "Marta Silva");
+    const costa = await addTestParticipant(group.groupId, "Marta Costa");
 
+    // "Marta" is exactly one member and the first name of two others. Anybody
+    // with a join link picks their own name, so the exact one does not win:
+    // all three are listed, and nothing is written.
     const result = await tool(accessToken, "balancia_add_expense", {
       group: "Lisbon trip",
       description: "Taxi",
@@ -1418,8 +1426,26 @@ describe("/mcp: changing things", () => {
       paidBy: "Marta Silva",
       splitBetween: ["Ada", "Marta"],
     });
-    // "Marta" is exactly one member, a prefix of two others: exact beats prefix.
-    expect(result.failed).toBe(false);
+    expect(result.failed).toBe(true);
+    expect(result.text).toMatch(/could be more than one/i);
+    for (const id of [marta, silva, costa]) expect(result.text).toContain(id);
+
+    // The id the refusal gave is taken as it stands.
+    const sure = await tool(accessToken, "balancia_add_expense", {
+      group: "Lisbon trip",
+      description: "Taxi",
+      amount: "10",
+      currency: "EUR",
+      paidBy: "Marta Silva",
+      splitBetween: ["Ada", marta],
+    });
+    expect(sure.failed).toBe(false);
+    expect(sure.json.created.paidBy).toEqual([
+      { member: "Marta Silva", memberId: silva, amount: "10.00 EUR" },
+    ]);
+    expect(
+      sure.json.created.sharedBy.map((s: { memberId: string }) => s.memberId),
+    ).toContain(marta);
 
     const vague = await tool(accessToken, "balancia_add_expense", {
       group: "Lisbon trip",
@@ -1575,7 +1601,7 @@ describe("/mcp: changing things", () => {
   });
 
   it("can change who paid and how it is shared", async () => {
-    const { accessToken } = await lisbon();
+    const { accessToken, marta } = await lisbon();
     const added = await tool(accessToken, "balancia_add_expense", {
       group: "Lisbon trip",
       description: "Dinner",
@@ -1590,10 +1616,10 @@ describe("/mcp: changing things", () => {
     });
 
     expect(updated.json.updated.paidBy).toEqual([
-      { member: "Marta", amount: "60.00 EUR" },
+      { member: "Marta", memberId: marta, amount: "60.00 EUR" },
     ]);
     expect(updated.json.updated.sharedBy).toEqual([
-      { member: "Marta", owes: "60.00 EUR" },
+      { member: "Marta", memberId: marta, owes: "60.00 EUR" },
     ]);
   });
 
@@ -1633,7 +1659,7 @@ describe("/mcp: changing things", () => {
     expect(given.failed).toBe(false);
     expect(given.json.updated.amount).toBe("6.10 EUR");
     expect(given.json.updated.paidBy).toEqual([
-      { member: "Ada", amount: "6.10 EUR" },
+      { member: "Ada", memberId: expect.any(String), amount: "6.10 EUR" },
     ]);
   });
 

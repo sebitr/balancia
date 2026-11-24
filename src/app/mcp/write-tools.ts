@@ -3,6 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import { and, desc, eq, gte, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/lib/db/client";
+import { withTryLock } from "@/lib/db/try-lock";
 import { activityEvents, expenses, settlements } from "@/lib/db/schema";
 import type { GroupAccess } from "@/lib/security/authorization";
 import type { Principal } from "@/modules/agent-access/principal";
@@ -38,8 +39,9 @@ import { groupPeople, pickPerson, resolveGroup, type Person } from "./resolve";
 import {
   amountText,
   decimalText,
-  requireWrite,
-  runTool,
+  groupRef,
+  runWriteTool,
+  shown,
   ToolFailure,
 } from "./support";
 
@@ -198,25 +200,30 @@ export function registerWriteTools(server: McpServer, principal: Principal) {
       },
     },
     (input) =>
-      runTool("balancia_add_expense", principal, async (actor) => {
-        requireWrite(principal);
+      runWriteTool("balancia_add_expense", principal, async (actor) => {
         const access = await resolveGroup(actor, input.group, {
           requireActive: true,
         });
         const people = await groupPeople(access.groupId);
         const built = await buildExpense(access, people, input);
 
-        if (!input.allowDuplicate) {
-          const twin = await recentTwin(access.groupId, built);
-          if (twin) {
-            throw new ToolFailure(
-              `An identical expense ("${twin.description}", ${amountText(twin.amount, twin.currency)}, ${twin.expenseDate}) was added a few minutes ago (id ${twin.id}). Nothing was added. If the person really wants another, call again with allowDuplicate: true.`,
-            );
-          }
-        }
-
-        const id = await createExpense(access, built);
+        const id = await onlyOnce(
+          input.allowDuplicate,
+          expenseLockKey(access.groupId, built),
+          async () => {
+            if (!input.allowDuplicate) {
+              const twin = await recentTwin(access.groupId, built);
+              if (twin) {
+                throw new ToolFailure(
+                  `An identical expense ("${shown(twin.description)}", ${amountText(twin.amount, twin.currency)}, ${twin.expenseDate}) was added a few minutes ago (id ${twin.id}). Nothing was added. If the person really wants another, call again with allowDuplicate: true.`,
+                );
+              }
+            }
+            return createExpense(access, built);
+          },
+        );
         return {
+          group: groupRef(access),
           created: await describeExpense(access.groupId, id),
           groupNotified: true,
           undo: `balancia_delete_entry with kind "expense" and id ${id}`,
@@ -267,8 +274,7 @@ export function registerWriteTools(server: McpServer, principal: Principal) {
       },
     },
     (input) =>
-      runTool("balancia_update_expense", principal, async (actor) => {
-        requireWrite(principal);
+      runWriteTool("balancia_update_expense", principal, async (actor) => {
         const access = await resolveGroup(actor, input.group, {
           requireActive: true,
         });
@@ -400,6 +406,7 @@ export function registerWriteTools(server: McpServer, principal: Principal) {
           expectedVersion: current.version,
         });
         return {
+          group: groupRef(access),
           updated: await describeExpense(access.groupId, input.expenseId),
           groupNotified: true,
         };
@@ -436,8 +443,7 @@ export function registerWriteTools(server: McpServer, principal: Principal) {
       },
     },
     (input) =>
-      runTool("balancia_record_repayment", principal, async (actor) => {
-        requireWrite(principal);
+      runWriteTool("balancia_record_repayment", principal, async (actor) => {
         const access = await resolveGroup(actor, input.group, {
           requireActive: true,
         });
@@ -460,22 +466,30 @@ export function registerWriteTools(server: McpServer, principal: Principal) {
           notes: input.notes ?? "",
         });
 
-        if (!input.allowDuplicate) {
-          const twin = await recentRepaymentTwin(access.groupId, built);
-          if (twin) {
-            throw new ToolFailure(
-              `An identical repayment (${from.name} → ${to.name}, ${amountText(twin.amount, twin.currency)}, ${twin.settledOn}) was recorded a few minutes ago (id ${twin.id}). Nothing was added. If it really happened twice, call again with allowDuplicate: true.`,
-            );
-          }
-        }
-
-        const id = await createSettlement(access, built);
+        const id = await onlyOnce(
+          input.allowDuplicate,
+          repaymentLockKey(access.groupId, built),
+          async () => {
+            if (!input.allowDuplicate) {
+              const twin = await recentRepaymentTwin(access.groupId, built);
+              if (twin) {
+                throw new ToolFailure(
+                  `An identical repayment (${shown(from.name)} → ${shown(to.name)}, ${amountText(twin.amount, twin.currency)}, ${twin.settledOn}) was recorded a few minutes ago (id ${twin.id}). Nothing was added. If it really happened twice, call again with allowDuplicate: true.`,
+                );
+              }
+            }
+            return createSettlement(access, built);
+          },
+        );
         return {
+          group: groupRef(access),
           created: {
             id,
             kind: "repayment",
             from: from.name,
+            fromId: from.id,
             to: to.name,
+            toId: to.id,
             amount: amountText(amount, currency),
             date,
             paymentMethod: input.paymentMethod ?? null,
@@ -505,14 +519,14 @@ export function registerWriteTools(server: McpServer, principal: Principal) {
       },
     },
     ({ group, kind, id }) =>
-      runTool("balancia_delete_entry", principal, async (actor) => {
-        requireWrite(principal);
+      runWriteTool("balancia_delete_entry", principal, async (actor) => {
         const access = await resolveGroup(actor, group, {
           requireActive: true,
         });
         if (kind === "expense") await deleteExpense(access, id);
         else await deleteSettlement(access, id);
         return {
+          group: groupRef(access),
           deleted: { kind, id },
           undo: `balancia_restore_entry with kind "${kind}" and id ${id}`,
         };
@@ -538,15 +552,14 @@ export function registerWriteTools(server: McpServer, principal: Principal) {
       },
     },
     ({ group, kind, id }) =>
-      runTool("balancia_restore_entry", principal, async (actor) => {
-        requireWrite(principal);
+      runWriteTool("balancia_restore_entry", principal, async (actor) => {
         const access = await resolveGroup(actor, group, {
           requireActive: true,
         });
         await assertNotReplaced(access.groupId, kind, id);
         if (kind === "expense") await restoreExpense(access, id);
         else await restoreSettlement(access, id);
-        return { restored: { kind, id } };
+        return { group: groupRef(access), restored: { kind, id } };
       }),
   );
 }
@@ -566,6 +579,65 @@ type AddInput = {
   notes?: string | undefined;
   exchangeRate?: string | undefined;
 };
+
+/**
+ * Runs a write that must not be made twice at once.
+ *
+ * The duplicate check inside `work` is a read followed by an insert, and two
+ * identical calls that arrive together both read before either has written — so
+ * both pass, and the same debt is recorded twice. Batching is refused at the
+ * door, but nothing stops a client sending two requests in parallel. So the
+ * check and the insert run under a lock on what is being written, and a second
+ * identical call that finds it taken is refused rather than waited for.
+ *
+ * Skipped when the person asked for a second copy: that is the one case where
+ * two of them is the point.
+ */
+async function onlyOnce<T>(
+  allowDuplicate: boolean | undefined,
+  key: string,
+  work: () => Promise<T>,
+): Promise<T> {
+  if (allowDuplicate) return work();
+  const attempt = await withTryLock(key, work);
+  if (!attempt.ran) {
+    throw new ToolFailure(
+      "An identical entry is being recorded right now. Nothing was added by this call. Look in balancia_list_transactions before trying again.",
+    );
+  }
+  return attempt.value;
+}
+
+/**
+ * What the lock in `onlyOnce` is taken on: exactly what `recentTwin` compares,
+ * and nothing it does not. Keyed on the whole entry instead, two calls that the
+ * duplicate check would call identical — "Taxi" and "taxi", or the same taxi
+ * with a different note — took different locks, both found nothing written yet,
+ * and both wrote.
+ */
+function expenseLockKey(groupId: string, built: ExpenseInput): string {
+  return JSON.stringify([
+    "mcp-expense",
+    groupId,
+    built.amount,
+    built.currency,
+    built.expenseDate,
+    built.description.trim().toLowerCase(),
+  ]);
+}
+
+/** The same for a repayment: what `recentRepaymentTwin` compares. */
+function repaymentLockKey(groupId: string, built: SettlementInput): string {
+  return JSON.stringify([
+    "mcp-repayment",
+    groupId,
+    built.fromParticipantId,
+    built.toParticipantId,
+    built.amount,
+    built.currency,
+    built.settledOn,
+  ]);
+}
 
 /** The group's currency, or the one the caller named — never a guess. */
 function resolveCurrency(
@@ -646,6 +718,39 @@ async function chosenCategory(
   };
 }
 
+/**
+ * One person's part of an unequal split, which has to be more than nothing.
+ *
+ * The split engine takes a negative exact amount, and for a reason — a receipt
+ * with a discount on it. A model has no such receipt. What it has is text some
+ * other member wrote, and "Bob 1,000,000.00, Carol −999,999.00" is a split that
+ * adds up to a euro and leaves one co-member owing a million. A part of nothing
+ * is somebody who is not in the split, which is not what an entry that names
+ * them means either.
+ */
+function splitValue(
+  method: "exact" | "percentage" | "shares",
+  value: string,
+  currency: string,
+): string {
+  if (method === "exact") {
+    const amount = parseMajorAmount(value, currency).amount;
+    if (amount <= 0n) {
+      throw new ToolFailure(
+        "Each person's exact amount must be more than zero. Leave a person out of the split instead of giving them nothing.",
+      );
+    }
+    return amount.toString();
+  }
+  const text = value.trim();
+  if (!/^\d+(\.\d+)?$/.test(text) || Number(text) <= 0) {
+    throw new ToolFailure(
+      `Each person's ${method === "percentage" ? "percentage" : "share"} must be a plain number more than zero. Leave a person out of the split instead of giving them nothing.`,
+    );
+  }
+  return text;
+}
+
 async function splitFrom(
   input: {
     splitBetween?: string[] | undefined;
@@ -664,10 +769,7 @@ async function splitFrom(
       splitMethod: method,
       splitEntries: entries.map((entry) => ({
         participantId: pickPerson(people, entry.who, access).id,
-        value:
-          method === "exact"
-            ? parseMajorAmount(entry.value, currency).amount.toString()
-            : entry.value,
+        value: splitValue(method, entry.value, currency),
       })),
     };
   }
@@ -845,13 +947,17 @@ async function describeExpense(groupId: string, expenseId: string) {
     amount: money(expense.amount),
     date: expense.expenseDate,
     category: expense.category,
+    // By id as well as by name: a name is whatever its owner typed, and two
+    // members can share one, so the id is what tells the person who was meant.
     paidBy: expense.payers.map((payer) => ({
       member: payer.displayName,
+      memberId: payer.participantId,
       amount: money(payer.amount),
     })),
     splitMethod: expense.splitMethod,
     sharedBy: expense.shares.map((share) => ({
       member: share.displayName,
+      memberId: share.participantId,
       owes: money(share.amount),
     })),
   };
