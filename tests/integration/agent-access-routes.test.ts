@@ -1659,7 +1659,7 @@ describe("/mcp: changing things", () => {
     expect(given.failed).toBe(false);
     expect(given.json.updated.amount).toBe("6.10 EUR");
     expect(given.json.updated.paidBy).toEqual([
-      { member: "Ada", amount: "6.10 EUR" },
+      { member: "Ada", memberId: expect.any(String), amount: "6.10 EUR" },
     ]);
   });
 

@@ -173,7 +173,9 @@ export function pickPerson(
     );
     if (byId) return byId;
     throw new ToolFailure(
-      `Nobody in this group has the id ${ref}. Look the ${role} up in balancia_get_group.`,
+      `Nobody in this group has the id ${ref}. Members: ${people
+        .map((person) => `"${shown(person.name)}" (${person.id})`)
+        .join(", ")}.`,
     );
   }
 
