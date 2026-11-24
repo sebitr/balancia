@@ -20,6 +20,7 @@ import { hasGlyph } from "@/components/expenses/category-icon";
 import { useDateFormatter, useFormatPreferences } from "@/i18n/format-context";
 import { parsePlainDate } from "@/i18n/format";
 import { cn } from "@/lib/utils";
+import { shortMonthWithYear } from "./month-label";
 import { TONE, toneFor } from "@/components/money/balance-tone";
 import { getSubcategoryGroups } from "@/modules/categorization/taxonomy";
 import type { Granularity, StatsRange } from "@/modules/groups/member-stats";
@@ -524,12 +525,13 @@ function Flows({
       key: "flowRevenue",
       sub: t("flowRevenueSub", { count: flows.revenueCount }),
       minorUnits: flows.revenue,
-      // A zero is not money in, and green is for money that is: with nothing
-      // recorded the row goes neutral and the subtitle says so.
-      tone: nothingCame ? "text-muted-foreground" : "text-positive-ink",
+      // Income is a flow, not a balance somebody owes the reader, so it never
+      // takes the gets-back green. With nothing recorded the row goes muted
+      // and the subtitle says so.
+      tone: nothingCame ? "text-muted-foreground" : "text-foreground",
       chip: nothingCame
         ? "bg-wash-2 text-muted-foreground"
-        : "bg-positive/15 text-positive-ink",
+        : "bg-wash-2 text-foreground",
       icon: ArrowDownLeft,
     },
     {
@@ -1430,7 +1432,7 @@ function useBucketLabels(granularity: Granularity): {
 function useMonthNames(): {
   short: Intl.DateTimeFormat;
   long: Intl.DateTimeFormat;
-  shortWithYear: Intl.DateTimeFormat;
+  shortWithYear: { format: (date: Date) => string };
 } {
   const { formatLocale } = useFormatPreferences();
   return useMemo(
@@ -1444,11 +1446,10 @@ function useMonthNames(): {
         year: "numeric",
         timeZone: "UTC",
       }),
-      shortWithYear: new Intl.DateTimeFormat(formatLocale, {
-        month: "short",
-        year: "2-digit",
-        timeZone: "UTC",
-      }),
+      // Not a bare `Intl` format: its apostrophe before the year differs
+      // between the server's ICU and the browser's, and the sr-only list of
+      // these labels then failed hydration.
+      shortWithYear: { format: shortMonthWithYear(formatLocale) },
     }),
     [formatLocale],
   );
