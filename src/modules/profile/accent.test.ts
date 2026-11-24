@@ -177,12 +177,11 @@ describe.each(ACCENT_COLORS)("%s", (accent) => {
   const palette = accentPalette(accent);
   const seed = ACCENT_SEEDS[accent];
 
-  it("keeps the seed as the fill, readable under plum", () => {
+  it("keeps the seed as the fill, with text that reads on it", () => {
     expect(palette.fill).toEqual(seed);
-    const plum = oklchToHex(cssToken(":root", "primary-foreground"));
-    expect(contrastRatio(oklchToHex(seed), plum)).toBeGreaterThanOrEqual(
-      AA_TEXT,
-    );
+    expect(
+      contrastRatio(oklchToHex(seed), oklchToHex(palette.foreground)),
+    ).toBeGreaterThanOrEqual(AA_TEXT);
   });
 
   describe.each(THEMES)("in the %s theme", (theme) => {
@@ -232,11 +231,12 @@ describe.each(ACCENT_COLORS)("%s", (accent) => {
     });
   });
 
-  it("emits six variables, and only six", () => {
+  it("emits seven variables, and only those", () => {
     const tokens = accentTokens(accent);
     const expected = [
       "--primary",
-      "--ring",
+      "--primary-foreground",
+      "--sidebar-primary-foreground",
       ...THEMES.flatMap((theme) => [
         `--accent-ink-${theme}`,
         `--accent-ink-more-${theme}`,
@@ -244,7 +244,9 @@ describe.each(ACCENT_COLORS)("%s", (accent) => {
     ];
     expect(Object.keys(tokens).sort()).toEqual(expected.sort());
     expect(tokens["--primary"]).toBe(formatOklch(seed));
-    expect(tokens["--ring"]).toBe(formatOklch(seed));
+    expect(tokens["--primary-foreground"]).toBe(
+      formatOklch(palette.foreground),
+    );
     for (const value of Object.values(tokens)) {
       const parsed = parseOklch(value);
       expect(parsed, value).not.toBeNull();
@@ -290,8 +292,8 @@ const EXPECTED: Record<AccentColor, Inks> = {
     dark: { ink: "0.735 0.17 350", inkMore: "0.855 0.092 350" },
   },
   plum: {
-    light: { ink: "0.535 0.048 319", inkMore: "0.43 0.048 319" },
-    dark: { ink: "0.725 0.048 319", inkMore: "0.85 0.048 319" },
+    light: { ink: "0.52 0.09 319", inkMore: "0.415 0.09 319" },
+    dark: { ink: "0.69 0.09 319", inkMore: "0.81 0.09 319" },
   },
 };
 

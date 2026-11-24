@@ -292,8 +292,10 @@
       The reader picks one of seven accents on the appearance screen. Each is a
       seed — lightness, chroma, hue — in
       <code>src/modules/profile/accent.ts</code>, from which the app derives a
-      <code>--primary-ink</code> per theme, walked to 4.5:1. Six variables in
-      all, and the money colours are not among them: green means the same thing
+      <code>--primary-ink</code> per theme, walked to 4.5:1, and a foreground for text on the
+      fill — cream on plum, which has real weight (L 0.52) so a ready button
+      never reads as disabled, deep plum on the six lighter ones. The focus ring
+      is that ink. Seven variables in all, and the money colours are not among them: green means the same thing
       on every account. Three of the seven do sit near a money colour — coral by
       the &ldquo;you owe&rdquo; red, mint on the green, amber on the payer — and
       that is accepted, because a balance is told apart by its sign and its word
@@ -310,7 +312,7 @@
     <div class="row">
       <span
         class="badge"
-        style="background: oklch(0.71 0.048 319); color: oklch(0.226 0.072 319)"
+        style="background: oklch(0.52 0.09 319); color: oklch(0.977 0.007 85)"
         >plum &middot; default</span
       >
       <span

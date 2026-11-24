@@ -11,6 +11,7 @@ import {
 import {
   ACCENT_COLORS,
   ACCENT_SEEDS,
+  accentPalette,
   accentTokens,
   DEFAULT_ACCENT,
   MONEY_ROLES,
@@ -142,14 +143,14 @@ const TINT_BASE: Record<string, string> = {
 const BAND_INKS: Record<Theme, Record<string, string>> = {
   light: {
     "chart-1": "background",
-    "chart-2": "foreground",
+    "chart-2": "primary-foreground",
     "chart-3": "foreground",
     "chart-4": "foreground",
     "chart-5": "foreground",
   },
   dark: {
     "chart-1": "background",
-    "chart-2": "background",
+    "chart-2": "primary-foreground",
     "chart-3": "background",
     "chart-4": "background",
     "chart-5": "foreground",
@@ -322,6 +323,43 @@ describe.each(CASCADES)("$name", ({ theme, selectors, more }) => {
     );
   });
 
+  describe("the focus ring", () => {
+    // `--ring` is an alias of `--primary-ink`, so it follows the accent. A
+    // ring is a graphical object that has to be seen (WCAG 2.2 1.4.11): 3:1
+    // on the page and on the card, in every accent. The fill it used to be
+    // measured 2.5:1 on cream for the default.
+    it("is the accent's ink, not its fill", () => {
+      expect(tokens.get("ring")).toBe("var(--primary-ink)");
+    });
+
+    it.each(ACCENT_COLORS)("%s: reads at 3:1 on card and background", (accent) => {
+      const painted = accentTokens(accent);
+      const value = tokens.get("primary-ink")!;
+      const indirect = value.match(/^var\((--[a-z0-9-]+),\s*(.+)\)$/i)!;
+      const ring = oklchToHex(
+        parseOklch(painted[indirect[1]!] ?? indirect[2]!)!,
+      );
+      for (const surface of ["card", "background"]) {
+        expect(
+          contrastRatio(ring, colour(surface)),
+          `${accent} ring on ${surface}`,
+        ).toBeGreaterThanOrEqual(AA_GRAPHIC);
+      }
+    });
+  });
+
+  it.each(ACCENT_COLORS)(
+    `%s: the button's text reads on its fill at ${AA_TEXT}:1`,
+    (accent) => {
+      const painted = accentTokens(accent);
+      const ratio = contrastRatio(
+        oklchToHex(parseOklch(painted["--primary-foreground"]!)!),
+        oklchToHex(parseOklch(painted["--primary"]!)!),
+      );
+      expect(ratio, `${accent} button text`).toBeGreaterThanOrEqual(AA_TEXT);
+    },
+  );
+
   it(`--muted-foreground reads as a caption at ${textFloor}:1`, () => {
     for (const surface of ["card", "background"]) {
       expect(
@@ -356,13 +394,18 @@ describe.each(CASCADES)("$name", ({ theme, selectors, more }) => {
 
     it("carry the ink the band styles give them, under every accent", () => {
       for (const [chart, ink] of Object.entries(BAND_INKS[theme])) {
-        const fills =
+        // The accent's band is read in every accent, with the foreground
+        // that accent paints; the others against the stylesheet's own ink.
+        const pairs =
           chart === "chart-2"
-            ? ACCENT_COLORS.map((accent) => ACCENT_SEEDS[accent])
-            : [resolve(tokens, chart).color];
-        for (const fill of fills) {
+            ? ACCENT_COLORS.map((accent) => ({
+                fill: ACCENT_SEEDS[accent],
+                text: oklchToHex(accentPalette(accent).foreground),
+              }))
+            : [{ fill: resolve(tokens, chart).color, text: colour(ink) }];
+        for (const { fill, text } of pairs) {
           expect(
-            contrastRatio(oklchToHex(fill), colour(ink)),
+            contrastRatio(oklchToHex(fill), text),
             `--${ink} on --${chart} ${oklchToHex(fill)}`,
           ).toBeGreaterThanOrEqual(AA_TEXT);
         }

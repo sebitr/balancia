@@ -50,8 +50,8 @@
   --payer-ink: oklch(0.534 0.145 70);
   --border: oklch(0.9 0.012 82);
   --input: oklch(0.88 0.016 82);
-  --ring: oklch(0.712 0.168 30);
-  --chart-1: oklch(0.47 0.085 319);
+  --ring: var(--primary-ink);
+  --chart-1: oklch(0.33 0.075 319);
   --chart-2: var(--primary);
   --chart-3: oklch(0.6 0.1 205);
   --chart-4: oklch(0.62 0.05 250);
@@ -122,12 +122,12 @@
   --payer-ink: oklch(0.82 0.14 78);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.712 0.168 30);
+  --ring: var(--primary-ink);
   --chart-1: oklch(0.84 0.035 319);
   --chart-2: var(--primary);
   --chart-3: oklch(0.84 0.08 205);
   --chart-4: oklch(0.86 0.06 267);
-  --chart-5: oklch(0.55 0.09 319);
+  --chart-5: oklch(0.4 0.08 319);
   --sidebar: oklch(0.27 0.068 319);
   --sidebar-foreground: oklch(0.977 0.007 85);
   --sidebar-primary: var(--primary);
@@ -192,12 +192,13 @@
    through the `var(--accent-ink-…)` it is declared with above.
    src/app/design-system-kit.test.ts holds this block to the app's default. */
 html:root {
-  --primary: oklch(0.71 0.048 319);
-  --ring: oklch(0.71 0.048 319);
-  --accent-ink-light: oklch(0.535 0.048 319);
-  --accent-ink-more-light: oklch(0.43 0.048 319);
-  --accent-ink-dark: oklch(0.725 0.048 319);
-  --accent-ink-more-dark: oklch(0.85 0.048 319);
+  --primary: oklch(0.52 0.09 319);
+  --primary-foreground: oklch(0.977 0.007 85);
+  --sidebar-primary-foreground: oklch(0.977 0.007 85);
+  --accent-ink-light: oklch(0.52 0.09 319);
+  --accent-ink-more-light: oklch(0.415 0.09 319);
+  --accent-ink-dark: oklch(0.69 0.09 319);
+  --accent-ink-more-dark: oklch(0.81 0.09 319);
 }
 
 /* ── base ── */
@@ -447,7 +448,9 @@ code {
 }
 .btn:focus-visible {
   border-color: var(--ring);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent);
+  box-shadow:
+    0 0 0 2px var(--background),
+    0 0 0 4px var(--ring);
 }
 .btn svg {
   width: 1rem;
@@ -466,6 +469,14 @@ code {
 }
 .btn--default:hover {
   background: color-mix(in oklch, var(--primary) 80%, transparent);
+}
+/* Disabled is a wash and a hairline with muted text, not a fainter fill. */
+.btn--default[disabled],
+.btn--default[aria-disabled="true"] {
+  background: var(--muted);
+  border-color: var(--border);
+  color: var(--muted-foreground);
+  opacity: 1;
 }
 .btn--outline {
   border-color: var(--border);
@@ -2457,7 +2468,11 @@ a[aria-current="page"] .nav-icon--primary {
     </div>
     <p class="note" style="margin-top: 0.75rem">
       A submitting button keeps its label and adds a spinner. It never collapses
-      to a bare spinner — people lose track of what they pressed.
+      to a bare spinner — people lose track of what they pressed. A disabled
+      primary is a wash with a hairline and muted text, never a fainter accent
+      fill, so it cannot be mistaken for a ready one. The focus ring is the
+      accent's ink (3:1 or more on the page and the card), two pixels, set off
+      from the button by a two-pixel gap.
     </p>
   </section>
 

@@ -14,9 +14,9 @@ colors:
   plum-night-raised: "oklch(0.27 0.068 319)"
   midnight: "oklch(0.15 0.03 319)"
   midnight-raised: "oklch(0.2 0.035 319)"
-  plum-accent: "oklch(0.71 0.048 319)"
-  plum-accent-ink: "oklch(0.535 0.048 319)"
-  plum-accent-ink-dark: "oklch(0.725 0.048 319)"
+  plum-accent: "oklch(0.52 0.09 319)"
+  plum-accent-ink: "oklch(0.52 0.09 319)"
+  plum-accent-ink-dark: "oklch(0.69 0.09 319)"
   accent-coral: "oklch(0.712 0.168 30)"
   accent-amber: "oklch(0.78 0.13 70)"
   accent-mint: "oklch(0.75 0.13 167)"
@@ -104,7 +104,7 @@ spacing:
 components:
   button-primary:
     backgroundColor: "{colors.plum-accent}"
-    textColor: "{colors.aubergine-ink}"
+    textColor: "{colors.cream-paper}"
     typography: "{typography.body}"
     rounded: "{rounded.lg}"
     height: "2.75rem"
@@ -149,7 +149,7 @@ components:
     padding: "0.25rem 0.625rem"
   badge:
     backgroundColor: "{colors.plum-accent}"
-    textColor: "{colors.aubergine-ink}"
+    textColor: "{colors.cream-paper}"
     typography: "{typography.caption}"
     rounded: "{rounded.4xl}"
     height: "1.25rem"
@@ -196,7 +196,7 @@ A cream-and-plum ground with one chosen accent and three fixed money colours. Ev
 
 ### Primary
 
-- **Plum Accent** (`plum-accent`): the default accent and the one a reader who has never chosen sees, on every signed-out screen. It is `--primary` and `--ring`: the main button, the focus ring, the "you" pill, the "you" series in a chart, the selected tab. It is deliberately quiet (chroma 0.048) and sits beside neither money colour. Its text form is **Plum Accent Ink** (`plum-accent-ink`, 4.5:1 on cream; `plum-accent-ink-dark` on the dark card); a button label or a link is set in the ink, never in the fill.
+- **Plum Accent** (`plum-accent`): the default accent and the one a reader who has never chosen sees, on every signed-out screen. It is `--primary` (its ink is `--ring`): the main button, the focus ring, the "you" pill, the "you" series in a chart, the selected tab. It has real weight (L 0.52, chroma 0.09) so a ready button never reads as a disabled one, carries cream text, and sits beside neither money colour. Its text form is **Plum Accent Ink** (`plum-accent-ink`, 4.5:1 on cream; `plum-accent-ink-dark` on the dark card); a button label or a link is set in the ink, never in the fill.
 - **Six other accents**, all chosen by name and stored by name: **Coral** (`accent-coral`), **Amber** (`accent-amber`), **Mint** (`accent-mint`), **Ocean** (`accent-ocean`), **Lavender** (`accent-lavender`), **Raspberry** (`accent-raspberry`). Each is one seed in `ACCENT_SEEDS`; its inks are derived by walking lightness until the text clears 4.5:1 (7:1 under increased contrast) on every surface it lands on. Coral, mint and amber sit next to a money colour and are still allowed (see the Named Rules).
 - **Brand Coral** is the same coral as the palette's original `--primary`. It survives in static artifacts drawn from the stylesheet (emails, the app icon, the share image) and is the dot in the mark there. In the product the dot takes the reader's accent.
 

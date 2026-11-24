@@ -126,13 +126,13 @@ export type { EntryKind, RowView };
  * palette's chart colours are darker, and cream on the teal `--chart-3` or
  * the slate `--chart-4` falls well short. Each band therefore takes whichever
  * of the two inks its own colour can carry. `--chart-2` is the accent — the
- * "you" series — so its band has to read under plum in all seven accents,
- * which it does; `src/app/token-contrast.test.ts` holds every pairing below
+ * "you" series — so its band takes `--primary-foreground`, the text the accent
+ * itself says belongs on its fill, which reads in all seven accents; `src/app/token-contrast.test.ts` holds every pairing below
  * to 4.5:1 in both themes.
  */
 const BAND_STYLES: readonly string[] = [
   "bg-chart-1 text-background",
-  "bg-chart-2 text-foreground dark:text-background",
+  "bg-chart-2 text-primary-foreground",
   "bg-chart-3 text-foreground dark:text-background",
   "bg-chart-4 text-foreground dark:text-background",
   "bg-chart-5 text-foreground",
