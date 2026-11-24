@@ -566,8 +566,10 @@ Two things to know before leaving it on:
   put behind a login or a firewall that blocks them. Editors and Claude Code on
   the same machine reach any address.
 - **What an allowed assistant reads leaves your server** and goes to whoever runs
-  that assistant. Balancia itself calls no AI service and sends nothing anywhere
-  because of this setting.
+  that assistant. Balancia sends nothing anywhere because of this setting; the
+  one AI service it can call itself is a server-side receipt reader, when
+  [`RECEIPT_OCR_PROVIDER`](#receipt_ocr_provider) is set and a person chooses it
+  for a scan.
 
 See [AI assistants](ai-agents.md) for what an assistant can and cannot do, and
 how the sign-in works.

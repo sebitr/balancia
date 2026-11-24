@@ -172,7 +172,11 @@ assistant is immune to it, and Balancia does what it can on its side:
   people will see, which is a reason to read before you approve.
 
 What the assistant reads is sent to whoever runs it — Anthropic, OpenAI or the
-maker of your editor — under their terms. Balancia itself calls no AI service.
+maker of your editor — under their terms. Balancia itself calls no AI service
+for it. The one AI call Balancia can make of its own is reading a receipt, when
+an administrator has turned on server-side receipt reading
+([`RECEIPT_OCR_PROVIDER`](environment.md#receipt_ocr_provider)) and a person
+chooses it for a scan.
 
 **One limit to know about.** A connection that may write to _every_ group can be
 steered into copying something from one group into another: text in group A tells

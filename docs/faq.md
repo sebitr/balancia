@@ -142,11 +142,16 @@ safely and how to fix a connection that does not work.
 
 ## Does Balancia send expense data to an AI service?
 
-Not by itself. Automatic category suggestions and optional receipt scanning run
-locally on the Balancia instance, and imported files are also parsed on the
-instance. Balancia calls no AI service.
+Not by itself. Automatic category suggestions run locally, receipt scanning
+reads the photo on your own device by default, and imported files are parsed on
+the instance. Balancia calls no AI service, with one exception that an
+administrator has to choose: an instance can be set to read receipts on the
+server (`RECEIPT_OCR_PROVIDER`), and a person who picks that reader for a scan
+sends the photo through the server to the provider the administrator configured
+— which may be a model on the administrator's own hardware. See
+[Receipt scanning](receipt-scanning.md).
 
-The exception is one you start: when you connect an AI assistant, what it reads
+The other exception is one you start: when you connect an AI assistant, what it reads
 of the groups you allow goes to whoever runs that assistant — Anthropic, OpenAI
 or the maker of your editor — under their terms. See
 [AI assistants](ai-agents.md#using-one-safely).

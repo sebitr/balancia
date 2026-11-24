@@ -168,6 +168,15 @@ describe("llms.txt", () => {
     expect(text).toMatch(/read only \(the\s+default\)/);
   });
 
+  it("does not claim Balancia never calls an AI service", () => {
+    // It does, once: an administrator can have receipts read on the server
+    // (`RECEIPT_OCR_PROVIDER`), and a person can choose that for a scan.
+    const text = llmsIndex(OFFICIAL_ORIGIN).replace(/\s+/g, " ");
+    expect(text).toMatch(/server-side receipt reading/);
+    expect(text).not.toMatch(/; Balancia itself sends nothing to an AI vendor/);
+    expect(text).toMatch(/apart from that receipt reader, Balancia itself/);
+  });
+
   it("is no longer also a static file, which would shadow the route", () => {
     expect(() =>
       readFileSync(path.join(process.cwd(), "public", "llms.txt")),

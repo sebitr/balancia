@@ -1443,7 +1443,7 @@
         },
         "assistants": {
           "question": "Puis-je utiliser Balancia avec Claude, ChatGPT ou un autre assistant IA ?",
-          "answer": "Oui. Balancia est un serveur MCP : Claude, ChatGPT et les autres assistants qui acceptent les connecteurs personnalisés peuvent l’ajouter avec son adresse, puis t’envoyer sur un écran Balancia pour te connecter et appuyer sur Autoriser. Rien à installer, aucune clé à copier. Tu choisis la lecture seule ou la lecture avec modifications, tous les groupes ou un seul, et tu peux le déconnecter à tout moment depuis les Paramètres. Il agit en ton nom, ne voit jamais les coordonnées de paiement ni les adresses e-mail, et Balancia n’appelle lui-même aucun service d’IA. Les formules qui acceptent un connecteur personnalisé dépendent de l’éditeur de l’assistant."
+          "answer": "Oui. Balancia est un serveur MCP : Claude, ChatGPT et les autres assistants qui acceptent les connecteurs personnalisés peuvent l’ajouter avec son adresse, puis t’envoyer sur un écran Balancia pour te connecter et appuyer sur Autoriser. Rien à installer, aucune clé à copier. Tu choisis la lecture seule ou la lecture avec modifications, tous les groupes ou un seul, et tu peux le déconnecter à tout moment depuis les Paramètres. Il agit en ton nom, ne voit jamais les coordonnées de paiement ni les adresses e-mail, et Balancia n’appelle lui-même aucun service d’IA, sauf si l’administrateur a activé la lecture des reçus sur le serveur et que tu la choisis pour un reçu. Les formules qui acceptent un connecteur personnalisé dépendent de l’éditeur de l’assistant."
         },
         "comparison": {
           "question": "Quelle est la différence entre Balancia, Splitwise et Tricount ?",
@@ -1604,7 +1604,7 @@
       "sections": {
         "privacy": {
           "title": "Confidentialité et contrôle",
-          "body1": "En auto-hébergement, c’est toi qui choisis le serveur, le stockage, le domaine, le fournisseur d’e-mail et chaque intégration facultative. L’application n’a besoin d’aucun service extérieur pour fonctionner et la télémétrie est désactivée au départ. Les suggestions de catégorie et la lecture des reçus s’exécutent localement, sans envoyer de dépense à un service d’IA.",
+          "body1": "En auto-hébergement, c’est toi qui choisis le serveur, le stockage, le domaine, le fournisseur d’e-mail et chaque intégration facultative. L’application n’a besoin d’aucun service extérieur pour fonctionner et la télémétrie est désactivée au départ. Les suggestions de catégorie s’exécutent localement, sans envoyer de dépense à un service d’IA, et la lecture des reçus aussi, sauf si l’administrateur active la lecture sur le serveur et que la personne qui scanne la choisit ; la photo part alors chez le fournisseur choisi par l’administrateur, qui peut être un modèle sur son propre matériel.",
           "body2": "Ce contrôle est aussi une responsabilité : il faut appliquer les mises à jour, configurer HTTPS, protéger les secrets, surveiller l’instance et tester les sauvegardes. Splitwise prend ce travail en charge, et sa politique de confidentialité encadre la façon dont le service et ses prestataires traitent ce que tu saisis."
         },
         "migration": {
@@ -1746,7 +1746,7 @@
         },
         "privacy": {
           "title": "Confidentialité et contrôle",
-          "body1": "En auto-hébergement, c’est toi qui choisis le serveur, le stockage, le domaine, le fournisseur d’e-mail et chaque intégration facultative. L’application n’a besoin d’aucun service extérieur pour fonctionner et la télémétrie est désactivée au départ. Les suggestions de catégorie et la lecture des reçus s’exécutent localement, sans envoyer de dépense à un service d’IA.",
+          "body1": "En auto-hébergement, c’est toi qui choisis le serveur, le stockage, le domaine, le fournisseur d’e-mail et chaque intégration facultative. L’application n’a besoin d’aucun service extérieur pour fonctionner et la télémétrie est désactivée au départ. Les suggestions de catégorie s’exécutent localement, sans envoyer de dépense à un service d’IA, et la lecture des reçus aussi, sauf si l’administrateur active la lecture sur le serveur et que la personne qui scanne la choisit ; la photo part alors chez le fournisseur choisi par l’administrateur, qui peut être un modèle sur son propre matériel.",
           "body2": "Tricount appartient à bunq, qui l’exploite. Sa politique de confidentialité détaille les données financières, d’identification, d’appareil et d’usage utilisées pour faire fonctionner et améliorer le service, ainsi que les traitements confiés à ses prestataires. En échange, personne dans le groupe n’a de serveur, de base de données, de mises à jour ni de sauvegardes à gérer."
         },
         "migration": {

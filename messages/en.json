@@ -1443,7 +1443,7 @@
         },
         "assistants": {
           "question": "Can I use Balancia with Claude, ChatGPT or another AI assistant?",
-          "answer": "Yes. Balancia is an MCP server, so Claude, ChatGPT and other assistants that accept custom connectors can add it by its address and send you to a Balancia screen to sign in and press Allow. There is nothing to install and no key to copy. You choose read only or read and make changes, and every group or just one, and you can disconnect it from Settings at any time. It acts as you, never sees payment details or email addresses, and Balancia itself calls no AI service. Which plans allow custom connectors is up to the assistant's maker."
+          "answer": "Yes. Balancia is an MCP server, so Claude, ChatGPT and other assistants that accept custom connectors can add it by its address and send you to a Balancia screen to sign in and press Allow. There is nothing to install and no key to copy. You choose read only or read and make changes, and every group or just one, and you can disconnect it from Settings at any time. It acts as you, never sees payment details or email addresses, and Balancia itself calls no AI service unless the administrator has turned on server-side receipt reading and you choose it for a scan. Which plans allow custom connectors is up to the assistant's maker."
         },
         "comparison": {
           "question": "How is Balancia different from Splitwise and Tricount?",
@@ -1604,7 +1604,7 @@
       "sections": {
         "privacy": {
           "title": "Privacy and control",
-          "body1": "With a self-hosted Balancia, the operator chooses the server, the storage, the domain, the email provider and every optional integration. The application needs no outside service to run, and telemetry starts off. Category suggestions and receipt scanning run locally and send no expense to an AI provider.",
+          "body1": "With a self-hosted Balancia, the operator chooses the server, the storage, the domain, the email provider and every optional integration. The application needs no outside service to run, and telemetry starts off. Category suggestions run locally and send no expense to an AI provider, and neither does receipt scanning unless the administrator turns on server-side reading and the person scanning chooses it; the photo then goes to the provider the administrator picked, which can be a model on their own hardware.",
           "body2": "That control is also a responsibility: somebody has to apply updates, configure HTTPS, protect the secrets, watch the instance and test the backups. Splitwise takes that work on, and its privacy statement governs how it and its vendors handle what you enter."
         },
         "migration": {
@@ -1746,7 +1746,7 @@
         },
         "privacy": {
           "title": "Privacy and control",
-          "body1": "With a self-hosted Balancia, the operator chooses the server, the storage, the domain, the email provider and every optional integration. The application needs no outside service to run, and telemetry starts off. Category suggestions and receipt scanning run locally and send no expense to an AI provider.",
+          "body1": "With a self-hosted Balancia, the operator chooses the server, the storage, the domain, the email provider and every optional integration. The application needs no outside service to run, and telemetry starts off. Category suggestions run locally and send no expense to an AI provider, and neither does receipt scanning unless the administrator turns on server-side reading and the person scanning chooses it; the photo then goes to the provider the administrator picked, which can be a model on their own hardware.",
           "body2": "tricount is owned and operated by bunq. Its privacy policy sets out the financial, identification, device and usage data used to run and improve the service, and the processing done by its providers. In exchange, nobody in the group has a server, a database, upgrades or backups to look after."
         },
         "migration": {
