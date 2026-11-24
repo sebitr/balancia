@@ -225,17 +225,31 @@ export function GroupNav({ groupId }: { groupId: string }) {
       aria-label={name}
       className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-background/85 lg:hidden"
     >
-      <ul className="mx-auto flex w-full max-w-3xl items-stretch justify-between px-2 pb-2">
+      {/*
+        * Five tabs have to fit 320px, the narrowest phone anyone still holds.
+        * That is 60px apiece, and "Transactions" alone is about 79px at 12px,
+        * so the tabs are `flex-auto` (sized by their words, then shrunk
+        * together) rather than `flex-1`, which made every tab as wide as the
+        * widest and pushed the bar to 358px in French: "Paramètres" fell off
+        * the edge. Below 360px the margins and the padding give up a few
+        * pixels and the labels drop to `text-2xs`; `min-w-0` and `truncate`
+        * are the net for a language whose words are longer still. The label
+        * stays the link's accessible name either way: truncation is paint.
+        */}
+      <ul className="mx-auto flex w-full max-w-3xl items-stretch justify-between px-1 pb-2 min-[360px]:px-2">
         {tabs.map(
           ({ item, href, label, isActive, transitionTypes, onClick }) => (
-            <li key={item.labelKey} className="flex-1">
+            <li
+              key={item.labelKey}
+              className="flex min-w-0 flex-auto justify-center"
+            >
               <Link
                 href={href}
                 aria-current={isActive ? "page" : undefined}
                 transitionTypes={transitionTypes}
                 onClick={onClick}
                 className={cn(
-                  "flex flex-col items-center rounded-xl px-1 py-2.5 text-xs font-medium transition-transform duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
+                  "flex max-w-full min-w-0 flex-col items-center rounded-xl px-0.5 py-2.5 text-2xs font-medium transition-transform min-[360px]:px-1 min-[360px]:text-xs duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
                   item.primary
                     ? // Lifted out of the bar, and the label keeps full
                       // contrast: this one is an action, not a place.
@@ -262,7 +276,7 @@ export function GroupNav({ groupId }: { groupId: string }) {
                     strokeWidth={item.primary ? 2.2 : undefined}
                   />
                 </span>
-                {label}
+                <span className="max-w-full truncate">{label}</span>
               </Link>
             </li>
           ),
@@ -316,7 +330,7 @@ export function GroupTabs({ groupId }: { groupId: string }) {
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {label}
+                <span className="max-w-full truncate">{label}</span>
               </Link>
             </li>
           ),
