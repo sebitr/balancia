@@ -25,7 +25,7 @@ export function IdentityCard({
   return (
     <HubLink
       href="/settings/account"
-      className="flex shrink-0 items-center gap-3 rounded-xl bg-card p-4 text-card-foreground ring-1 ring-foreground/10 transition-colors hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+      className="flex shrink-0 items-center gap-3 rounded-xl bg-card p-4 text-card-foreground ring-1 ring-foreground/10 transition-colors hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none"
       // Lit as the hub's rows are, from `lg` up, when the account is the
       // screen beside the pane — see `SettingsLinkRow`.
       currentClassName="bg-wash-3 hover:bg-wash-3"

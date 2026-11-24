@@ -25,6 +25,8 @@
     "overview": "Aperçu",
     "expenses": "Transactions",
     "settings": "Paramètres",
+    "expensesBar": "Transactions",
+    "settingsBar": "Paramètres",
     "add": "Ajouter",
     "people": "Personnes",
     "groupSections": "Sections du groupe",
@@ -3472,6 +3474,7 @@
   "remind": {
     "action": "Relancer",
     "reminded": "Relance envoyée",
+    "remindedState": "Relance envoyée à {count, plural, one {{name}} other {# personnes}} · {when}",
     "sheetTitle": "Envoyer une relance",
     "sheetSubtitle": "{count, plural, one {# personne te doit} other {# personnes te doivent}} {amount}.",
     "sheetSubtitleNone": "Choisis qui relancer.",

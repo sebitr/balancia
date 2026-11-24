@@ -120,6 +120,7 @@ export function SplitSummaryRow({
                 <MemberAvatar
                   key={member.id}
                   name={member.displayName}
+                  hueKey={member.id}
                   guest={member.guest}
                   className="size-7 ring-2 ring-card"
                   selected

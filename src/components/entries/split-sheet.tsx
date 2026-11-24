@@ -313,6 +313,7 @@ export function SplitSheet({
               <MemberPill
                 key={member.id}
                 name={member.displayName}
+                hueKey={member.id}
                 shownAs={nameOf(member)}
                 // Both halves of this sheet carry a control per person. The
                 // colours tell them apart on screen; these names do it for
@@ -392,6 +393,7 @@ export function SplitSheet({
             <MemberPill
               key={member.id}
               name={member.displayName}
+              hueKey={member.id}
               shownAs={nameOf(member)}
               label={t("includeOption", {
                 name: member.displayName,
@@ -482,6 +484,7 @@ export function SplitSheet({
             >
               <MemberAvatar
                 name={member.displayName}
+                hueKey={member.id}
                 selected
                 tone={member.id === payerId ? "payer" : "primary"}
                 guest={member.guest}
@@ -690,6 +693,7 @@ function MultiPayerPanel({
           >
             <MemberAvatar
               name={member.displayName}
+              hueKey={member.id}
               selected={(amounts[member.id] ?? "").trim() !== ""}
               tone="payer"
               guest={member.guest}

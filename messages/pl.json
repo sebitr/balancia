@@ -22,6 +22,8 @@
     "overview": "Podsumowanie",
     "expenses": "Transakcje",
     "settings": "Ustawienia",
+    "expensesBar": "",
+    "settingsBar": "",
     "add": "Dodaj",
     "people": "Osoby",
     "groupSections": "Wybór grup",
@@ -2422,6 +2424,7 @@
   "remind": {
     "action": "",
     "reminded": "",
+    "remindedState": "",
     "sheetTitle": "",
     "sheetSubtitle": "",
     "sheetSubtitleNone": "",

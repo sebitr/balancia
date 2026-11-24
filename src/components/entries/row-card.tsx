@@ -39,7 +39,7 @@ export function RowCard({
   return (
     <div
       className={cn(
-        "divide-y divide-border overflow-hidden rounded-[17px] bg-card shadow-hairline has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
+        "divide-y divide-border overflow-hidden rounded-[17px] bg-card shadow-hairline has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring",
         className,
       )}
       {...props}

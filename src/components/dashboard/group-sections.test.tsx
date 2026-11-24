@@ -18,6 +18,7 @@ function row(overrides: Partial<GroupRowView> = {}): GroupRowView {
     icon: null,
     iconColor: null,
     memberNames: ["Sofia", "Mika"],
+    memberHues: [],
     participantCount: 2,
     lastActivityAt: "2026-08-11T12:00:00.000Z",
     amounts: [{ minorUnits: "-10000", currency: "EUR" }],
@@ -209,9 +210,10 @@ describe("GroupList from lg", () => {
     expect(owed).toHaveClass("text-positive-ink");
     expect(owe).toHaveClass("text-negative-ink");
     expect(owed.className).not.toMatch(/primary/);
-    // Only where there is room to draw it; the figure's own word still says
-    // it to a screen reader at every width.
-    expect(owed).toHaveClass("hidden", "lg:inline");
+    // Drawn at every width — under the figure on a phone — and never read
+    // twice: the figure's own word says it to a screen reader.
+    expect(owed).not.toHaveClass("hidden");
+    expect(owed.parentElement).toHaveClass("flex-col", "lg:flex-row");
     expect(owed).toHaveAttribute("aria-hidden", "true");
     expect(screen.getByText("gets back")).toHaveClass("sr-only");
     // Each beside its own figure.

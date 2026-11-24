@@ -19,6 +19,7 @@ import { Row, RowCard } from "@/components/entries/row-card";
 import { Button } from "@/components/ui/button";
 import { toastUndoable } from "@/components/ui/sonner";
 import { useAutosave } from "@/components/ui/use-autosave";
+import { useFaceHue } from "@/components/ui/face-hues";
 import { useDateFormatter, useNumberLocale } from "@/i18n/format-context";
 import { formatMoney, money } from "@/modules/currencies/money";
 import {
@@ -167,6 +168,7 @@ export function PersonRow({
   canLeave: boolean;
 }) {
   const t = useTranslations("membersPage");
+  const face = useFaceHue(isSelf ? undefined : person.id);
   const may = openings(person, {
     isSelf,
     manage: canManage,
@@ -205,6 +207,9 @@ export function PersonRow({
     <>
       <span
         aria-hidden="true"
+        // Everybody but the reader wears their hue, as on every other group
+        // screen; the reader keeps the plain "you" face.
+        {...face}
         className="inline-flex size-[38px] shrink-0 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground"
       >
         {[...person.name][0]?.toUpperCase() ?? "?"}

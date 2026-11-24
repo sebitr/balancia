@@ -133,7 +133,7 @@ describe("focus on the borderless fields", () => {
     ]) {
       const card = field.closest(".shadow-hairline");
       expect(card?.className).toContain("has-[:focus-visible]:ring-3");
-      expect(card?.className).toContain("has-[:focus-visible]:ring-ring/50");
+      expect(card?.className).toContain("has-[:focus-visible]:ring-ring");
     }
   });
 });

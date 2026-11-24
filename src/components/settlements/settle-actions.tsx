@@ -46,6 +46,8 @@ export interface SettleActionsShared {
    * `buildPayoutHints` — so there is no way to ask about anybody else.
    */
   readonly payoutHints: readonly PayoutHintView[];
+  /** The server's clock, as an ISO string, for "reminded 2 hours ago". */
+  readonly now?: string;
 }
 
 /** The reminder rows that are about this payment's debtor, if it is owed to the reader. */
@@ -69,6 +71,7 @@ export function SettleActions({
   senderName,
   recipients,
   payoutHints,
+  now,
 }: SettleActionsShared & { transfer: SettleUpTransferView }) {
   const t = useTranslations("settleUp");
 
@@ -201,6 +204,9 @@ export function SettleActions({
           groupName={groupName}
           senderName={senderName}
           recipients={chaseable}
+          now={now}
+          // The line above this button names the person.
+          showNames={false}
           label={t("remindShort")}
           // The word on the button is short because the line above it says
           // who; out of that context — a screen reader running the buttons

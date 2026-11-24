@@ -151,6 +151,8 @@ interface Tab {
   readonly item: NavItem;
   readonly href: string;
   readonly label: string;
+  /** The word painted in the phone bar; `label` stays the accessible name. */
+  readonly barLabel: string;
   /** Lit: this is where the reader is. */
   readonly isActive: boolean;
   /** The motion a tap carries, or none — see `directionFor`. */
@@ -201,6 +203,15 @@ function useTabs(groupId: string): { tabs: Tab[]; name: string } {
     item,
     href: `${base}${item.href}`,
     label: t(item.labelKey),
+    // The bar's own word, for the two labels a phone cannot always fit. The
+    // long one stays the link's accessible name (`aria-label`) and the desk
+    // tabs' text; the short one is paint.
+    barLabel:
+      item.labelKey === "expenses"
+        ? t("expensesBar")
+        : item.labelKey === "settings"
+          ? t("settingsBar")
+          : t(item.labelKey),
     // The same claim the direction is ranked from, so a tab cannot be lit
     // without being the one a sideways move counts from.
     isActive: claimOf(item, pathname, base) !== null,
@@ -238,13 +249,17 @@ export function GroupNav({ groupId }: { groupId: string }) {
        */}
       <ul className="mx-auto flex w-full max-w-3xl items-stretch justify-between px-1 pb-2 min-[360px]:px-2">
         {tabs.map(
-          ({ item, href, label, isActive, transitionTypes, onClick }) => (
+          ({ item, href, barLabel, isActive, transitionTypes, onClick }) => (
             <li
               key={item.labelKey}
               className="flex min-w-0 flex-auto justify-center"
             >
               <Link
                 href={href}
+                // No aria-label: the bar's own word is the name. A longer
+                // one here ("Einstellungen" over a visible "Optionen") is
+                // the label-in-name mismatch WCAG 2.5.3 and the journeys'
+                // axe check refuse.
                 aria-current={isActive ? "page" : undefined}
                 transitionTypes={transitionTypes}
                 onClick={onClick}
@@ -276,7 +291,7 @@ export function GroupNav({ groupId }: { groupId: string }) {
                     strokeWidth={item.primary ? 2.2 : undefined}
                   />
                 </span>
-                <span className="max-w-full truncate">{label}</span>
+                <span className="max-w-full truncate">{barLabel}</span>
               </Link>
             </li>
           ),

@@ -187,7 +187,7 @@ export function ApiTokensCard({
                 type="button"
                 onClick={() => setRevoking(token)}
                 aria-label={t("revokeLabel", { name: token.name })}
-                className="tap-target flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-wash-3 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                className="tap-target flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-wash-3 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none"
               >
                 <Trash2 aria-hidden="true" className="size-4" />
               </button>

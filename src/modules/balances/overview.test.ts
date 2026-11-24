@@ -35,6 +35,7 @@ function group(overrides: Partial<GroupSummary> = {}): GroupSummary {
     participantId: crypto.randomUUID(),
     lastActivityAt: new Date("2026-08-01T12:00:00Z"),
     memberNames: ["Sofia", "Mika"],
+    memberHues: [],
     ...overrides,
   };
 }

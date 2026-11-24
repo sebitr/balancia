@@ -332,8 +332,7 @@ describe("the headline", () => {
   /**
    * Colour never carries the side alone. When every figure is on one side
    * the card says the word once, under them; when they differ, the word
-   * rides with each figure for a screen reader, and the signs already differ
-   * for everyone else.
+   * rides beside each figure, seen as well as heard.
    */
   it("says the side once when the figures agree, and per figure when they do not", () => {
     const { unmount } = renderCard([CHALET, level("EUR")]);
@@ -353,6 +352,18 @@ describe("the headline", () => {
     expect(screen.getByText("− €45.00").parentElement).toHaveTextContent(
       /You owe/,
     );
+    // Visible, not sr-only: a sign and a colour alone are not enough.
+    expect(screen.getByText(/^\s*You owe$/)).toBeVisible();
+    expect(screen.getByText(/^\s*You owe$/)).not.toHaveClass("sr-only");
+  });
+
+  it("offers no reminder when the reader owes in every currency", () => {
+    renderCard([OWED]);
+
+    expect(screen.getByRole("link", { name: /Settle up/ })).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: /Remind|Reminded/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("says the word when every currency is level, and offers nothing to calculate", () => {

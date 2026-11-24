@@ -197,7 +197,7 @@
         <div class="swatch-chip" style="background: var(--ring)"></div>
         <div class="swatch-meta">
           <div class="swatch-name">--ring</div>
-          <div class="swatch-val">focus, at 50% over 3px</div>
+          <div class="swatch-val">focus, full strength, 3px</div>
         </div>
       </div>
       <div class="swatch">
@@ -363,6 +363,26 @@
       from <code>TONE</code> in
       <code>src/components/money/balance-tone.ts</code>.
     </p>
+  </section>
+
+  <section>
+    <h2>Member faces</h2>
+    <p class="note">
+      A member's initial sits on one of five muted hues, chosen from their
+      participant id so the same person is the same colour on every screen. The
+      hues (200, 225, 250, 275, 345) stay more than 25&deg; from the green, red
+      and amber money colours, and the tint is pale in light and deep in dark so
+      the initial holds 4.5:1. A chosen face, and the reader's own, keep their
+      tone instead. Implemented in
+      <code>src/components/ui/avatar-hue.ts</code>.
+    </p>
+    <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem">
+      <span class="avatar" data-avatar-hue style="--avatar-hue: 200">A</span>
+      <span class="avatar" data-avatar-hue style="--avatar-hue: 225">B</span>
+      <span class="avatar" data-avatar-hue style="--avatar-hue: 250">C</span>
+      <span class="avatar" data-avatar-hue style="--avatar-hue: 275">D</span>
+      <span class="avatar" data-avatar-hue style="--avatar-hue: 345">E</span>
+    </div>
   </section>
 
   <section>

@@ -86,7 +86,7 @@ export function AccentChoices({ current }: { current: AccentColor }) {
             key={accent}
             value={accent}
             aria-label={t(`accents.${accent}` as Parameters<typeof t>[0])}
-            className="group flex size-8.5 shrink-0 items-center justify-center rounded-full transition-shadow focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+            className="group flex size-8.5 shrink-0 items-center justify-center rounded-full transition-shadow focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none"
             style={{
               background: accentCss(accent),
               // The inner gap is the card's own colour, so the ring reads as a

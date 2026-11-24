@@ -25,6 +25,8 @@
     "overview": "Überblick",
     "expenses": "Transaktionen",
     "settings": "Einstellungen",
+    "expensesBar": "Einträge",
+    "settingsBar": "Optionen",
     "add": "Hinzufügen",
     "people": "Personen",
     "groupSections": "Gruppenbereiche",
@@ -3094,6 +3096,7 @@
   "remind": {
     "action": "Erinnern",
     "reminded": "Erinnert",
+    "remindedState": "Erinnert: {count, plural, one {{name}} other {# Personen}} · {when}",
     "sheetTitle": "Erinnerung senden",
     "sheetSubtitle": "{count, plural, one {# Person schuldet} other {# Personen schulden}} dir {amount}.",
     "sheetSubtitleNone": "Wähle aus, wen du erinnern möchtest.",
@@ -4766,7 +4769,9 @@
       "unknown": "Etwas ist schiefgelaufen.",
       "invalidKey": "Das ist kein gültiger Wiederherstellungsschlüssel.",
       "tooMany": "Du hast die maximale Anzahl an Backup-Zielen erreicht. Deaktiviere zuerst ein Ziel.",
-      "invalidDetails": "Einige Angaben sind ungültig. Prüfe sie und teste erneut."
+      "invalidDetails": "Einige Angaben sind ungültig. Prüfe sie und teste erneut.",
+      "interrupted": "Diese Sicherung wurde abgebrochen, meist weil der Server neu gestartet wurde.",
+      "interruptedHint": "Frühere Sicherungen sind unberührt. Die nächste läuft wie geplant."
     },
     "restore": {
       "title": "Aus einem Backup wiederherstellen",

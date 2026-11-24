@@ -440,9 +440,25 @@
   }
 }
 
+/*
+ * A face's own hue, from `src/components/ui/avatar-hue.ts`. Unlayered on
+ * purpose: it has to beat the `bg-accent` a call site may still carry. The
+ * hues stay clear of the money colours; lightness and chroma are what hold
+ * the initial at 4.5:1 on its tint in each theme, and the test beside the
+ * palette checks it.
+ */
+[data-avatar-hue] {
+  background-color: oklch(0.92 0.035 var(--avatar-hue));
+  color: oklch(0.34 0.09 var(--avatar-hue));
+}
+.dark [data-avatar-hue] {
+  background-color: oklch(0.36 0.06 var(--avatar-hue));
+  color: oklch(0.93 0.03 var(--avatar-hue));
+}
+
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring;
   }
   body {
     @apply bg-background text-foreground;

@@ -56,12 +56,19 @@ const TICK_TONE: Record<PillTone, string> = {
 
 export function MemberAvatar({
   name,
+  hueKey,
   className,
   selected = false,
   tone = "primary",
   guest = false,
 }: {
   name: string;
+  /**
+   * Who this is, for the face's hue: their participant id where the screen
+   * has one. Without it the name stands in, which is stable but is a second
+   * key for the same person, so pass the id whenever there is one.
+   */
+  hueKey?: string;
   className?: string;
   /** Selected avatars take their tone's colour, so a face reads as chosen. */
   selected?: boolean;
@@ -80,6 +87,8 @@ export function MemberAvatar({
       )}
     >
       <AvatarFallback
+        // A chosen face states its own tone; every other one gets its hue.
+        hueKey={selected ? undefined : (hueKey ?? name)}
         className={cn(
           "text-xs font-semibold",
           selected ? AVATAR_TONE[tone] : "bg-accent text-accent-foreground",
@@ -128,6 +137,7 @@ function nameShowing(shown: string, label: string | undefined) {
  */
 export function MemberPill({
   name,
+  hueKey,
   shownAs = name,
   label,
   selected,
@@ -139,6 +149,8 @@ export function MemberPill({
   guest = false,
 }: {
   name: string;
+  /** The person's participant id, for the face's hue. See `MemberAvatar`. */
+  hueKey?: string;
   /**
    * What the pill says, when it is not the name: "You", for the reader. The
    * face keeps the name's initial, as it does on every other screen.
@@ -174,7 +186,13 @@ export function MemberPill({
           : "border-border bg-wash-1 font-normal text-muted-foreground",
       )}
     >
-      <MemberAvatar name={name} selected={selected} tone={tone} guest={guest} />
+      <MemberAvatar
+        name={name}
+        hueKey={hueKey}
+        selected={selected}
+        tone={tone}
+        guest={guest}
+      />
       <span className="truncate">{shownAs}</span>
       {selected && (
         <Check

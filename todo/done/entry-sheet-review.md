@@ -1,3 +1,3 @@
 # The add-expense and repayment sheets stop tripping over themselves
 
-Branch: `fix/entry-sheet-review`
+Merged: 2026-11-24 in #507

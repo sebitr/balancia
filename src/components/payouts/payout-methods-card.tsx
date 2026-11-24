@@ -307,7 +307,7 @@ export function PayoutMethodsCard({
                     type="button"
                     disabled={pending}
                     onClick={() => prefer(entry.method)}
-                    className="shrink-0 rounded-full bg-wash-2 px-2 py-1 text-2xs text-muted-foreground transition-colors hover:bg-wash-4 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
+                    className="shrink-0 rounded-full bg-wash-2 px-2 py-1 text-2xs text-muted-foreground transition-colors hover:bg-wash-4 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
                   >
                     {t("makePreferred")}
                   </button>
@@ -318,7 +318,7 @@ export function PayoutMethodsCard({
                   disabled={pending}
                   onClick={() => remove(entry.method)}
                   aria-label={t("removeMethod", { method: label })}
-                  className="tap-target flex size-7 shrink-0 items-center justify-center rounded-full bg-wash-2 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
+                  className="tap-target flex size-7 shrink-0 items-center justify-center rounded-full bg-wash-2 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
                 >
                   <Trash2 aria-hidden="true" className="size-3.5" />
                 </button>
@@ -373,7 +373,7 @@ export function PayoutMethodsCard({
           aria-haspopup="dialog"
           className={cn(
             "flex min-h-13 w-full items-center gap-2.5 px-4 py-3 text-left transition-colors",
-            "hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+            "hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none",
             entries.length > 0 && "border-t border-border",
           )}
         >

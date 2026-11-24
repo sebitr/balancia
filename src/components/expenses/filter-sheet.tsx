@@ -268,6 +268,7 @@ export function FilterSheet({
                       leading={
                         <MemberAvatar
                           name={member.displayName}
+                          hueKey={member.id}
                           selected={on}
                           className="-ml-1.5 size-5"
                         />
@@ -298,6 +299,7 @@ export function FilterSheet({
                       leading={
                         <MemberAvatar
                           name={member.displayName}
+                          hueKey={member.id}
                           selected={on}
                           className="-ml-1.5 size-5"
                         />

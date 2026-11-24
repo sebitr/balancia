@@ -4,6 +4,8 @@ import * as React from "react";
 import { Avatar as AvatarPrimitive } from "radix-ui";
 
 import { cn } from "@/lib/utils";
+import { avatarHue } from "./avatar-hue";
+import { FaceHuesContext } from "./face-hues";
 
 function Avatar({
   className,
@@ -43,11 +45,41 @@ function AvatarImage({
 
 function AvatarFallback({
   className,
+  hueKey,
+  hue: givenHue,
+  style,
   ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Fallback>) {
+}: React.ComponentProps<typeof AvatarPrimitive.Fallback> & {
+  /**
+   * A hue already worked out on the server, where the person's account could
+   * be read (the home screen's stacks). Wins over `hueKey`.
+   */
+  hue?: number;
+  /**
+   * Who this face is, as a string that never changes: a participant id, or a
+   * name where a screen has nothing better. It picks the face's hue from a
+   * small muted palette (`avatar-hue.ts`); leave it out for the plain lilac.
+   * A face that is chosen, or is the reader, states its own colour instead
+   * and passes no key.
+   */
+  hueKey?: string;
+}) {
+  // Inside a group the layout has already said which hue each participant
+  // wears, keyed by their account where they have one (`FaceHuesProvider`),
+  // so a person is one colour in every group they share with the reader.
+  // Anywhere else, or for a key it does not know, the key itself decides.
+  const known = React.useContext(FaceHuesContext);
+  const hue =
+    givenHue ?? (hueKey ? (known?.[hueKey] ?? avatarHue(hueKey)) : undefined);
   return (
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
+      data-avatar-hue={hue}
+      style={
+        hue === undefined
+          ? style
+          : ({ ...style, "--avatar-hue": hue } as React.CSSProperties)
+      }
       className={cn(
         "flex size-full items-center justify-center rounded-full bg-muted text-sm text-muted-foreground group-data-[size=sm]/avatar:text-xs",
         className,

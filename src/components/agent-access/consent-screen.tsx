@@ -158,7 +158,7 @@ export async function ConsentScreen({
           id="agent-group"
           name="group"
           defaultValue="all"
-          className="h-11 w-full rounded-lg border border-input bg-transparent px-2.5 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:h-9 md:text-sm dark:bg-input/30"
+          className="h-11 w-full rounded-lg border border-input bg-transparent px-2.5 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring md:h-9 md:text-sm dark:bg-input/30"
         >
           <option value="all">{t("allGroups")}</option>
           {groups.map((group) => (

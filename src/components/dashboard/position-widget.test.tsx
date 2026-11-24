@@ -199,6 +199,7 @@ describe("PositionWidget", () => {
       net: null,
       owedToYou: null,
       youOwe: null,
+      displayCurrency: "USD",
       currencyTotals: [
         { currency: "EUR", owedToYou: "0", youOwe: "5000" },
         { currency: "JPY", owedToYou: "0", youOwe: "4500" },
@@ -208,6 +209,37 @@ describe("PositionWidget", () => {
     expect(screen.getByRole("button", { name: /¥4,500/ })).toBeVisible();
     expect(screen.getAllByRole("listitem")).toHaveLength(1);
     expect(screen.getByText("€50.00")).toBeVisible();
+  });
+
+  it("leads on the display currency ahead of a bigger raw number", () => {
+    renderWidget({
+      net: null,
+      owedToYou: null,
+      youOwe: null,
+      displayCurrency: "EUR",
+      currencyTotals: [
+        { currency: "EUR", owedToYou: "0", youOwe: "17610" },
+        { currency: "JPY", owedToYou: "0", youOwe: "4500" },
+      ],
+    });
+
+    expect(screen.getByRole("button", { name: /€176\.10/ })).toBeVisible();
+    expect(screen.getByText("¥4,500")).toBeVisible();
+  });
+
+  it("still puts a debt in another currency ahead of the display currency's credit", () => {
+    renderWidget({
+      net: null,
+      owedToYou: null,
+      youOwe: null,
+      displayCurrency: "EUR",
+      currencyTotals: [
+        { currency: "EUR", owedToYou: "17610", youOwe: "0" },
+        { currency: "JPY", owedToYou: "0", youOwe: "4500" },
+      ],
+    });
+
+    expect(screen.getByRole("button", { name: /¥4,500/ })).toBeVisible();
   });
 
   it("counts the currencies rather than adding them up", () => {

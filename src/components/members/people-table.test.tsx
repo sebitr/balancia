@@ -279,7 +279,7 @@ describe("PeopleCard at width", () => {
       within(rowOf("Ravi")).getByRole("button", { name: "Remind Ravi" }),
     ).toBeEnabled();
     expect(
-      within(rowOf("Jonas")).getByRole("button", { name: "Reminded" }),
+      within(rowOf("Jonas")).getByRole("button", { name: /^Reminded .*ago$/ }),
     ).toBeDisabled();
     expect(
       within(rowOf("Amélie")).queryByRole("button", { name: /Remind/ }),

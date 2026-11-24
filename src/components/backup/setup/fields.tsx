@@ -169,7 +169,7 @@ export function SelectField({
           id={id}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-10 w-full appearance-none rounded-xl border border-input bg-transparent px-3 pr-9 text-base transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none md:text-sm dark:bg-input/30"
+          className="h-10 w-full appearance-none rounded-xl border border-input bg-transparent px-3 pr-9 text-base transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none md:text-sm dark:bg-input/30"
         >
           {options.map((option) => (
             <option key={option.value} value={option.value}>

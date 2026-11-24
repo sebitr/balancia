@@ -186,7 +186,7 @@ export function TimezoneSelect({
         >
           {/* The row is the field, so the row shows the caret — inside its
               own edge, because it is the popover's top edge as well. */}
-          <div className="flex shrink-0 items-center gap-2 rounded-t-lg border-b border-border px-2.5 has-[input:focus-visible]:inset-ring-2 has-[input:focus-visible]:inset-ring-ring/50">
+          <div className="flex shrink-0 items-center gap-2 rounded-t-lg border-b border-border px-2.5 has-[input:focus-visible]:inset-ring-2 has-[input:focus-visible]:inset-ring-ring">
             <Search
               aria-hidden="true"
               className="size-4 shrink-0 text-muted-foreground"

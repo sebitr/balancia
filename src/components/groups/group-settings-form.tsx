@@ -184,7 +184,7 @@ export function GroupSettingsForm({
                 type="button"
                 onClick={() => setPickerOpen(true)}
                 aria-label={t("changeIcon")}
-                className="rounded-lg focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                className="rounded-lg focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none"
               >
                 <GroupIconTile
                   icon={draft.icon}

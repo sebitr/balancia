@@ -155,7 +155,7 @@ export function PushCard({ devices }: { devices: PushDevice[] }) {
                 type="button"
                 disabled={testing}
                 onClick={() => void sendTest()}
-                className="text-xs font-semibold text-primary-ink transition-colors hover:text-primary-ink/80 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
+                className="text-xs font-semibold text-primary-ink transition-colors hover:text-primary-ink/80 focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
               >
                 {t("testSend")}
               </button>
@@ -183,7 +183,7 @@ export function PushCard({ devices }: { devices: PushDevice[] }) {
                   disabled={removing === device.id}
                   onClick={() => void forget(device.id)}
                   aria-label={`${t("deviceRemove")} — ${device.label}`}
-                  className="tap-target flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-wash-3 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
+                  className="tap-target flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-wash-3 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
                 >
                   {removing === device.id ? (
                     <Loader2

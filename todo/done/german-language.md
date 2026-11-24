@@ -1,3 +1,3 @@
 # Add German language support
 
-Branch: `feat/german-language`
+Merged: 2026-11-24 in #490

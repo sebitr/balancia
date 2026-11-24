@@ -20,6 +20,7 @@ import { generateToken } from "@/lib/security/tokens";
 import { createJoinLink, joinLinkUrl } from "@/lib/security/join-link";
 import { revokeSessionsForInvitation } from "@/lib/security/guest-session";
 import { telemetry } from "@/lib/telemetry";
+import { avatarHue } from "@/components/ui/avatar-hue";
 import { activityActorFrom, recordActivity } from "@/modules/activity/service";
 import {
   removeStoredReceipts,
@@ -63,6 +64,15 @@ export interface GroupSummary {
   readonly lastActivityAt: Date;
   /** First few participants, oldest first, for an avatar stack. */
   readonly memberNames: readonly string[];
+  /**
+   * The same participants' faces, in the same order, as hues from
+   * `avatar-hue.ts` — worked out here so no account id leaves the server.
+   * Keyed by the person's account where they have one, so somebody in three
+   * of the reader's groups is one colour on every row; by participant where
+   * they do not. The reader's own slot is null: every screen draws them in
+   * the "you" tone.
+   */
+  readonly memberHues: readonly (number | null)[];
 }
 
 /** How many names the avatar stack on the home screen can show. */
@@ -120,14 +130,34 @@ export async function listGroupsForUser(
       // Aggregated here rather than in a second query per group: the home
       // screen needs these for every row it draws.
       memberNames: sql<string[]>`(
-        SELECT coalesce(array_agg(name ORDER BY joined), '{}')
+        SELECT coalesce(array_agg(name ORDER BY joined, tie), '{}')
         FROM (
           SELECT ${participants.displayName} AS name,
-                 ${participants.createdAt} AS joined
+                 ${participants.createdAt} AS joined,
+                 ${participants.id} AS tie
           FROM ${participants}
           WHERE ${participants.groupId} = ${groups.id}
             AND ${participants.removedAt} IS NULL
-          ORDER BY ${participants.createdAt}
+          ORDER BY ${participants.createdAt}, ${participants.id}
+          LIMIT ${AVATAR_STACK_NAMES}
+        ) AS stack
+      )`,
+      // The same few participants as `memberNames`, by id, for the hue of
+      // each face — a name is not a key, two people can share one. Both
+      // break a tie on `created_at` by id: people added in one transaction
+      // share the timestamp, and the two lists must pair up face for face.
+      memberFaceKeys: sql<string[]>`(
+        SELECT coalesce(array_agg(id ORDER BY joined, tie), '{}')
+        FROM (
+          SELECT CASE WHEN ${participants.userId} = ${userId} THEN ''
+                      ELSE coalesce(${participants.userId}::text,
+                                    ${participants.id}::text) END AS id,
+                 ${participants.createdAt} AS joined,
+                 ${participants.id} AS tie
+          FROM ${participants}
+          WHERE ${participants.groupId} = ${groups.id}
+            AND ${participants.removedAt} IS NULL
+          ORDER BY ${participants.createdAt}, ${participants.id}
           LIMIT ${AVATAR_STACK_NAMES}
         ) AS stack
       )`,
@@ -141,7 +171,12 @@ export async function listGroupsForUser(
     // live group below the archived ones.
     .orderBy(sql`${groups.archivedAt} ASC NULLS FIRST`, desc(lastActivityAt));
 
-  return rows;
+  // The keys are account ids where there is one: turned into hues here and
+  // dropped, so they never reach a page, a search result or an assistant.
+  return rows.map(({ memberFaceKeys, ...row }) => ({
+    ...row,
+    memberHues: memberFaceKeys.map((key) => (key ? avatarHue(key) : null)),
+  }));
 }
 
 /** What a group calls itself: the fields its settings screen edits. */

@@ -525,7 +525,7 @@ export function RemindSheet({
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "flex size-5 shrink-0 items-center justify-center rounded-full transition-all duration-150 peer-focus-visible:ring-3 peer-focus-visible:ring-ring/50",
+                    "flex size-5 shrink-0 items-center justify-center rounded-full transition-all duration-150 peer-focus-visible:ring-3 peer-focus-visible:ring-ring",
                     isSelected
                       ? "bg-primary text-primary-foreground shadow-[inset_0_0_0_1.5px_var(--primary)]"
                       : "text-transparent shadow-[inset_0_0_0_1.5px_var(--input)]",
@@ -535,7 +535,10 @@ export function RemindSheet({
                 </span>
 
                 <Avatar className="size-8 shrink-0">
-                  <AvatarFallback className="bg-accent text-xs font-semibold text-accent-foreground">
+                  <AvatarFallback
+                    hueKey={recipient.participantId}
+                    className="bg-accent text-xs font-semibold text-accent-foreground"
+                  >
                     {recipient.name.trim().charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
@@ -636,7 +639,7 @@ export function RemindSheet({
             onClick={() => changeTone(option)}
             aria-pressed={tone === option}
             className={cn(
-              "tap-target h-[38px] flex-1 rounded-xl border text-xs font-medium transition-all duration-150 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+              "tap-target h-[38px] flex-1 rounded-xl border text-xs font-medium transition-all duration-150 focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none",
               tone === option ? PICKED_CHIP : UNPICKED,
             )}
           >
@@ -690,7 +693,7 @@ export function RemindSheet({
                     aria-pressed={option.method === chosenPay.method}
                     onClick={() => setPayMethod(option.method)}
                     className={cn(
-                      "tap-target h-7 rounded-full border px-2.5 text-2xs font-medium transition-all duration-150 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+                      "tap-target h-7 rounded-full border px-2.5 text-2xs font-medium transition-all duration-150 focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none",
                       option.method === chosenPay.method
                         ? PICKED_CHIP
                         : UNPICKED,
@@ -772,7 +775,7 @@ export function RemindSheet({
             onClick={() => setAttachPay((on) => !on)}
             aria-pressed={attachPay}
             className={cn(
-              "tap-target inline-flex h-8 items-center gap-[7px] rounded-full border px-3 text-xs font-medium transition-all duration-150 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+              "tap-target inline-flex h-8 items-center gap-[7px] rounded-full border px-3 text-xs font-medium transition-all duration-150 focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none",
               attachPay ? PICKED_CHIP : UNPICKED,
             )}
           >

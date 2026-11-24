@@ -268,6 +268,7 @@ export default async function MemberStatsPage({
                         senderName={senderName}
                         recipients={recipients}
                         payoutHints={payoutHints}
+                        now={new Date().toISOString()}
                       />
                     ))
                   : null

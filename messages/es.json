@@ -19,6 +19,8 @@
     "overview": "",
     "expenses": "",
     "settings": "",
+    "expensesBar": "",
+    "settingsBar": "",
     "add": "",
     "people": "",
     "groupSections": "",
@@ -2418,6 +2420,7 @@
   "remind": {
     "action": "",
     "reminded": "",
+    "remindedState": "",
     "sheetTitle": "",
     "sheetSubtitle": "",
     "sheetSubtitleNone": "",

@@ -182,7 +182,7 @@ function BackupRows({
             {...rove(file.name)}
             className={cn(
               "flex min-h-14 w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors",
-              "hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none focus-visible:ring-inset",
+              "hover:bg-wash-1 focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset",
               "disabled:pointer-events-none disabled:opacity-50",
               "not-first:border-t not-first:border-border",
               checked && "bg-wash-3 hover:bg-wash-3",

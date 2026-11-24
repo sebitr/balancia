@@ -139,6 +139,7 @@ interface Shared {
    * the people who owe you and to nobody else.
    */
   readonly payoutHints: readonly PayoutHintView[];
+  readonly now?: string;
 }
 
 export function SettleUpScreen({
@@ -603,15 +604,27 @@ function PaymentBlock({
   // two, and their own initials would say nothing.
   const face = transfer.fromIsSelf ? transfer.toName : transfer.fromName;
 
-  const reminded = remindRecipientsFor(transfer, shared.recipients).find(
+  const chaseable = remindRecipientsFor(transfer, shared.recipients);
+  const reminded = chaseable.find(
     (recipient) => recipient.lastRemindedAt !== null,
   )?.lastRemindedAt;
+  // Once the cooldown is running the Remind button turns into the statement
+  // "Reminded · 3 hours ago" itself; the line here would say it twice.
+  const buttonSaysSo =
+    chaseable.length > 0 && chaseable.every((recipient) => recipient.locked);
 
   return (
     <div className={cn("flex flex-col gap-3.5 py-4", !first && "border-t")}>
       <div className="flex items-center gap-3">
         <Avatar className="size-10 shrink-0">
-          <AvatarFallback className="bg-accent text-sm font-semibold text-accent-foreground">
+          <AvatarFallback
+            hueKey={
+              transfer.fromIsSelf
+                ? transfer.toParticipantId
+                : transfer.fromParticipantId
+            }
+            className="bg-accent text-sm font-semibold text-accent-foreground"
+          >
             {initialsOf(face)}
           </AvatarFallback>
         </Avatar>
@@ -625,10 +638,13 @@ function PaymentBlock({
               ? t("payBack", { name: transfer.toName })
               : t("personRepaysYou", { name: transfer.fromName })}
           </p>
-          {reminded && (
+          {reminded && !buttonSaysSo && (
             <p className="truncate text-xs text-muted-foreground">
               {t("remindedWhen", {
-                when: format.relativeTime(new Date(reminded)),
+                when: format.relativeTime(
+                  new Date(reminded),
+                  shared.now ? new Date(shared.now) : new Date(),
+                ),
               })}
             </p>
           )}
@@ -656,6 +672,7 @@ function PaymentBlock({
         senderName={shared.senderName}
         recipients={shared.recipients}
         payoutHints={shared.payoutHints}
+        now={shared.now}
       />
     </div>
   );
@@ -698,7 +715,10 @@ function TheirRow({
       className="-mx-2 flex min-h-14 items-center gap-3 rounded-[14px] px-2 transition-colors hover:bg-wash-1"
     >
       <Avatar className="size-8 shrink-0 opacity-60">
-        <AvatarFallback className="bg-accent text-2xs font-semibold text-accent-foreground">
+        <AvatarFallback
+          hueKey={transfer.fromParticipantId}
+          className="bg-accent text-2xs font-semibold text-accent-foreground"
+        >
           {initialsOf(transfer.fromName)}
         </AvatarFallback>
       </Avatar>

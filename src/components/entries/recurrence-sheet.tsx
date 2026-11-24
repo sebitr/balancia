@@ -336,7 +336,7 @@ export function RecurrenceSheet({
         <ul
           role="radiogroup"
           aria-label={t("title")}
-          className="overflow-hidden rounded-2xl bg-card shadow-hairline has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50"
+          className="overflow-hidden rounded-2xl bg-card shadow-hairline has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring"
         >
           {presets.map((option) => (
             <li key={option.id} role="none">

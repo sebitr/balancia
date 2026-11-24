@@ -86,7 +86,7 @@ export function UserMenu({
       transitionTypes={PUSH}
       onClick={rememberOrigin}
       aria-label={t("yourAccount")}
-      className="tap-target flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+      className="tap-target flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none"
     >
       {initials}
       <span className="hidden max-w-32 truncate text-sm font-medium sm:inline">
