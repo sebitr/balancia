@@ -62,6 +62,22 @@ export function commandHeld(event: KeyboardEvent): boolean {
   return isApplePlatform() ? event.metaKey : event.ctrlKey;
 }
 
+/**
+ * AltGr is held, off a Mac: the key that types a character, not a command.
+ *
+ * Windows reports AltGr as Ctrl and Alt together, so to `commandHeld` it is
+ * Ctrl — and on a German, French or Spanish board `\` is typed with AltGr.
+ * Taking it for ⌘\ folded the sidebar and swallowed the character. A Mac has
+ * no AltGr; its ⌥ is how a French board types `\` with ⌘ held, and stays.
+ */
+export function altGraphHeld(event: KeyboardEvent): boolean {
+  if (isApplePlatform()) return false;
+  return (
+    event.getModifierState?.("AltGraph") === true ||
+    (event.ctrlKey && event.altKey)
+  );
+}
+
 /** No modifier at all: the bare letter. */
 function bare(event: KeyboardEvent): boolean {
   return !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
@@ -171,9 +187,11 @@ export function useShortcuts({
 
       // By the character, whatever else it took to type it — a French Mac
       // keyboard's backslash is ⌥⇧/ — and by the key's place on the board
-      // where the layout puts something else there.
+      // where the layout puts something else there. Never through AltGr,
+      // which is typing a `\`, not asking for the sidebar.
       if (
         commandHeld(event) &&
+        !altGraphHeld(event) &&
         (event.key === "\\" || event.code === "Backslash")
       ) {
         if (isLayerOpen()) return;
