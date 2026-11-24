@@ -2393,10 +2393,23 @@ export function AddEntryForm({
    * was pressed for; a picker open over the form is what the keys are for
    * while it is open. And it is the button, pressed: nothing the button would
    * refuse to do.
+   *
+   * Only for a key pressed in the form itself. React carries an event up
+   * through a portal to the component that rendered it, so "Delete this
+   * entry?" — drawn over the form, from inside it — sent its ⌘↵ here, and the
+   * question about deleting the entry was answered by saving the edit
+   * instead. A dialog or a popover over the form is not in its DOM, and is
+   * what the keys are for while it is open.
    */
   const saveFromKeyboard = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "Enter" || !(event.metaKey || event.ctrlKey)) return;
-    if (event.defaultPrevented || sheet !== null) return;
+    if (event.defaultPrevented || sheet !== null || confirmDelete) return;
+    if (
+      !(event.target instanceof Node) ||
+      !event.currentTarget.contains(event.target)
+    ) {
+      return;
+    }
     event.preventDefault();
     if (canSave && !pending) void onSubmit();
   };
