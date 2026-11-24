@@ -1,6 +1,7 @@
 import "server-only";
 import { oncePerRender } from "@/lib/render-memo";
 import { getUserPreferredCurrency } from "@/modules/auth/service";
+import { todayIso } from "@/modules/currencies/provider";
 import {
   isGroupIcon,
   isGroupIconColor,
@@ -10,7 +11,7 @@ import {
 import {
   directionOf,
   displayAmountsOf,
-  loadHomeOverview,
+  loadHomeOverviewOnce,
   type GroupPosition,
   type PositionDirection,
 } from "./overview";
@@ -75,12 +76,19 @@ function toNavigationGroup(position: GroupPosition): NavigationGroup {
  * anyone is going next.
  *
  * Memoised per request, because the sidebar asks for it from more than one
- * place in the same render.
+ * place in the same render. The overview under it is memoised too, and keyed
+ * as Home asks for it — the same user, preference and day — so on Home the
+ * sidebar is handed the overview the screen beside it already computed rather
+ * than walking every group's balances a second time.
  */
 export const loadNavigationGroups = oncePerRender(
   async (userId: string): Promise<NavigationGroup[]> => {
     const preferredCurrency = await getUserPreferredCurrency(userId);
-    const { buckets } = await loadHomeOverview(userId, { preferredCurrency });
+    const { buckets } = await loadHomeOverviewOnce(
+      userId,
+      preferredCurrency,
+      todayIso(),
+    );
 
     return [...buckets.needsYou, ...buckets.youAreOwed, ...buckets.settled].map(
       toNavigationGroup,

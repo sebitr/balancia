@@ -1,6 +1,7 @@
 import "server-only";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { getDb, type Database } from "@/lib/db/client";
+import { oncePerRender } from "@/lib/render-memo";
 // Aliased: `groups` is the name this module already uses for the user's own
 // list of groups, and the two would shadow each other.
 import {
@@ -511,6 +512,34 @@ export async function loadHomeOverview(
       : null,
   };
 }
+
+/**
+ * The home screen's overview, computed at most once per server render.
+ *
+ * Home draws it, and the sidebar beside Home lists the same groups from it
+ * (`loadNavigationGroups`); both are in one render, and each used to walk
+ * every group's balances for itself. Keyed on primitives only, as
+ * `oncePerRender` asks: the day rather than the instant, because the day is
+ * all `now` decides — which fixing the conversions look up — and two callers
+ * a few milliseconds apart hold two different instants on one day.
+ *
+ * Every render starts from nothing, so a render after a Server Action never
+ * sees the overview from before it wrote; outside a render it reads every
+ * time. Callers that pass a database handle of their own call
+ * `loadHomeOverview` instead.
+ */
+export const loadHomeOverviewOnce = oncePerRender(
+  (
+    userId: string,
+    preferredCurrency: string | null,
+    today: string,
+  ): Promise<HomeOverview> =>
+    loadHomeOverview(userId, {
+      preferredCurrency,
+      // Midnight UTC of `today`, which `todayIso` reads back as `today`.
+      now: new Date(`${today}T00:00:00.000Z`),
+    }),
+);
 
 /** Square overall *and* square in every group — not merely netting to zero. */
 function isZeroNet(netPosition: NetPosition): boolean {

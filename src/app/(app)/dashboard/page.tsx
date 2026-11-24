@@ -25,7 +25,7 @@ import { resolveFormatPreferences } from "@/i18n/preferences";
 import { getCurrentUser } from "@/lib/security/actor";
 import {
   displayAmountsOf,
-  loadHomeOverview,
+  loadHomeOverviewOnce,
   type GroupPosition,
 } from "@/modules/balances/overview";
 import { getUserPreferredCurrency } from "@/modules/auth/service";
@@ -134,10 +134,14 @@ export default async function DashboardPage() {
     resolveFormatPreferences(),
   ]);
   const now = new Date();
-  const overview = await loadHomeOverview(user.userId, {
+  // Once per render: the sidebar beside this screen lists its groups from the
+  // same overview, asked for with the same user, preference and day, and is
+  // handed this one rather than computing every balance again.
+  const overview = await loadHomeOverviewOnce(
+    user.userId,
     preferredCurrency,
-    now,
-  });
+    todayIso(now),
+  );
   const { buckets, netPosition } = overview;
 
   /*
