@@ -95,6 +95,7 @@ function toRow(position: GroupPosition): GroupRowView {
     id: position.group.id,
     name: position.group.name,
     memberNames: [...position.group.memberNames],
+    memberIds: [...position.group.memberIds],
     participantCount: position.group.participantCount,
     lastActivityAt: position.group.lastActivityAt.toISOString(),
     amounts: amountsOf(position),

@@ -820,7 +820,10 @@ function SplitsMostWith({
             className="flex items-center gap-2.5 py-2"
           >
             <Avatar className="size-7 shrink-0">
-              <AvatarFallback className="bg-accent text-2xs font-semibold text-accent-foreground">
+              <AvatarFallback
+                hueKey={partner.participantId}
+                className="bg-accent text-2xs font-semibold text-accent-foreground"
+              >
                 {partner.name.trim().charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>

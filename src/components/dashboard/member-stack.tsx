@@ -11,9 +11,15 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
  */
 export function MemberStack({
   names,
+  ids,
   total,
 }: {
   names: readonly string[];
+  /**
+   * Their participant ids, in the same order, for each face's hue. Absent, the
+   * name is the key — stable, but not the one the rest of the app uses.
+   */
+  ids?: readonly string[];
   total: number;
 }) {
   const t = useTranslations("dashboard");
@@ -37,7 +43,10 @@ export function MemberStack({
     >
       {shown.map((name, index) => (
         <Avatar key={`${name}-${index}`} className="size-5">
-          <AvatarFallback className="bg-accent text-2xs font-semibold text-accent-foreground">
+          <AvatarFallback
+            hueKey={ids?.[index] ?? name}
+            className="bg-accent text-2xs font-semibold text-accent-foreground"
+          >
             {name.trim().charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>

@@ -63,6 +63,8 @@ export interface GroupSummary {
   readonly lastActivityAt: Date;
   /** First few participants, oldest first, for an avatar stack. */
   readonly memberNames: readonly string[];
+  /** The same participants' ids, in the same order. */
+  readonly memberIds: readonly string[];
 }
 
 /** How many names the avatar stack on the home screen can show. */
@@ -123,6 +125,20 @@ export async function listGroupsForUser(
         SELECT coalesce(array_agg(name ORDER BY joined), '{}')
         FROM (
           SELECT ${participants.displayName} AS name,
+                 ${participants.createdAt} AS joined
+          FROM ${participants}
+          WHERE ${participants.groupId} = ${groups.id}
+            AND ${participants.removedAt} IS NULL
+          ORDER BY ${participants.createdAt}
+          LIMIT ${AVATAR_STACK_NAMES}
+        ) AS stack
+      )`,
+      // The same few participants as `memberNames`, by id, for the hue of
+      // each face — a name is not a key, two people can share one.
+      memberIds: sql<string[]>`(
+        SELECT coalesce(array_agg(id ORDER BY joined), '{}')
+        FROM (
+          SELECT ${participants.id}::text AS id,
                  ${participants.createdAt} AS joined
           FROM ${participants}
           WHERE ${participants.groupId} = ${groups.id}

@@ -73,6 +73,8 @@ export interface GroupRowView {
   readonly icon: GroupIcon | null;
   readonly iconColor: GroupIconColor | null;
   readonly memberNames: readonly string[];
+  /** Their participant ids, in the same order: the key for each face's hue. */
+  readonly memberIds: readonly string[];
   readonly participantCount: number;
   readonly lastActivityAt: string;
   readonly amounts: readonly { minorUnits: string; currency: string }[];
@@ -133,6 +135,7 @@ export function GroupList({
               <span className="flex items-center gap-2 text-xs text-muted-foreground">
                 <MemberStack
                   names={group.memberNames}
+                  ids={group.memberIds}
                   total={group.participantCount}
                 />
                 <span className="lg:min-w-0 lg:truncate">

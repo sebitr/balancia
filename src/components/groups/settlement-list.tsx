@@ -139,7 +139,14 @@ export function SettlementList({
                       "opacity-60",
                   )}
                 >
-                  <AvatarFallback className="bg-accent text-2xs font-semibold text-accent-foreground">
+                  <AvatarFallback
+                    hueKey={
+                      suggestion.fromIsSelf
+                        ? suggestion.toParticipantId
+                        : suggestion.fromParticipantId
+                    }
+                    className="bg-accent text-2xs font-semibold text-accent-foreground"
+                  >
                     {/* The other party: on the reader's own row their own
                         initial would say nothing. */}
                     {initialOf(

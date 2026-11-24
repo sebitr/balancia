@@ -313,6 +313,7 @@ function PersonTableRow({
         <span className="flex min-w-0 items-center gap-2.5">
           <MemberAvatar
             name={person.name}
+            hueKey={person.id}
             // The reader's own face in the accent, as the "you" pill is
             // everywhere else; a dashed ring for anybody with no account.
             selected={isSelf}
@@ -384,6 +385,7 @@ function PersonTableRow({
                 groupName={groupName}
                 senderName={senderName}
                 recipients={[reminder]}
+                showNames={false}
                 ariaLabel={tSettle("remindPerson", { name: person.name })}
                 // Drawn at 32px and hit at 44, as a button in a row is.
                 className="lg:h-8 lg:rounded-lg lg:px-2.5"

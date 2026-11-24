@@ -45,7 +45,9 @@ export function PositionCard({
   groupName,
   senderName,
   recipients,
+  now,
 }: {
+  now?: string;
   positions: readonly PositionView[];
   groupId: string;
   groupName: string;
@@ -184,6 +186,7 @@ export function PositionCard({
                 groupName={groupName}
                 senderName={senderName}
                 recipients={recipients}
+                now={now}
                 label={recipients.length === 1 ? t("remind") : t("remindAll")}
                 variant="outline"
                 className="h-10 flex-1 rounded-lg text-sm font-medium lg:flex-none lg:px-4"

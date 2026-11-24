@@ -535,7 +535,10 @@ export function RemindSheet({
                 </span>
 
                 <Avatar className="size-8 shrink-0">
-                  <AvatarFallback className="bg-accent text-xs font-semibold text-accent-foreground">
+                  <AvatarFallback
+                    hueKey={recipient.participantId}
+                    className="bg-accent text-xs font-semibold text-accent-foreground"
+                  >
                     {recipient.name.trim().charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>

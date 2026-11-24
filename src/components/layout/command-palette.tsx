@@ -676,7 +676,11 @@ function OptionRow({
           transitionTypes={PUSH}
           onClick={onFollowLink}
         >
-          <MemberAvatar name={option.person.name} className="size-7" />
+          <MemberAvatar
+            name={option.person.name}
+            hueKey={option.person.id}
+            className="size-7"
+          />
           <span className="flex min-w-0 flex-1 flex-col leading-snug">
             <span className="truncate font-medium">{option.person.name}</span>
             <span className="truncate text-xs text-muted-foreground">

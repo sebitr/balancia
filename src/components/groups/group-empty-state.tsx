@@ -174,7 +174,10 @@ export function GroupEmptyState({
                       index > 0 && "-ml-[9px]",
                     )}
                   >
-                    <AvatarFallback className="bg-accent text-2xs font-semibold text-accent-foreground">
+                    <AvatarFallback
+                      hueKey={person.participantId}
+                      className="bg-accent text-2xs font-semibold text-accent-foreground"
+                    >
                       {initialsOf(person.name)}
                     </AvatarFallback>
                   </Avatar>

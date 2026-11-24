@@ -3472,6 +3472,7 @@
   "remind": {
     "action": "Remind",
     "reminded": "Reminded",
+    "remindedState": "Reminded {count, plural, one {{name}} other {# people}} · {when}",
     "sheetTitle": "Send a reminder",
     "sheetSubtitle": "{count, plural, one {# person owes} other {# people owe}} you {amount}.",
     "sheetSubtitleNone": "Choose who to remind.",
