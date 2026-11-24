@@ -67,11 +67,20 @@ const cursorSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d:[0-5]\d\.\d{6}Z$/)
     .refine((value) => isStorableDate(value.slice(0, 10))),
   id: z.uuid(),
-  // Nineteen digits is the whole of a bigint; anything longer is not an
-  // amount this server could have written.
+  // Nineteen digits is the length of a bigint, and anything longer is not an
+  // amount this server could have written. Nineteen digits can still be more
+  // than one holds, though — the largest is 9223372036854775807 — and the value
+  // is cast by PostgreSQL, which answers with an error rather than reading the
+  // cursor as no cursor.
   amount: z
     .string()
     .regex(/^\d{1,19}$/)
+    // Zod runs every check even after one has failed, and `BigInt` throws on
+    // text that is not digits — so the shape is asked again before the size.
+    .refine(
+      (value) =>
+        /^\d{1,19}$/.test(value) && BigInt(value) <= 9_223_372_036_854_775_807n,
+    )
     .optional(),
 });
 

@@ -1,6 +1,23 @@
-import { describe, expect, it } from "vitest";
-import { pickPerson } from "./resolve";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { UserActor } from "@/lib/security/authorization";
+import { pickPerson, resolveGroup } from "./resolve";
 import { ToolFailure } from "./support";
+
+const mocks = vi.hoisted(() => ({
+  groups: [] as { id: string; name: string }[],
+  authorizeGroup: vi.fn(async (_actor: unknown, groupId: string) => ({
+    groupId,
+  })),
+}));
+
+vi.mock("@/modules/groups/service", () => ({
+  listGroupsForUser: vi.fn(async () => mocks.groups),
+  listParticipants: vi.fn(async () => []),
+}));
+
+vi.mock("@/lib/security/authorization", () => ({
+  authorizeGroup: mocks.authorizeGroup,
+}));
 
 /**
  * Who a model means by what it says.
@@ -25,6 +42,17 @@ const ME = { participantId: ADA.id };
 
 const pick = (ref: string, people = PEOPLE) =>
   pickPerson(people, ref, ME, "payer");
+
+/** The message a call refuses with; fails the test if it does not refuse. */
+function failure(call: () => unknown): string {
+  try {
+    call();
+  } catch (error) {
+    expect(error).toBeInstanceOf(ToolFailure);
+    return (error as Error).message;
+  }
+  throw new Error("expected a refusal");
+}
 
 describe("naming a member", () => {
   it("takes a full name, in any case and without accents", () => {
@@ -81,15 +109,146 @@ describe("naming a member", () => {
     }
   });
 
-  it("prefers an exact name to a longer one that starts with it", () => {
+  it("refuses an exact name while a longer one starts with it, and lists every one", () => {
+    // Anybody with the join link picks their own name, so the exact match may
+    // be the one who arrived last, under a name chosen to catch a change.
     const longer = {
       id: "66666666-6666-4666-8666-666666666666",
       name: "Marta Costa",
     };
-    expect(pick("Marta", [ADA, MARTA, longer])).toBe(MARTA);
+    const message = failure(() => pick("Marta", [ADA, MARTA, longer]));
+    expect(message).toMatch(/could be more than one payer/);
+    expect(message).toContain(MARTA.id);
+    expect(message).toContain(longer.id);
+    expect(message).not.toContain(ADA.id);
+    expect(message).toContain("Nothing was changed");
+  });
+
+  it('does not let a guest who joined as "Ben" take what was meant for Ben Carter', () => {
+    const carter = {
+      id: "77777777-7777-4777-8777-777777777777",
+      name: "Ben Carter",
+    };
+    const guest = {
+      id: "88888888-8888-4888-8888-888888888888",
+      name: "Ben",
+    };
+    const message = failure(() => pick("Ben", [ADA, carter, guest]));
+    expect(message).toContain(carter.id);
+    expect(message).toContain(guest.id);
+
+    // Before the guest arrived, "Ben" meant the one Ben there was.
+    expect(pick("Ben", [ADA, carter])).toBe(carter);
+    // The full name is still only one of them, and the ids always are.
+    expect(pick("Ben Carter", [ADA, carter, guest])).toBe(carter);
+    expect(pick(carter.id, [ADA, carter, guest])).toBe(carter);
+    expect(pick(guest.id, [ADA, carter, guest])).toBe(guest);
+    expect(pick("me", [ADA, carter, guest])).toBe(ADA);
+  });
+
+  it("takes an id only as the id of somebody in the group, never as a name", () => {
+    // A display name is free text, so somebody can be called by an id that
+    // belongs to a member who has since left.
+    const gone = "99999999-9999-4999-8999-999999999999";
+    const impostor = { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", name: gone };
+    expect(() => pick(gone, [ADA, impostor])).toThrow(
+      /Nobody in this group has the id/,
+    );
+    expect(pick(MARCO.id.toUpperCase())).toBe(MARCO);
+  });
+
+  it('takes "me" even when a member is called "Me"', () => {
+    const called = { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", name: "Me" };
+    expect(pick("me", [ADA, called])).toBe(ADA);
   });
 
   it("tells the model who is in the group when nobody fits", () => {
     expect(() => pick("Nobody")).toThrow(/Members: "Ada Lovelace", "Marta"/);
+  });
+});
+
+describe("naming a group", () => {
+  const ACTOR = { userId: "u" } as UserActor;
+  const MINE = {
+    id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    name: "Lisbon trip 2026",
+  };
+  const TRAP = { id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd", name: "Lisbon" };
+  const FLAT = { id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", name: "Flat" };
+
+  beforeEach(() => {
+    mocks.authorizeGroup.mockClear();
+    mocks.groups = [MINE, TRAP, FLAT];
+  });
+
+  async function refusal(reference: string, requireActive?: boolean) {
+    const error = await resolveGroup(ACTOR, reference, {
+      requireActive,
+    }).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(ToolFailure);
+    return (error as Error).message;
+  }
+
+  it("refuses a name that is one group's and part of another's, for a change and for a read", async () => {
+    for (const changing of [true, false]) {
+      const message = await refusal("Lisbon", changing);
+      expect(message).toContain(MINE.id);
+      expect(message).toContain(TRAP.id);
+      expect(message).not.toContain(FLAT.id);
+    }
+    expect(mocks.authorizeGroup).not.toHaveBeenCalled();
+  });
+
+  it("takes a name that only one group could mean, whole or in part", async () => {
+    await resolveGroup(ACTOR, "lisbon trip 2026");
+    expect(mocks.authorizeGroup).toHaveBeenLastCalledWith(
+      ACTOR,
+      MINE.id,
+      expect.anything(),
+    );
+    await resolveGroup(ACTOR, "trip");
+    expect(mocks.authorizeGroup).toHaveBeenLastCalledWith(
+      ACTOR,
+      MINE.id,
+      expect.anything(),
+    );
+    await resolveGroup(ACTOR, "flat");
+    expect(mocks.authorizeGroup).toHaveBeenLastCalledWith(
+      ACTOR,
+      FLAT.id,
+      expect.anything(),
+    );
+  });
+
+  it("takes an exact name when nothing else could be meant", async () => {
+    mocks.groups = [TRAP, FLAT];
+    await resolveGroup(ACTOR, "Lisbon", { requireActive: true });
+    expect(mocks.authorizeGroup).toHaveBeenLastCalledWith(ACTOR, TRAP.id, {
+      requireActive: true,
+    });
+  });
+
+  it("takes an id directly, whatever the names", async () => {
+    await resolveGroup(ACTOR, TRAP.id, { requireActive: true });
+    expect(mocks.authorizeGroup).toHaveBeenLastCalledWith(ACTOR, TRAP.id, {
+      requireActive: true,
+    });
+  });
+
+  it("refuses two groups with one name, with both ids", async () => {
+    const twin = { id: "ffffffff-ffff-4fff-8fff-ffffffffffff", name: "flat" };
+    mocks.groups = [FLAT, twin];
+    const message = await refusal("Flat");
+    expect(message).toContain(FLAT.id);
+    expect(message).toContain(twin.id);
+  });
+
+  it("looks only at a pinned connection's own group", async () => {
+    await resolveGroup({ ...ACTOR, tokenGroupId: TRAP.id }, "Lisbon");
+    expect(mocks.authorizeGroup).toHaveBeenLastCalledWith(
+      expect.objectContaining({ tokenGroupId: TRAP.id }),
+      TRAP.id,
+      expect.anything(),
+    );
   });
 });

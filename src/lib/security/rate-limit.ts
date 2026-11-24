@@ -48,6 +48,7 @@ export type RateLimitBucket =
   | "apiToken"
   | "agentRegister"
   | "agentToken"
+  | "agentWrite"
   | "pushSubscribe"
   | "pushTest"
   | "backupTest"
@@ -258,6 +259,15 @@ function policies(): Record<RateLimitBucket, RateLimitPolicy> {
      * room for a retry storm and not for a thief hammering a guessed token.
      */
     agentToken: { limit: 120, windowSeconds: 600 },
+    /*
+     * What an AI assistant may change, per connection or key, on top of
+     * `apiToken`. Every write notifies the other members of a group, so a
+     * connection that has been talked into writing — by text somebody put in an
+     * expense description, say — costs other people attention for as long as it
+     * is let. A hundred changes an hour is a statement's worth of receipts typed
+     * in one sitting and nowhere near a loop.
+     */
+    agentWrite: { limit: 100, windowSeconds: 3600 },
     // Subscribing happens once per device, plus the odd re-subscribe when a
     // browser rotates an endpoint.
     pushSubscribe: { limit: 30, windowSeconds: 600 },

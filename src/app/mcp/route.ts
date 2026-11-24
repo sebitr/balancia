@@ -1,6 +1,7 @@
 import { createMcpHandler } from "@modelcontextprotocol/server";
 import { bearerToken } from "@/app/api/mobile";
 import { getEnv } from "@/lib/env";
+import { readRequestText } from "@/lib/http/read-capped";
 import { logger } from "@/lib/logger";
 import { trackRoute } from "@/lib/metrics/http";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
@@ -51,6 +52,11 @@ const handler = createMcpHandler(createBalanciaServer, {
   responseMode: "auto",
   // A tool call is a few hundred bytes; this is room for a long split.
   maxRequestBodySize: 256 * 1024,
+  // `subscriptions/listen` holds an event stream open for as long as the client
+  // likes, from a pool of 1024 shared by every caller on the instance, and any
+  // valid credential — a read-only one included — may open one. Nothing here
+  // publishes a change event, so there is nothing to listen for; none are let.
+  maxSubscriptions: 0,
   onerror: (error) => logger.warn({ err: error }, "MCP transport error"),
 });
 
@@ -130,31 +136,47 @@ function rpcError(status: number, code: number, message: string): Response {
 }
 
 /**
- * A response if the body is a batch, or declares itself too large to read.
+ * The call, with its body read once and bounded — or the answer to refuse it.
  *
- * Read from a clone, so the handler still has the original to read for itself.
- * The size is checked from the header first, so a body that announces itself as
- * large is refused without being read; one that does not announce itself is
- * bounded by the handler's own limit.
+ * A refusal if the body is too large or is a batch. The size is checked from the
+ * header first, so a body that announces itself as large is refused without
+ * being read, and then counted as it arrives, because a chunked request
+ * announces nothing and `request.json()` would buffer all of it before anything
+ * measured it. What is handed on is a new request over the text already read:
+ * the body of the original is spent.
  */
-async function refuseBatchOrOversize(
-  request: Request,
-): Promise<Response | null> {
-  const declared = Number(request.headers.get("Content-Length") ?? 0);
-  if (declared > MAX_BODY_BYTES) {
+async function boundedCall(request: Request): Promise<Request | Response> {
+  const text = await readRequestText(request, MAX_BODY_BYTES);
+  if (text === null) {
     return rpcError(413, -32600, "That request is too large.");
   }
-  const body: unknown = await request
-    .clone()
-    .json()
-    .catch(() => undefined);
-  return Array.isArray(body)
-    ? rpcError(
-        400,
-        -32600,
-        "Batch requests are not supported. Send one call per request.",
-      )
-    : null;
+
+  let body: unknown;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    // Not for this function to judge: the handler answers a body that is not
+    // JSON with the protocol's own parse error.
+    body = undefined;
+  }
+  if (Array.isArray(body)) {
+    return rpcError(
+      400,
+      -32600,
+      "Batch requests are not supported. Send one call per request.",
+    );
+  }
+
+  const headers = new Headers(request.headers);
+  headers.delete("Transfer-Encoding");
+  headers.set("Content-Length", String(new TextEncoder().encode(text).length));
+  return new Request(request.url, {
+    method: request.method,
+    headers,
+    body: text,
+    // So a client that hangs up still cancels the work done for it.
+    signal: request.signal,
+  });
 }
 
 async function handle(request: Request): Promise<Response> {
@@ -175,10 +197,10 @@ async function handle(request: Request): Promise<Response> {
   // tool calls, and a hundred identical `add_expense` calls would all pass the
   // duplicate check before any of them committed. The 2025-06-18 revision
   // dropped batching, and no client this serves still sends one.
-  const refused = await refuseBatchOrOversize(request);
-  if (refused) return refused;
+  const call = await boundedCall(request);
+  if (call instanceof Response) return call;
 
-  const answer = await handler.fetch(request, {
+  const answer = await handler.fetch(call, {
     authInfo: toAuthInfo(result.principal, result.origin),
   });
 

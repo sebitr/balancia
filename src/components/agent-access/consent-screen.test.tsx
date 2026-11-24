@@ -47,6 +47,50 @@ async function show(
   return render(element);
 }
 
+describe("the consent screen, when the name is borrowed", () => {
+  it("warns that an application calling itself Claude is not sending the answer to Claude", async () => {
+    await show({
+      clientName: "Claude",
+      redirectUri: "https://evil.example/api/mcp/auth_callback",
+    });
+
+    const warning = screen.getByRole("alert");
+    expect(warning).toHaveTextContent("This is not Claude’s address");
+    expect(warning).toHaveTextContent("evil.example");
+  });
+
+  it("says nothing of the kind when the answer goes to the vendor itself", async () => {
+    await show({
+      clientName: "Claude",
+      redirectUri: "https://claude.ai/api/mcp/auth_callback",
+    });
+
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("says nothing of the kind to an application that borrowed no name", async () => {
+    await show({
+      clientName: "My budgeting bot",
+      redirectUri: "https://bot.example/cb",
+    });
+
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("the consent screen, when changes were asked for", () => {
+  it("says what choosing every group risks, and only when changes could be made", async () => {
+    const { unmount } = await show({ maxScope: "write" });
+    expect(
+      screen.getByText(/steer an assistant that may change every group/i),
+    ).toBeInTheDocument();
+    unmount();
+
+    await show({ maxScope: "read" });
+    expect(screen.queryByText(/steer an assistant/i)).toBeNull();
+  });
+});
+
 describe("the consent screen", () => {
   it("posts its decision to the route that checks it", async () => {
     const { container } = await show();

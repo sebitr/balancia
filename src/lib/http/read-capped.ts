@@ -1,4 +1,45 @@
 /**
+ * A request's body as text, or `null` when it is larger than `maxBytes`.
+ *
+ * `Content-Length` is the sender's claim, and a chunked request makes none: it
+ * sails past a check on the header and into `request.text()`, which buffers
+ * whatever arrives. So the bytes are counted as they are read, and reading
+ * stops — and the rest is cancelled, not downloaded — the moment the count
+ * passes the cap. The header is still looked at first, because refusing a
+ * declared size costs nothing.
+ *
+ * Answers `null` for "too large" rather than throwing, so every caller turns it
+ * into its own protocol's refusal: a 413 here, `invalid_request` there.
+ */
+export async function readRequestText(
+  request: Request,
+  maxBytes: number,
+): Promise<string | null> {
+  const declared = Number(request.headers.get("Content-Length") ?? 0);
+  if (Number.isFinite(declared) && declared > maxBytes) return null;
+
+  const body = request.body;
+  if (!body) return "";
+
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  const chunks: string[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) return null;
+      chunks.push(decoder.decode(value, { stream: true }));
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined);
+  }
+  return chunks.join("") + decoder.decode();
+}
+
+/**
  * Reads a bounded amount of text from a response.
  *
  * `response.text()` will happily buffer whatever arrives, and a body is

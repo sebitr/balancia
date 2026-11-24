@@ -39,6 +39,19 @@ describe("cursor encoding", () => {
     expect(decodeCursor(`${encodeCursor(KEY)}|1|2`)).toBeNull();
   });
 
+  /**
+   * Nineteen digits is the right length and can still be more than a bigint
+   * holds, which the database would answer with an error rather than a page.
+   */
+  it("refuses an amount longer than a bigint can hold", () => {
+    const largest = "9223372036854775807";
+    expect(decodeCursor(`${encodeCursor(KEY)}|${largest}`)).toMatchObject({
+      amount: largest,
+    });
+    expect(decodeCursor(`${encodeCursor(KEY)}|9223372036854775808`)).toBeNull();
+    expect(decodeCursor(`${encodeCursor(KEY)}|9999999999999999999`)).toBeNull();
+  });
+
   it("refuses anything it did not write", () => {
     // Every one of these would otherwise reach the database as a parameter.
     expect(decodeCursor(null)).toBeNull();

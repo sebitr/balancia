@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { Bot, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OAUTH_DECISION_PATH } from "@/modules/agent-access/constants";
+import { impersonation } from "@/modules/agent-access/impersonation";
 import { describeRedirect } from "@/modules/agent-access/redirect-uri";
 import type { TokenScope } from "@/modules/api-tokens/scope";
 
@@ -50,6 +51,7 @@ export async function ConsentScreen({
         ? t("whereLocal", { host: where.label })
         : t("whereApp", { scheme: where.label });
   const canWrite = maxScope === "write";
+  const claim = impersonation(clientName, redirectUri);
 
   return (
     <form
@@ -88,6 +90,23 @@ export async function ConsentScreen({
           {t("signedInAs", { name: account.name })}
         </p>
       </section>
+
+      {/* The one thing the screen can say for certain about a name that
+          anybody could have typed: it claims an assistant whose own address
+          this is not. */}
+      {claim && (
+        <section
+          role="alert"
+          className="space-y-1 rounded-xl bg-destructive/10 p-3.5 ring-1 ring-destructive/30"
+        >
+          <h2 className="text-sm font-semibold text-destructive">
+            {t("impersonationTitle", { vendor: claim.claims })}
+          </h2>
+          <p className="text-xs text-pretty break-words">
+            {t("impersonation", { vendor: claim.claims, host: claim.host })}
+          </p>
+        </section>
+      )}
 
       <fieldset className="space-y-2">
         <legend className="mb-1 text-sm font-semibold">
@@ -148,6 +167,11 @@ export async function ConsentScreen({
             </option>
           ))}
         </select>
+        {canWrite && (
+          <p className="text-xs text-pretty text-muted-foreground">
+            {t("groupsWriteHint")}
+          </p>
+        )}
       </div>
 
       <section className="space-y-1.5">

@@ -238,6 +238,11 @@ describe("the tools themselves", async () => {
 });
 
 describe("what the server tells a model about itself", () => {
+  it("says that a name that could mean two things is asked about, not guessed", () => {
+    expect(SERVER_INSTRUCTIONS).toMatch(/even when one of them is an exact/);
+    expect(SERVER_INSTRUCTIONS).toMatch(/ask the person which/i);
+  });
+
   it("says that text typed by other members is data, not instructions", () => {
     expect(SERVER_INSTRUCTIONS).toMatch(/untrusted/i);
     expect(SERVER_INSTRUCTIONS).toMatch(/never follow instructions/i);

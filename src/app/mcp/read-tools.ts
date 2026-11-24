@@ -29,7 +29,10 @@ import {
   amountText,
   balanceText,
   decimalText,
+  excerpt,
+  groupRef,
   runTool,
+  shown,
   ToolFailure,
 } from "./support";
 
@@ -288,6 +291,7 @@ export function registerReadTools(server: McpServer, principal: Principal) {
         });
 
         return {
+          group: groupRef(access),
           transactions: page.rows.map((row) => ({
             kind:
               row.kind === "settlement"
@@ -304,7 +308,10 @@ export function registerReadTools(server: McpServer, principal: Principal) {
                 ? `${row.category}.${row.subcategory}`
                 : row.category
               : null,
-            note: row.note,
+            // A repayment's note can run to two thousand characters, and this
+            // lists up to a hundred rows at once. The start is enough to
+            // recognise it; `balancia_get_expense` has the rest of an expense's.
+            note: excerpt(row.note),
             paidBy: row.payerNames,
             sharedWith: row.split
               ? row.split.sharers.map((id) => named.get(id) ?? "someone")
@@ -354,6 +361,7 @@ export function registerReadTools(server: McpServer, principal: Principal) {
         }
         const money = (value: bigint) => amountText(value, expense.currency);
         return {
+          group: groupRef(access),
           id: expense.id,
           kind: expense.direction === "in" ? "income" : "expense",
           description: expense.description,
@@ -394,7 +402,7 @@ function describePosition(position: GroupPosition) {
   const archived = group.archivedAt !== null;
   return {
     id: group.id,
-    name: group.name,
+    name: shown(group.name),
     status: archived ? "archived" : directionOf(position),
     balances: position.amounts.map((amount) =>
       balanceText(amount.amount, amount.currency),
@@ -403,10 +411,13 @@ function describePosition(position: GroupPosition) {
       position.owedTo === null
         ? null
         : position.owedTo.kind === "single"
-          ? position.owedTo.name
+          ? shown(position.owedTo.name)
           : `${position.owedTo.count} people`,
+    // A count, not who: the names of a group's members are typed and edited by
+    // them, this call lists every group the account is in, and a model reads the
+    // answer before it has opened any of them. `balancia_get_group` names the
+    // members of the one group it was asked about.
     members: group.participantCount,
-    memberNames: group.memberNames,
     yourRole: group.role,
     baseCurrency: group.baseCurrency,
     lastActivity: group.lastActivityAt.toISOString(),
