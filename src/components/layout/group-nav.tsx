@@ -249,22 +249,17 @@ export function GroupNav({ groupId }: { groupId: string }) {
        */}
       <ul className="mx-auto flex w-full max-w-3xl items-stretch justify-between px-1 pb-2 min-[360px]:px-2">
         {tabs.map(
-          ({
-            item,
-            href,
-            label,
-            barLabel,
-            isActive,
-            transitionTypes,
-            onClick,
-          }) => (
+          ({ item, href, barLabel, isActive, transitionTypes, onClick }) => (
             <li
               key={item.labelKey}
               className="flex min-w-0 flex-auto justify-center"
             >
               <Link
                 href={href}
-                aria-label={label}
+                // No aria-label: the bar's own word is the name. A longer
+                // one here ("Einstellungen" over a visible "Optionen") is
+                // the label-in-name mismatch WCAG 2.5.3 and the journeys'
+                // axe check refuse.
                 aria-current={isActive ? "page" : undefined}
                 transitionTypes={transitionTypes}
                 onClick={onClick}
