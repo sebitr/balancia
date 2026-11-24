@@ -69,6 +69,7 @@
     "searchLabel": "",
     "clear": "",
     "favorites": "",
+    "inGroup": "",
     "allCurrencies": "",
     "results": "",
     "favorite": "",
@@ -2684,8 +2685,7 @@
       "namedByYou": "",
       "notListed": "",
       "useMethodName": "",
-      "outcome": "",
-      "outcomeNoMethod": ""
+      "outcome": ""
     },
     "actions": {
       "addExpense": "",

@@ -2640,11 +2640,69 @@ describe("the amount field", () => {
     expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("1200");
   });
 
+  it("leads the currency list with the group's own currencies", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole("button", { name: "CHF" }));
+
+    const currency = sheet("Currency");
+    const heading = currency.getByRole("heading", { name: "In this group" });
+    expect(
+      within(heading.parentElement!).getByRole("button", { name: /^CHF/ }),
+    ).toBeInTheDocument();
+    // Listed once: not again under "All currencies".
+    expect(currency.getAllByRole("button", { name: /^CHF/ })).toHaveLength(1);
+  });
+
   /**
-   * The list is one screen for the whole app, so it is the alphabet plus
-   * whatever this reader has starred — not a per-group reordering. A group's
-   * own currency earns its place by being the one already chosen, which the
-   * row says with a check and a tint wherever it sits.
+   * Typing after opening the picker went into the description behind it
+   * ("Groceries at Migroseur"): focus stayed on the field that was open.
+   */
+  it("takes focus off the form when the currency list opens", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const description = screen.getByRole("textbox", { name: /description/i });
+    await user.click(description);
+    expect(description).toHaveFocus();
+
+    await user.click(screen.getByRole("button", { name: "CHF" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Currency" });
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    await user.keyboard("eur");
+    expect(description).toHaveValue("");
+  });
+
+  it("lands in the search field when a pointer can type", async () => {
+    const matchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: query.includes("pointer: fine"),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      onchange: null,
+      dispatchEvent: () => false,
+    })) as typeof window.matchMedia;
+    try {
+      const user = userEvent.setup();
+      renderForm();
+      await user.click(screen.getByRole("button", { name: "CHF" }));
+
+      expect(
+        sheet("Currency").getByRole("textbox", { name: "Search a currency" }),
+      ).toHaveFocus();
+    } finally {
+      window.matchMedia = matchMedia;
+    }
+  });
+
+  /**
+   * The list leads with what the group already deals in, so the currency
+   * somebody is reaching for is not an alphabet away (it opened on AED in a
+   * euro group). Whatever is chosen is marked with a check and a tint wherever
+   * it sits.
    */
   it("marks the currency already chosen", async () => {
     const user = userEvent.setup();
