@@ -1,5 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
-import { addParticipant, createGroup, registerAndSignIn } from "./helpers";
+import {
+  addParticipant,
+  createGroup,
+  openAddDrawer,
+  registerAndSignIn,
+} from "./helpers";
 
 /**
  * What moves when you navigate, and what does not.
@@ -72,7 +77,7 @@ async function openAndCloseDrawer(page: Page): Promise<{
   const drawer = page.getByRole("dialog", { name: "Add expense" });
 
   await watchScreen(page);
-  await page.getByRole("link", { name: "Add", exact: true }).click();
+  await openAddDrawer(page);
   await expect(drawer).toBeVisible();
   await page.waitForTimeout(600);
   const opening = await readScreen(page);

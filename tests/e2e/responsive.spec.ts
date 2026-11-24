@@ -47,7 +47,7 @@ test("the add-expense form is usable at a phone width", async ({ page }) => {
   // The drawer leaves and confirms in a toast; the list is a navigation away.
   await expectToast(page, "Expense added");
   await page.goto(`/groups/${groupId}/expenses`);
-  await expect(page.getByText("Snack")).toBeVisible();
+  await expect(page.getByText("Snack").first()).toBeVisible();
 
   const overflows = await page.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth + 1,
