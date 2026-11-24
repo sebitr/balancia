@@ -1,6 +1,6 @@
 # Back up the groups you own to your own cloud, encrypted so that only you can read them
 
-Branch: `feat/encrypted-cloud-backup`
+Merged: 2026-10-09 in #461
 
 Design: https://claude.ai/artifact/A5JMYtHhvcwGNnWUs3Ycpq (Claude Design, boards A to K), written up in `docs/design/cloud-backup.md`; how it works is `docs/cloud-backup.md`.
 
