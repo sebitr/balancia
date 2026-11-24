@@ -60,8 +60,26 @@ import {
 /** The seal's purpose string; a ciphertext for one purpose opens for no other. */
 const SEAL_PURPOSE = "backup-destination";
 
-/** A run that has been "running" this long is taken to be dead. */
+/**
+ * A run that has been "running" this long is taken to be dead. Counted from
+ * when a worker picked it up (`claimRun`), or from when it was queued if none
+ * has yet.
+ */
 const STALE_RUN_MS = 2 * 60 * 60 * 1000;
+
+/** What a run cut short by its server says about itself. */
+const INTERRUPTED = {
+  status: "failed",
+  errorCode: "interrupted",
+  errorDetail: "The server stopped before this backup finished.",
+} as const;
+
+/**
+ * The runs this process is working on now, so that a stop which cuts them
+ * short can close them (`closeRunsInHand`) instead of leaving them "running"
+ * until the reaper's two hours are up.
+ */
+const runsInHand = new Set<string>();
 
 /** How long a connection may wait in `setup` for the person to finish the wizard. */
 const SETUP_GRACE_MS = 24 * 60 * 60 * 1000;
@@ -867,6 +885,14 @@ export async function requestRun(
   return { status: "queued", runId };
 }
 
+/**
+ * Writes how a run ended, if it is still open. True when this call closed it.
+ *
+ * Only an open run: one that was already closed — reaped as stale, or closed
+ * when its server stopped — keeps the account it was given. Overwriting that
+ * with a later "succeeded" is how a run came to say two things at once, while
+ * the sweep had already queued its replacement.
+ */
 async function finishRun(
   db: Database,
   runId: string,
@@ -881,8 +907,8 @@ async function finishRun(
     errorCode?: BackupErrorCode;
     errorDetail?: string;
   },
-): Promise<void> {
-  await db
+): Promise<boolean> {
+  const closed = await db
     .update(backupRuns)
     .set({
       status: result.status,
@@ -895,7 +921,58 @@ async function finishRun(
       errorCode: result.errorCode ?? null,
       errorDetail: result.errorDetail ?? null,
     })
-    .where(eq(backupRuns.id, runId));
+    .where(and(eq(backupRuns.id, runId), eq(backupRuns.status, "running")))
+    .returning({ id: backupRuns.id });
+  return closed.length > 0;
+}
+
+/**
+ * Takes a queued run for the worker that is about to do it, or says it is no
+ * longer there to take.
+ *
+ * A run is opened when it is queued, so a screen can show it at once, but the
+ * worker serves the queue one job at a time and may reach it much later. Its
+ * start is moved to now, so the reaper's clock counts the work and not the
+ * wait. And a run that is no longer open — reaped while it waited, its
+ * destination removed — is not done at all: the sweep that reaped it has
+ * already queued another.
+ */
+async function claimRun(
+  db: Database,
+  runId: string,
+  at: Date,
+): Promise<boolean> {
+  const claimed = await db
+    .update(backupRuns)
+    .set({ startedAt: at })
+    .where(and(eq(backupRuns.id, runId), eq(backupRuns.status, "running")))
+    .returning({ id: backupRuns.id });
+  return claimed.length > 0;
+}
+
+/**
+ * Closes the runs this process was in the middle of, as `interrupted`.
+ *
+ * Called once the queue has stopped (`onQueueStopped`), when pg-boss has
+ * already given up on every job still in hand: whatever is left here will not
+ * be finished by this process. Without it, a restart during a backup left the
+ * run "running", and "Back up now" refused, for two hours. The destination is
+ * not touched: a restart is not its fault, and a scheduled run that was due
+ * is still due, so the next sweep queues it again.
+ */
+export async function closeRunsInHand(
+  now = new Date(),
+  options: { db?: Database } = {},
+): Promise<number> {
+  const ids = [...runsInHand];
+  if (ids.length === 0) return 0;
+  const db = options.db ?? getDb();
+  const closed = await db
+    .update(backupRuns)
+    .set({ ...INTERRUPTED, finishedAt: now })
+    .where(and(inArray(backupRuns.id, ids), eq(backupRuns.status, "running")))
+    .returning({ id: backupRuns.id });
+  return closed.length;
 }
 
 export interface RunOptions extends Seams {
@@ -926,6 +1003,18 @@ export async function runBackup(
   const clock = options.now ?? (() => new Date());
   const startedAt = clock();
 
+  // A queued run is taken before anything else is read. One that is no longer
+  // open was given up on while it waited, and its replacement may already be
+  // queued: doing it now would be two runs, and this one's "succeeded" landing
+  // over the account of its failure.
+  if (options.runId && !(await claimRun(db, options.runId, startedAt))) {
+    logger.info(
+      { module: "backup", destinationId, runId: options.runId },
+      "Backup skipped: its run was closed before a worker reached it",
+    );
+    return null;
+  }
+
   const [dest] = await db
     .select()
     .from(backupDestinations)
@@ -949,6 +1038,31 @@ export async function runBackup(
     options.runId ?? (await startRun(db, dest.id, options.trigger, startedAt));
   if (!runId) return null;
 
+  runsInHand.add(runId);
+  try {
+    return await writeBackup(db, dest, runId, startedAt, options);
+  } finally {
+    runsInHand.delete(runId);
+  }
+}
+
+/**
+ * The run itself, once it is this process's to do: everything from reading
+ * the key to recording how it went.
+ *
+ * Each outcome is written to the run first, and to the destination only if
+ * that closed the run. A run already closed by somebody else — the reaper, or
+ * this process stopping — has had its account given, and the destination is
+ * left to the run that replaced it.
+ */
+async function writeBackup(
+  db: Database,
+  dest: DestinationRow,
+  runId: string,
+  startedAt: Date,
+  options: RunOptions,
+): Promise<RunOutcome> {
+  const clock = options.now ?? (() => new Date());
   const log = logger.child({
     module: "backup",
     destinationId: dest.id,
@@ -1008,23 +1122,25 @@ export async function runBackup(
       })
     ) {
       const finishedAt = clock();
-      await finishRun(db, runId, {
+      const closed = await finishRun(db, runId, {
         status: "unchanged",
         finishedAt,
         groupCount: built.bundle.groups.length,
         receiptsWritten,
         receiptsPending,
       });
-      await markSuccess(
-        db,
-        dest.id,
-        { startedAt, finishedAt },
-        built.contentHash,
-        {
-          keepSuccessAt: true,
-          receiptsPending,
-        },
-      );
+      if (closed) {
+        await markSuccess(
+          db,
+          dest.id,
+          { startedAt, finishedAt },
+          built.contentHash,
+          {
+            keepSuccessAt: true,
+            receiptsPending,
+          },
+        );
+      }
       log.info("Backup skipped: nothing changed");
       return { runId, status: "unchanged", deleted: [] };
     }
@@ -1059,7 +1175,7 @@ export async function runBackup(
     }
 
     const finishedAt = clock();
-    await finishRun(db, runId, {
+    const closed = await finishRun(db, runId, {
       status: "succeeded",
       finishedAt,
       groupCount: built.bundle.groups.length,
@@ -1068,13 +1184,15 @@ export async function runBackup(
       receiptsWritten,
       receiptsPending,
     });
-    await markSuccess(
-      db,
-      dest.id,
-      { startedAt, finishedAt },
-      built.contentHash,
-      { receiptsPending },
-    );
+    if (closed) {
+      await markSuccess(
+        db,
+        dest.id,
+        { startedAt, finishedAt },
+        built.contentHash,
+        { receiptsPending },
+      );
+    }
     log.info(
       {
         groups: built.bundle.groups.length,
@@ -1101,13 +1219,22 @@ export async function runBackup(
     }
 
     const finishedAt = clock();
-    await finishRun(db, runId, {
-      status: "failed",
-      finishedAt,
-      errorCode: failure.code,
-      errorDetail: failure.detail,
-    });
-    await markFailure(db, dest.id, { startedAt, finishedAt }, failure.code);
+    try {
+      const closed = await finishRun(db, runId, {
+        status: "failed",
+        finishedAt,
+        errorCode: failure.code,
+        errorDetail: failure.detail,
+      });
+      if (closed) {
+        await markFailure(db, dest.id, { startedAt, finishedAt }, failure.code);
+      }
+    } catch (recording) {
+      // Not even the failure could be written — the database went with the
+      // cloud. Still not the queue's to retry: the run stays open, and the
+      // reaper closes it.
+      log.error({ err: recording }, "Backup failure could not be recorded");
+    }
     return { runId, status: "failed", errorCode: failure.code, deleted: [] };
   }
 }
@@ -1251,7 +1378,16 @@ async function markFailure(
 
 // ── The scheduler's half ─────────────────────────────────────────────────────
 
-/** Runs left "running" by a process that died are closed as failed. */
+/**
+ * Runs left "running" by a process that died outright — killed, out of
+ * memory — are closed as interrupted. A process that is stopped closes its own
+ * at once (`closeRunsInHand`); this is for the one that could not.
+ *
+ * It also closes a run that waited in the queue this long without a worker
+ * reaching it, which is a backlog or a lost job. The sweep that does this
+ * queues a fresh run straight after, and the old job, if it is ever reached,
+ * finds its run closed and does nothing (`claimRun`).
+ */
 export async function reapStaleRuns(
   now: Date,
   options: { db?: Database } = {},
@@ -1259,12 +1395,7 @@ export async function reapStaleRuns(
   const db = options.db ?? getDb();
   const closed = await db
     .update(backupRuns)
-    .set({
-      status: "failed",
-      finishedAt: now,
-      errorCode: "unknown",
-      errorDetail: "The server stopped before this backup finished.",
-    })
+    .set({ ...INTERRUPTED, finishedAt: now })
     .where(
       and(
         eq(backupRuns.status, "running"),

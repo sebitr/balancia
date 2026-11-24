@@ -457,9 +457,20 @@ destination, never a credential. The codes:
 | `endpoint_blocked` | This server refuses that address.                                                               | Retried; fix the setting or the address.         |
 | `unavailable`      | `rclone` is missing, or the provider is not enabled here.                                       | Retried.                                         |
 | `no_key`           | There is no recovery key to encrypt to.                                                         | Retried.                                         |
+| `interrupted`      | The server stopped before the run finished: a restart, an update, a process that died.          | Not counted as a failure; runs at its next turn. |
 
-After three failures in a row the card raises a banner. A run left "running" by a
-process that died is closed as failed after two hours.
+After three failures in a row the card raises a banner.
+
+Runs are queued and the worker takes them one at a time, so a run's clock starts
+when the worker picks it up, not when it was queued. A server that is stopped
+while a run is going — a restart, an update — gives it the usual twenty seconds
+to finish and then closes it as `interrupted` before it exits, so "Back up now"
+works again as soon as the server is back. A process that dies outright cannot
+do that: its run is closed the same way two hours after it started. So is a run
+that waited two hours in the queue without a worker reaching it; the sweep queues
+a fresh one straight after, and the old job, if it is ever reached, finds its run
+closed and does nothing. A run that has been closed is never reopened by the job
+that held it finishing late.
 
 ### Raising the rclone version
 

@@ -21,6 +21,7 @@ import { type BackupBundle } from "./bundle";
 import { BackupError } from "./errors";
 import { bundleName, destinationTag } from "./naming";
 import {
+  closeRunsInHand,
   createDestination,
   deleteDestination,
   finishSetup,
@@ -1173,8 +1174,114 @@ describe("the schedule", () => {
     expect(await reapStaleRuns(clock)).toBe(1);
     expect((await listRuns(owner.userId, id))[0]).toMatchObject({
       status: "failed",
-      errorCode: "unknown",
+      errorCode: "interrupted",
     });
+  });
+
+  it("counts a queued run's two hours from when a worker picks it up, not from when it was queued", async () => {
+    const { owner } = await setUp();
+    await createTestGroup(owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    const queued = await requestRun(owner.userId, id, seams());
+    if (queued.status !== "queued") throw new Error("not queued");
+
+    // A busy night: the worker reaches it an hour and a half later.
+    clock = new Date(clock.getTime() + 90 * 60_000);
+    const pickedUp = clock;
+    const put = cloud.put.bind(cloud);
+    let reaped = -1;
+    cloud.put = async (name, bytes) => {
+      // Forty minutes into the work, two hours and ten since it was queued.
+      reaped = await reapStaleRuns(new Date(pickedUp.getTime() + 40 * 60_000));
+      await put(name, bytes);
+    };
+
+    const outcome = await runBackup(id, {
+      trigger: "manual",
+      runId: queued.runId,
+      ...seams(),
+    });
+
+    expect(reaped).toBe(0);
+    expect(outcome?.status).toBe("succeeded");
+    expect((await listRuns(owner.userId, id))[0]).toMatchObject({
+      id: queued.runId,
+      status: "succeeded",
+      startedAt: pickedUp,
+    });
+  });
+
+  it("does nothing with a job whose run was given up on while it waited", async () => {
+    const { owner } = await setUp();
+    await createTestGroup(owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    const queued = await requestRun(owner.userId, id, seams());
+    if (queued.status !== "queued") throw new Error("not queued");
+    clock = new Date(clock.getTime() + 2 * 3_600_000 + 60_000);
+    // Reaps the run that never started, and queues its replacement.
+    expect((await sweepDueBackups({ now: clock })).queued).toBe(1);
+
+    // The worker reaches the old job at last.
+    const outcome = await runBackup(id, {
+      trigger: "manual",
+      runId: queued.runId,
+      ...seams(),
+    });
+
+    expect(outcome).toBeNull();
+    expect(cloud.files.size).toBe(0);
+    const runs = await listRuns(owner.userId, id);
+    expect(runs.find((run) => run.id === queued.runId)).toMatchObject({
+      status: "failed",
+      errorCode: "interrupted",
+    });
+    // The replacement is left to its own job.
+    expect(runs.filter((run) => run.status === "running")).toHaveLength(1);
+    expect((await listDestinations(owner.userId))[0]?.lastRunAt).toBeNull();
+  });
+
+  it("closes the run it was in the middle of when the server stops, and the late finish does not reopen it", async () => {
+    const { owner } = await setUp();
+    await createTestGroup(owner);
+    const { id } = await createDestination(
+      owner.userId,
+      { provider: "s3", credentials: S3 },
+      seams(),
+    );
+    const put = cloud.put.bind(cloud);
+    let closedByStop = -1;
+    cloud.put = async (name, bytes) => {
+      // The queue has stopped and given up on this job; the upload, already
+      // under way, carries on for a moment.
+      closedByStop = await closeRunsInHand(clock);
+      await put(name, bytes);
+    };
+
+    await runBackup(id, { trigger: "schedule", ...seams() });
+
+    expect(closedByStop).toBe(1);
+    expect((await listRuns(owner.userId, id))[0]).toMatchObject({
+      status: "failed",
+      errorCode: "interrupted",
+    });
+    // Not the destination's fault, and not its success either: nothing is
+    // counted, and the run that was due is still due.
+    const [view] = await listDestinations(owner.userId);
+    expect(view).toMatchObject({
+      lastSuccessAt: null,
+      consecutiveFailures: 0,
+      status: "active",
+    });
+    expect(await closeRunsInHand(clock)).toBe(0);
+    expect((await sweepDueBackups({ now: clock })).queued).toBe(1);
   });
 
   it("resumes a paused destination straight away", async () => {

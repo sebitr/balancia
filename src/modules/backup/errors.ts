@@ -42,6 +42,12 @@ export const BACKUP_ERROR_CODES = [
   "unavailable",
   /** The recovery key is missing, so nothing can be encrypted. */
   "no_key",
+  /**
+   * The server stopped before the run finished: a restart or an update while
+   * it ran, or a process that died. Nothing about the destination is wrong,
+   * and it is not counted against it.
+   */
+  "interrupted",
   /** Nothing in the output said what went wrong. */
   "unknown",
 ] as const;
