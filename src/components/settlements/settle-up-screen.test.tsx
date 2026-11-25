@@ -269,7 +269,9 @@ describe("the actions on a row", () => {
     render();
 
     expect(
-      screen.getByRole("link", { name: "Record Seb's repayment to Amélie" }),
+      screen.getByRole("link", {
+        name: "I paid Amélie, Record Seb's repayment to Amélie",
+      }),
     ).toHaveAttribute(
       "href",
       "/groups/g1/expenses/new#settleFrom=seb&settleTo=amelie&settleIn=EUR",
@@ -282,7 +284,7 @@ describe("the actions on a row", () => {
     // The row's own link, named for its pair — not the header's "Record a
     // repayment", which names nobody.
     const href = screen
-      .getByRole("link", { name: /^Record .+ repayment to/ })
+      .getByRole("link", { name: /^I paid .+, Record .+ repayment to/ })
       .getAttribute("href");
 
     expect(href).not.toContain("14860");
@@ -313,7 +315,9 @@ describe("the actions on a row", () => {
       screen.getByRole("button", { name: /remind ravi/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Record Ravi's repayment to Seb" }),
+      screen.getByRole("link", {
+        name: "I was paid back, Record Ravi's repayment to Seb",
+      }),
     ).toHaveAttribute(
       "href",
       "/groups/g1/expenses/new#settleFrom=ravi&settleTo=seb&settleIn=CHF",
@@ -724,7 +728,9 @@ describe("the method on the record link", () => {
     render({ payoutHints: [hint] });
 
     expect(
-      screen.getByRole("link", { name: "Record Seb's repayment to Amélie" }),
+      screen.getByRole("link", {
+        name: "I paid Amélie, Record Seb's repayment to Amélie",
+      }),
     ).toHaveAttribute("href", expect.stringContaining("settleVia=twint"));
   });
 
@@ -735,7 +741,9 @@ describe("the method on the record link", () => {
     await user.click(screen.getByRole("button", { name: /Revolut/ }));
 
     expect(
-      screen.getByRole("link", { name: "Record Seb's repayment to Amélie" }),
+      screen.getByRole("link", {
+        name: "I paid Amélie, Record Seb's repayment to Amélie",
+      }),
     ).toHaveAttribute("href", expect.stringContaining("settleVia=revolut"));
   });
 
@@ -744,7 +752,9 @@ describe("the method on the record link", () => {
 
     expect(
       screen
-        .getByRole("link", { name: "Record Seb's repayment to Amélie" })
+        .getByRole("link", {
+          name: "I paid Amélie, Record Seb's repayment to Amélie",
+        })
         .getAttribute("href"),
     ).not.toContain("settleVia");
   });

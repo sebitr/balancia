@@ -62,9 +62,40 @@ export async function registerAndSignIn(
  * "Your account", and the sidebar a desktop window gets says who is signed in,
  * "Ada Lovelace, Settings". Only one of them is on screen at a time, so
  * matching either finds it at either width.
+ *
+ * Only from the app: settings is a surface of its own that replaces the app's
+ * chrome, the account link with it.
  */
 export async function openSettings(page: Page): Promise<void> {
   await page.getByRole("link", { name: /^Your account$|, Settings$/ }).click();
+}
+
+/**
+ * Signs out, which lives at the foot of the settings hub and asks first.
+ *
+ * Two presses rather than one: it is the only action in settings with no way
+ * back, because the Undo would be raised into a page nobody is signed in to.
+ *
+ * On a desk the hub is the navigation pane down the left of every settings
+ * screen, and the account screen a desk opens `/settings` on has a Sign out
+ * row of its own — so the button is the pane's, which is there whichever
+ * screen is beside it, and is waited for: the pane streams in after the
+ * screen. From inside settings there is no account link to open it from, and
+ * nothing to open.
+ */
+export async function signOut(page: Page): Promise<void> {
+  if (!new URL(page.url()).pathname.startsWith("/settings")) {
+    await openSettings(page);
+  }
+  await page
+    .getByRole("navigation", { name: "Settings", exact: true })
+    .getByRole("button", { name: "Sign out" })
+    .click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Sign out" })
+    .click();
+  await expect(page).toHaveURL("/");
 }
 
 /**

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { openSettings, registerAndSignIn } from "./helpers";
+import { openSettings, registerAndSignIn, signOut } from "./helpers";
 
 /**
  * Instance administration, from an ordinary account.
@@ -27,14 +27,7 @@ async function signInAsOrdinaryParticipant(page: Page): Promise<void> {
 
   // Signing out matters as well as registering twice: `/register` sends a
   // signed-in browser away, so the second registration needs a signed-out one.
-  // Sign out lives at the foot of the settings hub now, behind a confirmation.
-  await openSettings(page);
-  await page.getByRole("button", { name: "Sign out" }).click();
-  await page
-    .getByRole("alertdialog")
-    .getByRole("button", { name: "Sign out" })
-    .click();
-  await expect(page).toHaveURL("/");
+  await signOut(page);
 
   await registerAndSignIn(page);
 }
@@ -47,9 +40,13 @@ test.describe("telemetry administration", () => {
 
     // The hub draws every row this account is allowed to open, and no row for
     // administration — which is presentation only; the screen behind it
-    // resolves the caller again.
+    // resolves the caller again. On a desk the hub is the navigation pane,
+    // streamed in beside the account screen; its rows being there is what
+    // makes the absence below mean something.
     await expect(
-      page.getByRole("link", { name: /Notifications/ }),
+      page
+        .getByRole("navigation", { name: "Settings", exact: true })
+        .getByRole("link", { name: /Notifications/ }),
     ).toBeVisible();
     await expect(
       page.getByRole("link", { name: /Administration/ }),

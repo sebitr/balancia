@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { PUSH } from "@/components/motion/transitions";
 import { rememberOrigin } from "@/components/settings/settings-origin";
+import { DrawnInitials } from "@/components/ui/drawn-initials";
 import { cn } from "@/lib/utils";
 import { SidebarTip, useSidebar } from "./sidebar-context";
 
@@ -60,7 +61,7 @@ export function UserMenu({
         "bg-accent text-2xs font-medium text-accent-foreground",
       )}
     >
-      {initialsOf(label)}
+      <DrawnInitials initials={initialsOf(label)} />
     </span>
   );
 
@@ -111,7 +112,7 @@ function SidebarAccount({
       aria-hidden="true"
       className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-medium text-accent-foreground"
     >
-      {initialsOf(label)}
+      <DrawnInitials initials={initialsOf(label)} />
     </span>
   );
   const words = (secondary: string) => (
@@ -121,7 +122,9 @@ function SidebarAccount({
         collapsed && "sr-only",
       )}
     >
-      <span className="truncate text-sm font-medium">{label}</span>
+      {/* A space between the two lines, which a flex column does not draw:
+          the link's name says them as two words, so its text has to. */}
+      <span className="truncate text-sm font-medium">{label}</span>{" "}
       <span className="truncate text-xs text-muted-foreground">
         {secondary}
       </span>

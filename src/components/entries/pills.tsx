@@ -2,6 +2,7 @@
 
 import { Check } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { DrawnInitials } from "@/components/ui/drawn-initials";
 import type { RovingChoiceProps } from "@/components/ui/roving-choice";
 import { cn } from "@/lib/utils";
 import { initialOf } from "./initials";
@@ -93,10 +94,38 @@ export function MemberAvatar({
           selected ? AVATAR_TONE[tone] : "bg-accent text-accent-foreground",
         )}
       >
-        {initialOf(name)}
+        <DrawnInitials initials={initialOf(name)} />
       </AvatarFallback>
     </Avatar>
   );
+}
+
+/**
+ * The pill's name, holding the word it shows.
+ *
+ * A label is there to say more than the pill does — "Include Anna in the
+ * split", not just "Anna" — and it may say more, but not something else: a
+ * voice user says what they see (WCAG 2.5.3, Label in Name). Most labels
+ * already carry the name. The reader's own pill shows "You" and was called
+ * "Include yourself in the split", which does not contain it, and in other
+ * languages the payer's does not either ("Du" in "Von dir bezahlt"). Those
+ * lead with the word on the pill.
+ */
+function nameShowing(shown: string, label: string | undefined) {
+  if (label === undefined) return undefined;
+  const words = (text: string) =>
+    text
+      .normalize("NFKD")
+      .replace(/\p{M}/gu, "")
+      .toLowerCase()
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter(Boolean);
+  const named = words(label);
+  const seen = words(shown);
+  const contained = named.some((_, start) =>
+    seen.every((word, offset) => named[start + offset] === word),
+  );
+  return contained ? label : `${shown}, ${label}`;
 }
 
 /**
@@ -148,7 +177,7 @@ export function MemberPill({
       role={choice ? "radio" : undefined}
       aria-checked={choice ? selected : undefined}
       aria-pressed={choice ? undefined : selected}
-      aria-label={label}
+      aria-label={nameShowing(shownAs, label)}
       {...keys}
       className={cn(
         "tap-target inline-flex h-10 items-center gap-2 rounded-full border pr-3 pl-1 text-sm transition-colors disabled:pointer-events-none disabled:opacity-50",

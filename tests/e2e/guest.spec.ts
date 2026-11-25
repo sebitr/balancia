@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import {
   addParticipant,
   attachVirtualAuthenticator,
@@ -8,6 +8,20 @@ import {
   registerAndSignIn,
   uniqueEmail,
 } from "./helpers";
+
+/**
+ * An entry in the group's transactions, by its title.
+ *
+ * A desk draws the transactions as a table whose title is the link that opens
+ * the entry, and the phone's list is in the HTML beside it, not displayed — so
+ * the title is on the page twice, and the link is the one somebody can see and
+ * press.
+ */
+function transaction(page: Page, title: string) {
+  return page
+    .getByRole("table", { name: "Transactions" })
+    .getByRole("link", { name: title, exact: true });
+}
 
 /**
  * Guest participation through a secure link — including the property that the
@@ -76,11 +90,11 @@ test("invite a guest and participate through the secure link", async ({
   // The composer closes and confirms in a toast over the group.
   await expectToast(guestPage, "Expense added");
   await guestPage.goto(`/groups/${groupId}/expenses`);
-  await expect(guestPage.getByText("Guest lunch")).toBeVisible();
+  await expect(transaction(guestPage, "Guest lunch")).toBeVisible();
 
   // The owner sees it too.
   await ownerPage.goto(`/groups/${groupId}/expenses`);
-  await expect(ownerPage.getByText("Guest lunch")).toBeVisible();
+  await expect(transaction(ownerPage, "Guest lunch")).toBeVisible();
 
   await ownerContext.close();
   await guestContext.close();
@@ -236,7 +250,7 @@ test("a guest keeps their group and expenses by creating an account", async ({
   await guestPage.getByRole("button", { name: "Go to the group" }).click();
   await expect(guestPage).toHaveURL(new RegExp(`/groups/${groupId}$`));
   await guestPage.goto(`/groups/${groupId}/expenses`);
-  await expect(guestPage.getByText("Groceries and firewood")).toBeVisible();
+  await expect(transaction(guestPage, "Groceries and firewood")).toBeVisible();
 
   await ownerContext.close();
   await guestContext.close();

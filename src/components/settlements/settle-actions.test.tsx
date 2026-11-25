@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { screen } from "@testing-library/react";
 import { renderWithIntl } from "../../../tests/helpers/intl";
+import { expectLabelInName } from "../../../tests/helpers/label-in-name";
 import { settleIntentPath } from "@/components/entries/settle-intent";
 import type { RemindRecipient } from "@/modules/reminders/types";
 import { SettleActions } from "./settle-actions";
@@ -74,10 +75,12 @@ describe("SettleActions", () => {
   it("records a repayment the reader made, in the first person and the past", () => {
     render(OWED_TO_MARTA);
 
-    const link = screen.getByRole("link", {
-      name: "Record Seb's repayment to Marta",
-    });
+    const name = "I paid Marta, Record Seb's repayment to Marta";
+    const link = screen.getByRole("link", { name });
     expect(link).toHaveTextContent("I paid Marta");
+    // The words on the button begin its name rather than being replaced by
+    // it, which is what a voice user has to go on.
+    expectLabelInName(link, name);
     expect(link).toHaveAttribute(
       "href",
       settleIntentPath("g1", {
@@ -111,7 +114,9 @@ describe("SettleActions", () => {
     expect(screen.getByText("+41 79 123 45 67")).toBeInTheDocument();
     // The method the reader is looking at travels to the drawer with them.
     expect(
-      screen.getByRole("link", { name: "Record Seb's repayment to Marta" }),
+      screen.getByRole("link", {
+        name: "I paid Marta, Record Seb's repayment to Marta",
+      }),
     ).toHaveAttribute(
       "href",
       settleIntentPath("g1", {
@@ -126,10 +131,10 @@ describe("SettleActions", () => {
   it("records a repayment received, and offers to remind", () => {
     render(OWED_BY_MARTA, { recipients: [recipient()] });
 
-    const link = screen.getByRole("link", {
-      name: "Record Marta's repayment to Seb",
-    });
+    const name = "I was paid back, Record Marta's repayment to Seb";
+    const link = screen.getByRole("link", { name });
     expect(link).toHaveTextContent("I was paid back");
+    expectLabelInName(link, name);
     expect(link).toHaveAttribute(
       "href",
       settleIntentPath("g1", {

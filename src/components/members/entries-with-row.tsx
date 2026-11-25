@@ -46,7 +46,8 @@ export function EntriesWithRow({
       href={href}
       transitionTypes={PUSH}
       // Two stacked spans run together in an accessible name with nothing
-      // between them; see the Activity row.
+      // between them, and the words shown have to be in it; see the Activity
+      // row.
       aria-label={`${title} · ${caption}`}
       className="flex min-h-12 items-center gap-2.5 rounded-2xl bg-card px-4 py-2.5 ring-1 ring-border transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
     >
@@ -55,7 +56,7 @@ export function EntriesWithRow({
         className="size-[17px] shrink-0 text-primary-ink"
       />
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-xs font-medium">{title}</span>
+        <span className="truncate text-xs font-medium">{title}</span>{" "}
         <span className="text-xs text-pretty text-muted-foreground">
           {caption}
         </span>

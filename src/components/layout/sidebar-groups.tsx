@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { Fragment, useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -184,7 +184,7 @@ export function GroupRow({
       >
         {tile}
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm font-medium">{group.name}</span>
+          <span className="truncate text-sm font-medium">{group.name}</span>{" "}
           {/* The panel is for leaving: the group already open is marked
               rather than priced, since its own screen is right behind. */}
           {isCurrent ? (
@@ -193,12 +193,11 @@ export function GroupRow({
             </span>
           ) : (
             lines.map((line) => (
-              <span
-                key={line.key}
-                className={cn("truncate text-xs tabular-nums", line.ink)}
-              >
-                {line.text}
-              </span>
+              <Fragment key={line.key}>
+                <span className={cn("truncate text-xs tabular-nums", line.ink)}>
+                  {line.text}
+                </span>{" "}
+              </Fragment>
             ))
           )}
         </span>
@@ -213,16 +212,22 @@ export function GroupRow({
     );
   }
 
+  /*
+   * Spaced, though the column draws no space between its lines: the name
+   * above says them as separate words, and the words on screen are held to
+   * it. Run together, "Lisbon, Marchyou are owed €248.00" was a row whose
+   * label was not in its name, and a voice user saying what they saw was not
+   * saying what it is called (WCAG 2.5.3).
+   */
   const words = (
     <>
-      <span className="truncate text-sm font-medium">{group.name}</span>
+      <span className="truncate text-sm font-medium">{group.name}</span>{" "}
       {lines.map((line) => (
-        <span
-          key={line.key}
-          className={cn("truncate text-xs tabular-nums", line.ink)}
-        >
-          {line.text}
-        </span>
+        <Fragment key={line.key}>
+          <span className={cn("truncate text-xs tabular-nums", line.ink)}>
+            {line.text}
+          </span>{" "}
+        </Fragment>
       ))}
     </>
   );
@@ -232,9 +237,17 @@ export function GroupRow({
       <Link
         href={href}
         transitionTypes={transitionTypes}
-        // The group being read is lit with the sidebar's wash and the tile
-        // in the accent's fill — never a money colour, and never on the
-        // figures, which keep their own ink.
+        /*
+         * The group being read is lit, and the tile takes the accent's fill —
+         * never a money colour, and never on the figures, which keep their
+         * own ink. What it is lit with is the card, raised off the sidebar
+         * as the desk's current tab is, and not the sidebar's plum wash: the
+         * figures sit on whatever lights the row, and the wash took every
+         * one of them under 4.5:1 in the light theme — "Settled" in the
+         * neutral ink came to 4.0:1, and the money colours do not move to
+         * make room. In the dark themes the card is the sidebar's own
+         * colour, so the wash stays, and there the inks clear it.
+         */
         aria-current={isCurrent ? "true" : undefined}
         aria-label={spoken}
         className={cn(
@@ -242,7 +255,9 @@ export function GroupRow({
           folded
             ? "mx-auto size-11 justify-center"
             : "min-h-12 gap-2.5 px-2 py-1.5",
-          isCurrent ? "bg-sidebar-accent" : "hover:bg-wash-2",
+          isCurrent
+            ? "bg-card shadow-card ring-1 ring-sidebar-border dark:bg-sidebar-accent dark:shadow-none dark:ring-0"
+            : "hover:bg-wash-2",
         )}
       >
         {tile}

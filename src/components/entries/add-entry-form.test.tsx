@@ -860,7 +860,7 @@ describe("an empty split", () => {
     await openSplit(user);
     const split = sheet("Payment and split");
     for (const name of [
-      "Include yourself in the split",
+      "You, Include yourself in the split",
       "Include Hervé in the split",
       "Include Cyril in the split",
     ]) {

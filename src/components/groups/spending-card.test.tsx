@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { screen, within } from "@testing-library/react";
 import { renderWithIntl } from "../../../tests/helpers/intl";
+import { expectLabelInName } from "../../../tests/helpers/label-in-name";
 import type { SpendingPeriodView } from "./spending-card";
 
 /**
@@ -69,11 +70,12 @@ describe("the spending card's statistics row", () => {
       <SpendingCard groupId="g1" periods={[THIS_MONTH]} compact={false} />,
     );
 
-    expect(
-      screen.getByRole("link", {
-        name: "Statistics · Per person and per category",
-      }),
-    ).toHaveAttribute("href", "/groups/g1/stats");
+    const name = "Statistics · Per person and per category";
+    const link = screen.getByRole("link", { name });
+    expect(link).toHaveAttribute("href", "/groups/g1/stats");
+    // And shows nothing its name leaves out: run together, the two lines
+    // were "StatisticsPer", a word the name does not have (WCAG 2.5.3).
+    expectLabelInName(link, name);
   });
 
   it("carries the caption in French too", () => {

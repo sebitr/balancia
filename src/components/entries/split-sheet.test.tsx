@@ -80,8 +80,14 @@ describe("the reader on the split sheet", () => {
   it("is You, first among who it is split between", () => {
     renderSheet();
 
-    const included = screen.getAllByRole("button", { name: /^Include/ });
-    expect(included[0]).toHaveAccessibleName("Include yourself in the split");
+    const included = screen.getAllByRole("button", {
+      name: /^(You, )?Include/,
+    });
+    // Led by the word on the pill, which "Include yourself" does not
+    // contain: a voice user says what they see (WCAG 2.5.3).
+    expect(included[0]).toHaveAccessibleName(
+      "You, Include yourself in the split",
+    );
     expect(included[0]).toHaveTextContent("You");
     expect(included[1]).toHaveAccessibleName("Include Anna in the split");
   });
@@ -130,7 +136,7 @@ describe("the reader on the split sheet", () => {
     expect(payers[0]).toHaveAccessibleName("Payé par toi");
     expect(payers[0]).toHaveTextContent("Toi");
     expect(
-      screen.getByRole("button", { name: "T’inclure dans le partage" }),
+      screen.getByRole("button", { name: "Toi, T’inclure dans le partage" }),
     ).toBeInTheDocument();
   });
 });

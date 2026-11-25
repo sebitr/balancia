@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithIntl } from "../../../tests/helpers/intl";
+import { expectLabelInName } from "../../../tests/helpers/label-in-name";
 import { readOrigin } from "@/components/settings/settings-origin";
 import { UserMenu } from "./user-menu";
 
@@ -86,5 +87,27 @@ describe("the avatar", () => {
     renderWithIntl(<UserMenu label="Ada Lovelace" isGuest />);
 
     expect(screen.queryByRole("link")).toBeNull();
+  });
+});
+
+describe("the sidebar's account row", () => {
+  /*
+   * Named "Ada Lovelace, Settings", which has to hold every word the row
+   * shows. The initials used to be written beside the two lines and the lines
+   * ran together, so the row read "ALAda LovelaceSettings" to anybody
+   * comparing — axe failed the dashboard on it (label-content-name-mismatch).
+   */
+  it("shows only words its name says", () => {
+    renderWithIntl(
+      <UserMenu label="Ada Lovelace" isGuest={false} variant="sidebar" />,
+    );
+
+    const name = "Ada Lovelace, Settings";
+    const link = screen.getByRole("link", { name });
+    expectLabelInName(link, name);
+    expect(link.querySelector("[data-initials]")).toHaveAttribute(
+      "data-initials",
+      "AL",
+    );
   });
 });

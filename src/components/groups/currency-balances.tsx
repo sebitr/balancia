@@ -99,6 +99,10 @@ export function CurrencyBalances({
     (total, entry) => total + entry.transfers.length,
     0,
   );
+  const planMeta = t("settlementPlanMeta", {
+    payments,
+    currencies: currencies.length,
+  });
 
   return (
     <section
@@ -142,8 +146,11 @@ export function CurrencyBalances({
             href={`/groups/${groupId}/settle`}
             transitionTypes={PUSH}
             // Two stacked lines run together into one word in an accessible
-            // name, so the button states its own.
-            aria-label={t("viewSuggestedSettlement")}
+            // name, so the button states its own — both lines, with the pause
+            // the stacking shows, because a name has to hold every word the
+            // control shows (WCAG 2.5.3). Hiding the second line from a screen
+            // reader did not take it off the screen.
+            aria-label={`${t("viewSuggestedSettlement")} · ${planMeta}`}
             className="flex min-h-11 items-center justify-between gap-3 border-t bg-muted/50 px-4 py-3.5 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
           >
             <span className="flex min-w-0 items-center gap-2.5">
@@ -154,12 +161,9 @@ export function CurrencyBalances({
               <span aria-hidden="true" className="flex min-w-0 flex-col">
                 <span className="truncate text-xs font-semibold">
                   {t("viewSuggestedSettlement")}
-                </span>
+                </span>{" "}
                 <span className="truncate text-2xs text-muted-foreground">
-                  {t("settlementPlanMeta", {
-                    payments,
-                    currencies: currencies.length,
-                  })}
+                  {planMeta}
                 </span>
               </span>
             </span>
