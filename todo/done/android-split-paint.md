@@ -1,3 +1,3 @@
 # Keep payer names and amounts visible in Android Chrome
 
-Branch: `fix/android-split-paint`
+Merged: 2026-11-25 in #521

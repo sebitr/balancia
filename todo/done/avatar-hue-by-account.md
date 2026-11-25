@@ -1,3 +1,3 @@
 # Each person keeps one avatar colour in every group
 
-Branch: `fix/avatar-hue-by-account`
+Merged: 2026-11-24 in #517
